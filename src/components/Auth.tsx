@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import type { ReactNode, ChangeEvent, KeyboardEvent, CSSProperties } from 'react'
+import type { ReactNode, ChangeEvent, KeyboardEvent } from 'react'
 import type { Session } from '@supabase/supabase-js'
+import { KeyRound, Mail } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import './Auth.css'
 
 // -----------------------------------------------------------------
 // AuthGate: envolve o app. Enquanto não há sessão, mostra o login.
@@ -39,6 +41,7 @@ export function SignOutButton() {
 function LoginScreen() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [remember, setRemember] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -51,89 +54,31 @@ function LoginScreen() {
   }
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        display: 'grid',
-        placeItems: 'center',
-        background: '#0e1116',
-        color: '#e8edf2',
-        fontFamily: 'system-ui, sans-serif',
-      }}
-    >
-      <div
-        style={{
-          width: 340,
-          padding: 32,
-          borderRadius: 16,
-          background: '#161b22',
-          border: '1px solid #232a33',
-        }}
-      >
-        <p style={{ fontSize: 12, letterSpacing: 1, opacity: 0.6, margin: 0 }}>
-          ACESSO INTERNO · CBW
-        </p>
-        <h1 style={{ fontSize: 22, margin: '6px 0 20px' }}>Entrar no painel</h1>
-
-        <label style={{ fontSize: 13, opacity: 0.8 }}>E-mail</label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-          style={inputStyle}
-          autoComplete="username"
-        />
-
-        <label style={{ fontSize: 13, opacity: 0.8 }}>Senha</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-          onKeyDown={(e: KeyboardEvent) => e.key === 'Enter' && signIn()}
-          style={inputStyle}
-          autoComplete="current-password"
-        />
-
-        {msg && (
-          <p style={{ color: '#ff8080', fontSize: 13, marginTop: 4 }}>{msg}</p>
-        )}
-
-        <button
-          onClick={signIn}
-          disabled={busy || !email || !password}
-          style={{
-            width: '100%',
-            marginTop: 16,
-            padding: '11px 0',
-            borderRadius: 10,
-            border: 'none',
-            background: '#3b82f6',
-            color: 'white',
-            fontWeight: 600,
-            cursor: 'pointer',
-            opacity: busy ? 0.6 : 1,
-          }}
-        >
-          {busy ? 'Entrando…' : 'Entrar'}
-        </button>
-
-        <p style={{ fontSize: 12, opacity: 0.5, marginTop: 16, lineHeight: 1.5 }}>
-          As contas são criadas pela administração no painel do Supabase
-          (Authentication → Users). Não há cadastro público.
-        </p>
-      </div>
+    <main className="login-screen">
+      <section className="login-art" aria-label="Confederação Brasileira de Wrestling">
+        <div className="login-ribbons" aria-hidden="true"><i /><i /><i /><i /></div>
+        <div className="login-logo" aria-label="CBW Wrestling">
+          <span>CBW</span>
+          <strong>WRESTLING</strong>
+        </div>
+      </section>
+      <section className="login-content" aria-labelledby="login-title">
+        <form className="login-form" onSubmit={(event) => { event.preventDefault(); void signIn() }}>
+          <h1 id="login-title">Sistema de Gestão de<br />Novos Atletas</h1>
+          <label className="login-field">
+            <span>Email <b>*</b></span>
+            <div><Mail size={16} aria-hidden="true" /><input type="email" required value={email} onChange={(event: ChangeEvent<HTMLInputElement>) => setEmail(event.target.value)} placeholder="email@cbw.com" autoComplete="username" /></div>
+          </label>
+          <label className="login-field">
+            <span>Senha <b>*</b></span>
+            <div><KeyRound size={16} aria-hidden="true" /><input type="password" required value={password} onChange={(event: ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)} onKeyDown={(event: KeyboardEvent) => event.key === 'Enter' && void signIn()} placeholder="Senha" autoComplete="current-password" /></div>
+          </label>
+          <label className="login-remember"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} /><span>Manter conectado</span></label>
+          {msg && <p className="login-error" role="alert">{msg}</p>}
+          <button className="login-submit" type="submit" disabled={busy || !email || !password}>{busy ? 'Entrando...' : 'Entrar'}</button>
+        </form>
+        <p className="login-credit">Desenvolvido por <strong>wizd</strong><small>DIGITAL</small></p>
+      </section>
     </main>
   )
-}
-
-const inputStyle: CSSProperties = {
-  width: '100%',
-  padding: '10px 12px',
-  margin: '4px 0 14px',
-  borderRadius: 10,
-  border: '1px solid #2b333d',
-  background: '#0e1116',
-  color: '#e8edf2',
-  fontSize: 14,
-  boxSizing: 'border-box',
 }
