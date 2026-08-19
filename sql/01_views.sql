@@ -20,6 +20,8 @@ select
   ap.practice_location            as local_pratica,
   case when ap.practices_other_sport then 'sim' else 'nao' end
                                   as flag_outra_modalidade,
+  case when ap.started_in_wrestling then 'sim' else 'nao' end
+                                  as iniciou_na_luta,
   c.code                          as event_identifier
 from athlete_profiles ap
 join athlete_entries ae            on ae.id = ap.athlete_entry_id
@@ -72,3 +74,33 @@ join competitions c                on c.id  = cc.competition_id
 join styles st                     on st.id = cc.style_id
 left join states s                 on s.id  = ae.state_id
 left join weight_categories wc     on wc.id = ae.weight_category_id;
+
+-- ---------- Results (tipo CompetitionRow) ----------
+-- CompetitionRow: Estado, Estilo, Peso, Avaliação, Resultado, Competência,
+--           event_identifier  (uma linha por atleta classificado)
+create or replace view vw_competition_results as
+select
+  c.id as competition_id,
+  a.full_name as "fullName",
+  s.code as "teamAlternateName",
+  wc.short_name as "weightCategoryShortName",
+  er.rank,
+  er.wins,
+  er.losses,
+  er.technical_points_for as "technicalPointsFor",
+  er.technical_points_diff as "technicalPointsDiff",
+  er.count_fights as "countFights",
+  er.is_not_ranked as "isNotRanked"
+from competitions c
+join competition_categories cc
+  on cc.competition_id = c.id
+join athlete_entries ae
+  on ae.competition_category_id = cc.id
+join entry_results er
+  on er.athlete_entry_id = ae.id
+join athletes a
+  on a.id = ae.athlete_id
+left join states s
+  on s.id = ae.state_id
+left join weight_categories wc
+  on wc.id = ae.weight_category_id;

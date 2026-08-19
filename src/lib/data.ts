@@ -7,10 +7,15 @@ import { supabase } from './supabase'
 // Mesma assinatura de retorno (T[]) — as telas não precisam mudar,
 // só trocar a fonte: useSupabaseRows<ProfileRow>('vw_profile_dashboard')
 // -----------------------------------------------------------------
-export function useSupabaseRows<T>(view: string) {
+export function useSupabaseRows<T>(
+  view: string,
+  filter?: Record<string, string | number | boolean | null>
+) {
   const [rows, setRows] = useState<T[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const filterKey = filter ? JSON.stringify(filter) : null
 
   useEffect(() => {
     let alive = true
@@ -24,10 +29,13 @@ export function useSupabaseRows<T>(view: string) {
       const all: T[] = []
 
       while (true) {
-        const { data, error } = await supabase
-          .from(view)
-          .select('*')
-          .range(from, from + PAGE - 1)
+        let query = supabase.from(view).select('*')
+        if (filter) {
+          for (const [key, val] of Object.entries(filter)) {
+            query = query.eq(key, val)
+          }
+        }
+        const { data, error } = await query.range(from, from + PAGE - 1)
 
         if (error) {
           if (!alive) return
@@ -53,7 +61,8 @@ export function useSupabaseRows<T>(view: string) {
     }
     void load()
     return () => { alive = false }
-  }, [view])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, filterKey])
 
   return { rows, loading, error }
 }

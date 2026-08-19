@@ -43,14 +43,23 @@ create policy ref_read_states            on states             for select to aut
 create policy ref_read_competencies      on motor_competencies for select to authenticated using (true);
 create policy ref_read_movements         on motor_movements    for select to authenticated using (true);
 
+grant select on competitions      to authenticated;
+grant select on age_categories    to authenticated;
+grant select on styles            to authenticated;
+grant select on states            to authenticated;
+grant select on motor_competencies to authenticated;
+grant select on motor_movements   to authenticated;
+
 -- 4) VIEWS de dashboard: concede SELECT só a autenticados.
 --    (revoga do anon para não vazar nada sem login)
-revoke all on vw_profile_dashboard  from anon;
-revoke all on vw_physical_dashboard from anon;
-revoke all on vw_motor_dashboard    from anon;
-grant select on vw_profile_dashboard  to authenticated;
-grant select on vw_physical_dashboard to authenticated;
-grant select on vw_motor_dashboard    to authenticated;
+revoke all on vw_profile_dashboard      from anon;
+revoke all on vw_physical_dashboard     from anon;
+revoke all on vw_motor_dashboard        from anon;
+revoke all on vw_competition_results    from anon;
+grant select on vw_profile_dashboard    to authenticated;
+grant select on vw_physical_dashboard   to authenticated;
+grant select on vw_motor_dashboard      to authenticated;
+grant select on vw_competition_results  to authenticated;
 
 -- =====================================================================
 -- RESULTADO:
