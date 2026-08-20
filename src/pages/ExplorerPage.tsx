@@ -499,7 +499,7 @@ export function ExplorerPage() {
                                       labelSkipHeight={14}
                                       labelTextColor={{ from: 'color', modifiers: [['darker', 2.5]] }}
                                       borderRadius={2}
-                                      layers={['grid', 'axes', 'bars', StackTotals, AverageLine, 'markers', 'labels', 'legends']}
+                                      layers={['grid', 'axes', 'bars', StackTotals, AverageLine, 'markers', 'legends']}
                                       legends={[{
                                         dataFrom: 'keys',
                                         anchor: 'bottom',
@@ -591,7 +591,7 @@ export function ExplorerPage() {
                                 labelSkipHeight={14}
                                 labelTextColor={{ from: 'color', modifiers: [['darker', 2.5]] }}
                                 borderRadius={2}
-                                layers={['grid', 'axes', 'bars', AverageLine, 'markers', 'labels', 'legends']}
+                                layers={['grid', 'axes', 'bars', AverageLine, 'markers', 'legends']}
                                 legends={barLegends(selectedEvents.length)}
                               />
                             </div>
