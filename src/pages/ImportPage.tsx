@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { PageHeader } from '../components/PageHeader'
+import { LoadingSpinner } from '../components/LoadingSpinner'
 import {
   type CompetitionOption,
   getImportStatus,
@@ -77,7 +78,7 @@ export function ImportPage() {
         )}
 
         {step === 'processing' && (
-          <p style={{ marginTop: 24 }}>Processando arquivo…</p>
+          <LoadingSpinner size="lg" label={importId ? 'Processando dados…' : 'Analisando arquivo…'} />
         )}
 
         {step === 'select' && (
