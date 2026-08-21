@@ -1,31 +1,161 @@
-import { ArrowLeft, ArrowRight, Check } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Copy } from 'lucide-react'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { details, movements, states, weights } from '../constants'
-import type { Answers, FormKind, Props } from '../types'
-import { Field, Select } from './Field'
+import { details, movements } from '../constants'
+import { submitAssessment, useSupabaseRpc, useSupabaseRows } from '../lib/data'
+import type { SubmitPayload } from '../lib/data'
+import type { Answers, CompetitionAthlete, CompetitionRow, FormKind, Props } from '../types'
+import { Field, Select, SelectPairs } from './Field'
 
-function IdentityFields({ kind, answers, update }: { kind: FormKind; answers: Answers; update: (key: string, value: string) => void }) {
+function buildPayload(kind: FormKind, answers: Answers): SubmitPayload {
+  const base: SubmitPayload = {
+    kind,
+    event: answers.event,
+    name: answers.name,
+    state: answers.state,
+    style: answers.style,
+    gender: answers.gender,
+    weight: answers.weight,
+    age_code: answers.age_category_code,
+  }
+  if (kind === 'profile') {
+    return {
+      ...base,
+      practice_time: answers.practiceTime,
+      practice_location: answers.place,
+      practice_location_name: answers.locationName,
+      weekly_frequency: answers.frequency,
+      practices_other_sport: answers.otherSport === 'Sim',
+      other_sports: Object.entries(answers)
+        .filter(([k, v]) => k.startsWith('sport-') && Boolean(v))
+        .map(([, v]) => v),
+      birth: answers.birth,
+      school: answers.school,
+    }
+  }
+  if (kind === 'physical') {
+    return {
+      ...base,
+      arm_span_cm: answers['Envergadura (cm)'],
+      height_cm: answers['Estatura (cm)'],
+      hand_grip_right: answers['Prensão manual (D)'],
+      hand_grip_left: answers['Prensão manual (E)'],
+      base_cm: answers['Envergadura e base'],
+      forearm_right_cm: answers['Antebraço (D)'],
+      forearm_left_cm: answers['Antebraço (E)'],
+      placement: answers.placement,
+    }
+  }
+  const allMovements = Object.values(movements).flat()
+  return {
+    ...base,
+    results: allMovements
+      .filter(m => answers[m])
+      .map(m => ({ movement: m, result: answers[m] })),
+  }
+}
+
+function IdentityFields({
+  kind,
+  answers,
+  update,
+  athletes,
+  athletesLoading,
+  athletesError,
+  competitions,
+  competitionsLoading,
+}: {
+  kind: FormKind
+  answers: Answers
+  update: (key: string, value: string) => void
+  athletes: CompetitionAthlete[]
+  athletesLoading: boolean
+  athletesError: string | null
+  competitions: CompetitionRow[]
+  competitionsLoading: boolean
+}) {
+  function handleCompetitionChange(code: string) {
+    update('event', code)
+    update('entry_id', '')
+    update('name', '')
+    update('state', '')
+    update('style', '')
+    update('weight', '')
+    update('gender', '')
+    update('age_category_code', '')
+  }
+
+  function handleAthleteChange(entryId: string) {
+    const found = athletes.find(a => a.entry_id === entryId)
+    if (!found) { update('entry_id', ''); update('name', ''); return }
+    update('entry_id', found.entry_id)
+    update('name', found.athlete_name)
+    update('state', found.state)
+    update('style', found.style)
+    update('weight', String(found.weight))
+    update('gender', found.gender)
+    update('age_category_code', found.age_category_code)
+  }
+
+  const competitionOptions = competitions.map(c => ({ label: c.name, value: c.code }))
+  const athleteOptions = athletes.map(a => ({
+    label: `${a.athlete_name} · ${a.style} ${a.weight}kg`,
+    value: a.entry_id,
+  }))
+
   return (
     <div className="form-content">
       <div className="form-intro">
         <h3>Identifique o atleta</h3>
-        <p>Use os mesmos dados de competição para manter os registros conectados.</p>
+        <p>Escolha a competição e selecione o atleta na lista.</p>
       </div>
       <div className="field-grid">
-        <Select label="Evento" value={answers.event} options={['24_jebs', '25_jejs']} onChange={(value) => update('event', value)} />
-        <Field label="Nome do atleta" value={answers.name || ''} required onChange={(value) => update('name', value)} />
-        <Select label="Estado (UF)" value={answers.state} options={states} onChange={(value) => update('state', value)} />
-        <Select label="Estilo" value={answers.style} options={['WW', 'FS', 'GR']} onChange={(value) => update('style', value)} />
-        <Select label="Peso (kg)" value={answers.weight || ''} placeholder="Selecione" options={weights} onChange={(value) => update('weight', value)} />
-        {kind !== 'profile' && <Select label="Gênero" value={answers.gender} options={['M', 'W']} onChange={(value) => update('gender', value)} />}
-        {kind === 'profile' && (
+        <SelectPairs
+          label="Competição"
+          value={answers.event || ''}
+          placeholder={competitionsLoading ? 'Carregando competições…' : 'Selecione a competição'}
+          options={competitionOptions}
+          onChange={handleCompetitionChange}
+          disabled={competitionsLoading}
+        />
+        <SelectPairs
+          label="Atleta"
+          value={answers.entry_id || ''}
+          placeholder={
+            !answers.event ? 'Escolha uma competição primeiro'
+            : athletesLoading ? 'Carregando atletas…'
+            : athletes.length === 0 ? 'Nenhum atleta encontrado'
+            : 'Selecione o atleta'
+          }
+          options={athleteOptions}
+          onChange={handleAthleteChange}
+          disabled={!answers.event || athletesLoading}
+        />
+        {athletesError && (
+          <p className="form-error" style={{ gridColumn: '1/-1' }}>
+            {athletesError.includes('PGRST202') || athletesError.includes('schema cache')
+              ? 'Configuração pendente: execute o arquivo sql/07_get_competition_athletes_rpc.sql no Supabase e recarregue o schema.'
+              : `Erro ao carregar atletas: ${athletesError}`}
+          </p>
+        )}
+        {kind !== 'profile' && answers.entry_id && (
+          <Select label="Gênero" value={answers.gender || ''} options={['M', 'W']} onChange={(v) => update('gender', v)} />
+        )}
+        {kind === 'profile' && answers.entry_id && (
           <>
-            <Field label="Nascimento" type="date" value={answers.birth || ''} onChange={(value) => update('birth', value)} />
-            <Field label="Escola" value={answers.school || ''} onChange={(value) => update('school', value)} />
+            <Field label="Nascimento" type="date" value={answers.birth || ''} onChange={(v) => update('birth', v)} />
+            <Field label="Escola" value={answers.school || ''} onChange={(v) => update('school', v)} />
           </>
         )}
       </div>
+      {answers.entry_id && (
+        <dl className="identity-summary">
+          <div><dt>Estado</dt><dd>{answers.state || '—'}</dd></div>
+          <div><dt>Estilo</dt><dd>{answers.style}</dd></div>
+          <div><dt>Peso</dt><dd>{answers.weight} kg</dd></div>
+          <div><dt>Gênero</dt><dd>{answers.gender}</dd></div>
+        </dl>
+      )}
     </div>
   )
 }
@@ -113,6 +243,20 @@ function MotorFields({ answers, update }: Props) {
   )
 }
 
+const REVIEW_LABELS: Record<string, string> = {
+  event: 'Competição',
+  name: 'Atleta',
+  state: 'Estado',
+  style: 'Estilo',
+  weight: 'Peso',
+  gender: 'Gênero',
+  practiceTime: 'Tempo de prática',
+  frequency: 'Frequência semanal',
+  competency: 'Competência',
+  'Envergadura (cm)': 'Envergadura (cm)',
+  'Estatura (cm)': 'Estatura (cm)',
+}
+
 function Review({ kind, answers }: { kind: FormKind; answers: Answers }) {
   const labels =
     kind === 'profile'
@@ -124,12 +268,12 @@ function Review({ kind, answers }: { kind: FormKind; answers: Answers }) {
     <div className="form-content">
       <div className="form-intro">
         <h3>Revise antes de enviar</h3>
-        <p>Os dados serão associados ao evento e à categoria indicados.</p>
+        <p>Os dados serão associados à competição e categoria indicados.</p>
       </div>
       <dl className="review-list">
         {labels.map((key) => (
           <div key={key}>
-            <dt>{key.replace('event', 'Evento').replace('name', 'Atleta').replace('state', 'Estado').replace('style', 'Estilo').replace('weight', 'Peso').replace('gender', 'Gênero').replace('competency', 'Competência')}</dt>
+            <dt>{REVIEW_LABELS[key] ?? key}</dt>
             <dd>{answers[key] || 'Não informado'}</dd>
           </div>
         ))}
@@ -140,26 +284,126 @@ function Review({ kind, answers }: { kind: FormKind; answers: Answers }) {
 
 export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnother: () => void }) {
   const [step, setStep] = useState(1)
-  const [answers, setAnswers] = useState<Answers>({ event: '25_jejs', state: 'SP', style: 'FS', gender: 'M', competency: 'Acrobacias' })
+  const [answers, setAnswers] = useState<Answers>({ competency: 'Acrobacias' })
   const [sent, setSent] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [duplicating, setDuplicating] = useState(false)
+  const [duplicateTarget, setDuplicateTarget] = useState('')
+  const [duplicateSubmitting, setDuplicateSubmitting] = useState(false)
+  const [duplicateError, setDuplicateError] = useState<string | null>(null)
+  const [duplicateDone, setDuplicateDone] = useState(false)
+
+  const { rows: competitions, loading: competitionsLoading } = useSupabaseRows<CompetitionRow>('competitions')
+  const { rows: athletes, loading: athletesLoading, error: athletesError } = useSupabaseRpc<CompetitionAthlete>(
+    'get_competition_athletes',
+    { p_competition_code: answers.event || '' },
+    Boolean(answers.event)
+  )
+
   const info = details[kind]
   const Icon = info.icon
   const totalSteps = 3
-  const canAdvance = step !== 1 || Boolean(answers.name?.trim())
-  const update = (key: string, value: string) => setAnswers((current) => ({ ...current, [key]: value }))
-  const submit = (e: FormEvent) => { e.preventDefault(); setSent(true) }
+  const canAdvance = step !== 1 || Boolean(answers.entry_id)
+  const update = (key: string, value: string) => setAnswers(current => ({ ...current, [key]: value }))
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setSubmitError(null)
+    try {
+      await submitAssessment(buildPayload(kind, answers))
+      setSent(true)
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Erro ao enviar. Tente novamente.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDuplicate = async () => {
+    const target = athletes.find(a => a.entry_id === duplicateTarget)
+    if (!target) return
+    setDuplicateSubmitting(true)
+    setDuplicateError(null)
+    try {
+      const dupAnswers: Answers = {
+        ...answers,
+        name: target.athlete_name,
+        state: target.state,
+        style: target.style,
+        weight: String(target.weight),
+        gender: target.gender,
+        age_category_code: target.age_category_code,
+        entry_id: target.entry_id,
+      }
+      await submitAssessment(buildPayload(kind, dupAnswers))
+      setDuplicateDone(true)
+      setDuplicating(false)
+    } catch (err) {
+      setDuplicateError(err instanceof Error ? err.message : 'Erro ao duplicar. Tente novamente.')
+    } finally {
+      setDuplicateSubmitting(false)
+    }
+  }
 
   if (sent) {
+    const duplicateCandidates = athletes.filter(a => a.entry_id !== answers.entry_id)
+
+    if (duplicating) {
+      return (
+        <section className="full-success" aria-labelledby="dup-title">
+          <p className="eyebrow">DUPLICAR FORMULÁRIO</p>
+          <h1 id="dup-title">Para qual atleta duplicar?</h1>
+          <p>Os dados preenchidos serão copiados para o atleta selecionado.</p>
+          <div className="duplicate-picker">
+            <SelectPairs
+              label="Atleta de destino"
+              value={duplicateTarget}
+              placeholder="Selecione o atleta"
+              options={duplicateCandidates.map(a => ({
+                label: `${a.athlete_name} · ${a.style} ${a.weight}kg`,
+                value: a.entry_id,
+              }))}
+              onChange={setDuplicateTarget}
+            />
+            {duplicateError && <p className="form-error">{duplicateError}</p>}
+            <div className="form-dup-actions">
+              <button
+                type="button"
+                className="primary"
+                disabled={!duplicateTarget || duplicateSubmitting}
+                onClick={handleDuplicate}
+              >
+                {duplicateSubmitting ? 'Duplicando…' : <><Check size={15} /> Confirmar duplicação</>}
+              </button>
+              <button type="button" className="secondary" onClick={() => setDuplicating(false)}>Cancelar</button>
+            </div>
+          </div>
+        </section>
+      )
+    }
+
     return (
       <section className="full-success" aria-labelledby="success-title">
         <span className="success-icon"><Check /></span>
         <p className="eyebrow">REGISTRO CONCLUÍDO</p>
         <h1 id="success-title">Dados recebidos.</h1>
+        {duplicateDone && <p className="form-dup-done">Formulário duplicado com sucesso.</p>}
         <p>Deseja enviar outro formulário ou finalizar a coleta?</p>
         <div>
           <button className="primary" onClick={onAnother}>Enviar outro formulário <ArrowRight size={16} /></button>
           <a className="secondary" href="/">Finalizar coleta</a>
         </div>
+        {duplicateCandidates.length > 0 && !duplicateDone && (
+          <button
+            type="button"
+            className="dup-btn"
+            onClick={() => { setDuplicating(true); setDuplicateTarget('') }}
+          >
+            <Copy size={14} /> Duplicar formulário
+          </button>
+        )}
       </section>
     )
   }
@@ -190,7 +434,18 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
           ))}
         </div>
         <form onSubmit={submit}>
-          {step === 1 && <IdentityFields kind={kind} answers={answers} update={update} />}
+          {step === 1 && (
+            <IdentityFields
+              kind={kind}
+              answers={answers}
+              update={update}
+              athletes={athletes}
+              athletesLoading={athletesLoading}
+              athletesError={athletesError}
+              competitions={competitions}
+              competitionsLoading={competitionsLoading}
+            />
+          )}
           {step === 2 && (
             kind === 'profile'
               ? <ProfileFields answers={answers} update={update} />
@@ -199,6 +454,7 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
                 : <MotorFields answers={answers} update={update} />
           )}
           {step === 3 && <Review kind={kind} answers={answers} />}
+          {submitError && step === 3 && <p className="form-error">{submitError}</p>}
           <div className="form-actions">
             {step > 1
               ? <button type="button" className="secondary" onClick={() => setStep(step - 1)}><ArrowLeft size={16} /> Voltar</button>
@@ -206,7 +462,9 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
             }
             {step < totalSteps
               ? <button type="button" className="primary" disabled={!canAdvance} onClick={() => setStep(step + 1)}>Continuar <ArrowRight size={16} /></button>
-              : <button className="primary" type="submit">Enviar registro <Check size={16} /></button>
+              : <button className="primary" type="submit" disabled={submitting}>
+                  {submitting ? 'Enviando…' : <><Check size={16} /> Enviar registro</>}
+                </button>
             }
           </div>
         </form>

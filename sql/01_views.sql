@@ -22,7 +22,8 @@ select
                                   as flag_outra_modalidade,
   case when ap.started_in_wrestling then 'sim' else 'nao' end
                                   as iniciou_na_luta,
-  c.code                          as event_identifier
+  c.code                          as event_identifier,
+  ap.weekly_frequency             as frequencia_semanal
 from athlete_profiles ap
 join athlete_entries ae            on ae.id = ap.athlete_entry_id
 join competition_categories cc     on cc.id = ae.competition_category_id
@@ -75,32 +76,25 @@ join styles st                     on st.id = cc.style_id
 left join states s                 on s.id  = ae.state_id
 left join weight_categories wc     on wc.id = ae.weight_category_id;
 
--- ---------- Results (tipo CompetitionRow) ----------
--- CompetitionRow: Estado, Estilo, Peso, Avaliação, Resultado, Competência,
---           event_identifier  (uma linha por atleta classificado)
+-- ---------- Results (tipo ResultRow) ----------
 create or replace view vw_competition_results as
 select
-  c.id as competition_id,
-  a.full_name as "fullName",
-  s.code as "teamAlternateName",
-  wc.short_name as "weightCategoryShortName",
+  c.id                                as competition_id,
+  ae.id                               as entry_id,
+  a.name                              as "fullName",
+  s.code                              as "teamAlternateName",
+  coalesce(wc.weight_kg::text, '—')   as "weightCategoryShortName",
   er.rank,
   er.wins,
   er.losses,
-  er.technical_points_for as "technicalPointsFor",
-  er.technical_points_diff as "technicalPointsDiff",
-  er.count_fights as "countFights",
-  er.is_not_ranked as "isNotRanked"
+  er.technical_points_for             as "technicalPointsFor",
+  er.technical_points_diff            as "technicalPointsDiff",
+  er.count_fights                     as "countFights",
+  er.is_not_ranked                    as "isNotRanked"
 from competitions c
-join competition_categories cc
-  on cc.competition_id = c.id
-join athlete_entries ae
-  on ae.competition_category_id = cc.id
-join entry_results er
-  on er.athlete_entry_id = ae.id
-join athletes a
-  on a.id = ae.athlete_id
-left join states s
-  on s.id = ae.state_id
-left join weight_categories wc
-  on wc.id = ae.weight_category_id;
+join competition_categories cc   on cc.competition_id = c.id
+join athlete_entries ae          on ae.competition_category_id = cc.id
+join entry_results er            on er.athlete_entry_id = ae.id
+join athletes a                  on a.id = ae.athlete_id
+left join states s               on s.id = ae.state_id
+left join weight_categories wc   on wc.id = ae.weight_category_id;

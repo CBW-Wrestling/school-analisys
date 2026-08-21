@@ -51,6 +51,21 @@ export function ProfilesPage() {
                 <BarRow key={label} label={label} value={count} total={rows.length} />
               ))}
           </section>
+          <section className="analysis-panel">
+            <p className="eyebrow">ROTINA</p>
+            <h3>Frequência semanal de treino</h3>
+            {Object.entries(
+              rows.reduce<Record<string, number>>((all, row) => {
+                const key = row.frequencia_semanal || 'Não informado'
+                all[key] = (all[key] || 0) + 1
+                return all
+              }, {})
+            )
+              .sort((a, b) => b[1] - a[1])
+              .map(([label, count]) => (
+                <BarRow key={label} label={label} value={count} total={rows.length} />
+              ))}
+          </section>
         </div>
       </section>
     </main>

@@ -9,7 +9,8 @@ import { supabase } from './supabase'
 // -----------------------------------------------------------------
 export function useSupabaseRows<T>(
   view: string,
-  filter?: Record<string, string | number | boolean | null>
+  filter?: Record<string, string | number | boolean | null>,
+  enabled = true
 ) {
   const [rows, setRows] = useState<T[]>([])
   const [loading, setLoading] = useState(true)
@@ -18,6 +19,7 @@ export function useSupabaseRows<T>(
   const filterKey = filter ? JSON.stringify(filter) : null
 
   useEffect(() => {
+    if (!enabled) { setRows([]); setLoading(false); return }
     let alive = true
     const load = async () => {
       setLoading(true)
@@ -62,7 +64,46 @@ export function useSupabaseRows<T>(
     void load()
     return () => { alive = false }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, filterKey])
+  }, [view, filterKey, enabled])
+
+  return { rows, loading, error }
+}
+
+// -----------------------------------------------------------------
+// RPC de leitura
+// Para funções SECURITY DEFINER que retornam setof/table sem RLS.
+// -----------------------------------------------------------------
+export function useSupabaseRpc<T>(
+  fn: string,
+  params?: Record<string, string | number | boolean | null>,
+  enabled = true
+) {
+  const [rows, setRows] = useState<T[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const paramsKey = params ? JSON.stringify(params) : null
+
+  useEffect(() => {
+    if (!enabled) { setRows([]); setLoading(false); return }
+    let alive = true
+    const load = async () => {
+      setLoading(true)
+      const { data, error: rpcError } = await supabase.rpc(fn, params ?? {})
+      if (!alive) return
+      if (rpcError) {
+        console.error(`Erro no RPC ${fn}:`, rpcError.message)
+        setError(rpcError.message)
+        setRows([])
+      } else {
+        setRows((data ?? []) as T[])
+        setError(null)
+      }
+      setLoading(false)
+    }
+    void load()
+    return () => { alive = false }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fn, paramsKey, enabled])
 
   return { rows, loading, error }
 }
