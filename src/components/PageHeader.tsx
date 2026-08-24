@@ -17,6 +17,8 @@ export function PageHeader({ active }: { active: string }) {
         <a className={active === 'physical' ? 'active' : ''} href="?view=physical">Físico</a>
         <a className={active === 'motor' ? 'active' : ''} href="?view=motor">Técnico</a>
         <a className={active === 'collection' ? 'active' : ''} href="?view=collection">Coleta</a>
+        <a className={active === 'competition-import' ? 'active' : ''} href="?view=competition-import">Criar comp.</a>
+        <a className={active === 'results-import' ? 'active' : ''} href="?view=results-import">Imp. resultados</a>
       </nav>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <a className="header-action" href="?form=profile" target="_blank" rel="noopener">

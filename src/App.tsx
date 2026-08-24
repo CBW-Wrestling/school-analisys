@@ -7,6 +7,8 @@ import { CollectionPage } from "./pages/CollectionPage"
 import { DashboardPage } from "./pages/DashboardPage"
 import { ExplorerPage } from "./pages/ExplorerPage"
 import { ImportPage } from "./pages/ImportPage"
+import { CompetitionImportPage } from "./pages/CompetitionImportPage"
+import { ResultsImportPage } from "./pages/ResultsImportPage"
 import { ProfilePage } from "./pages/ProfilePage"
 import { MotorPage } from "./pages/MotorPage"
 import { PhysicalPage } from "./pages/PhysicalPage"
@@ -41,6 +43,8 @@ function App() {
   if (requestedView === "motor")      return <MotorPage />
   if (requestedView === "collection") return <CollectionHome />
   if (requestedView === "import")     return <ImportPage />
+  if (requestedView === "competition-import") return <CompetitionImportPage />
+  if (requestedView === "results-import")    return <ResultsImportPage />
   if (requestedView === "profile")    return <ProfilePage />
   return <DashboardPage />
 }

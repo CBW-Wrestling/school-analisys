@@ -33,3 +33,4 @@ nav a{color:#526273}.hero>div>p:last-child,.section-heading>p,.form-card>p:not(.
 .motor-competency{margin-bottom:14px}.motor-competency:last-child{margin-bottom:0}
 .motor-comp-label{margin:0 0 6px}
 @media(max-width:780px){.detail-sections{grid-template-columns:1fr}}
+.sql-dropzone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:190px;padding:36px 24px;border:2px dashed var(--line);border-radius:10px;background:#fafcfb;cursor:pointer;transition:border-color .18s,background .18s;text-align:center;color:var(--muted);font-size:12px;font-weight:600;outline:none}.sql-dropzone:hover,.sql-dropzone:focus-visible,.sql-dropzone--active{border-color:var(--green);background:var(--mint)}.sql-dropzone strong{font-size:14px;font-weight:800}
