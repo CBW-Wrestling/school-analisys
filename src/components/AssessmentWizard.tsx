@@ -2,10 +2,15 @@ import { ArrowLeft, ArrowRight, Check, Copy } from 'lucide-react'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { details, movements } from '../constants'
-import { submitAssessment, useSupabaseRpc, useSupabaseRows } from '../lib/data'
-import type { SubmitPayload } from '../lib/data'
+import { apiPost, useApiRows } from '../lib/api'
 import type { Answers, CompetitionAthlete, CompetitionRow, FormKind, Props } from '../types'
 import { Field, Select, SelectPairs } from './Field'
+
+type SubmitPayload = Record<string, unknown>
+
+async function submitAssessment(payload: SubmitPayload) {
+  return apiPost('/api/assessments', payload)
+}
 
 function buildPayload(kind: FormKind, answers: Answers): SubmitPayload {
   const base: SubmitPayload = {
@@ -86,21 +91,21 @@ function IdentityFields({
   }
 
   function handleAthleteChange(entryId: string) {
-    const found = athletes.find(a => a.entry_id === entryId)
+    const found = athletes.find(a => a.entryId === entryId)
     if (!found) { update('entry_id', ''); update('name', ''); return }
-    update('entry_id', found.entry_id)
-    update('name', found.athlete_name)
+    update('entry_id', found.entryId)
+    update('name', found.athleteName)
     update('state', found.state)
     update('style', found.style)
     update('weight', String(found.weight))
     update('gender', found.gender)
-    update('age_category_code', found.age_category_code)
+    update('age_category_code', found.ageCategoryCode)
   }
 
   const competitionOptions = competitions.map(c => ({ label: c.name, value: c.code }))
   const athleteOptions = athletes.map(a => ({
-    label: `${a.athlete_name} · ${a.style} ${a.weight}kg`,
-    value: a.entry_id,
+    label: `${a.athleteName} · ${a.style} ${a.weight}kg`,
+    value: a.entryId,
   }))
 
   return (
@@ -294,10 +299,9 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
   const [duplicateError, setDuplicateError] = useState<string | null>(null)
   const [duplicateDone, setDuplicateDone] = useState(false)
 
-  const { rows: competitions, loading: competitionsLoading } = useSupabaseRows<CompetitionRow>('competitions')
-  const { rows: athletes, loading: athletesLoading, error: athletesError } = useSupabaseRpc<CompetitionAthlete>(
-    'get_competition_athletes',
-    { p_competition_code: answers.event || '' },
+  const { rows: competitions, loading: competitionsLoading } = useApiRows<CompetitionRow>('/api/competitions')
+  const { rows: athletes, loading: athletesLoading, error: athletesError } = useApiRows<CompetitionAthlete>(
+    answers.event ? `/api/competitions/${answers.event}/athletes` : '/api/competitions/__none__/athletes',
     Boolean(answers.event)
   )
 
@@ -322,20 +326,20 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
   }
 
   const handleDuplicate = async () => {
-    const target = athletes.find(a => a.entry_id === duplicateTarget)
+    const target = athletes.find(a => a.entryId === duplicateTarget)
     if (!target) return
     setDuplicateSubmitting(true)
     setDuplicateError(null)
     try {
       const dupAnswers: Answers = {
         ...answers,
-        name: target.athlete_name,
+        name: target.athleteName,
         state: target.state,
         style: target.style,
         weight: String(target.weight),
         gender: target.gender,
-        age_category_code: target.age_category_code,
-        entry_id: target.entry_id,
+        age_category_code: target.ageCategoryCode,
+        entry_id: target.entryId,
       }
       await submitAssessment(buildPayload(kind, dupAnswers))
       setDuplicateDone(true)
@@ -348,7 +352,7 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
   }
 
   if (sent) {
-    const duplicateCandidates = athletes.filter(a => a.entry_id !== answers.entry_id)
+    const duplicateCandidates = athletes.filter(a => a.entryId !== answers.entry_id)
 
     if (duplicating) {
       return (
@@ -362,8 +366,8 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
               value={duplicateTarget}
               placeholder="Selecione o atleta"
               options={duplicateCandidates.map(a => ({
-                label: `${a.athlete_name} · ${a.style} ${a.weight}kg`,
-                value: a.entry_id,
+                label: `${a.athleteName} · ${a.style} ${a.weight}kg`,
+                value: a.entryId,
               }))}
               onChange={setDuplicateTarget}
             />

@@ -1,4 +1,4 @@
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, UserCircle } from 'lucide-react'
 
 export function PageHeader({ active }: { active: string }) {
   return (
@@ -18,9 +18,14 @@ export function PageHeader({ active }: { active: string }) {
         <a className={active === 'motor' ? 'active' : ''} href="?view=motor">Técnico</a>
         <a className={active === 'collection' ? 'active' : ''} href="?view=collection">Coleta</a>
       </nav>
-      <a className="header-action" href="?form=profile" target="_blank" rel="noopener">
-        Novo registro <ArrowRight size={16} />
-      </a>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <a className="header-action" href="?form=profile" target="_blank" rel="noopener">
+          Novo registro <ArrowRight size={16} />
+        </a>
+        <a href="?view=profile" title="Meu perfil" style={{ display: 'flex', color: active === 'profile' ? '#0c7444' : '#5e6f80' }}>
+          <UserCircle size={24} />
+        </a>
+      </div>
     </header>
   )
 }

@@ -2,7 +2,7 @@ import { ChevronDown, Medal } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Metric } from '../components/Metric'
 import { PageHeader } from '../components/PageHeader'
-import { useSupabaseRows } from '../lib/data'
+import { useApiRows } from '../lib/api'
 import { AthleteDetailPage } from './AthleteDetailPage'
 import type { CompetitionRow, ResultRow } from '../types'
 
@@ -14,7 +14,7 @@ export function ResultsPage() {
     rows: competitions,
     loading: competitionsLoading,
     error: competitionsError,
-  } = useSupabaseRows<CompetitionRow>('competitions')
+  } = useApiRows<CompetitionRow>('/api/competitions')
 
   useEffect(() => {
     if (!competitionId && competitions.length > 0) {
@@ -26,9 +26,9 @@ export function ResultsPage() {
     rows,
     loading: resultsLoading,
     error: resultsError,
-  } = useSupabaseRows<ResultRow>(
-    'vw_competition_results',
-    competitionId ? { competition_id: competitionId } : undefined
+  } = useApiRows<ResultRow>(
+    competitionId ? `/api/results?competitionId=${competitionId}` : '/api/results',
+    Boolean(competitionId)
   )
 
   const selectedCompetition = useMemo(
@@ -150,7 +150,7 @@ export function ResultsPage() {
                       <tr
                         key={row.entry_id}
                         className="result-row--clickable"
-                        onClick={() => setSelectedEntry(row.entry_id)}
+                        onClick={() => setSelectedEntry(row.entryId)}
                         title="Ver detalhe do atleta"
                       >
                         <td className="rank">{row.rank}</td>
