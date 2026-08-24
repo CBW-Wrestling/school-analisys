@@ -3,14 +3,14 @@ import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Metric } from '../components/Metric'
 import { PageHeader } from '../components/PageHeader'
-import { useSupabaseRows } from '../lib/data'
+import { useApiRows } from '../lib/api'
 import type { CompetitionRow, MotorRow, ProfileRow } from '../types'
 
 const SOCIAL_DIMS: { key: keyof ProfileRow; label: string; eyebrow: string }[] = [
-  { key: 'tempo_pratica',          label: 'Tempo de Prática',            eyebrow: 'EXPERIÊNCIA' },
-  { key: 'local_pratica',          label: 'Local de Prática',            eyebrow: 'AMBIENTE' },
-  { key: 'flag_outra_modalidade',  label: 'Pratica Outro Esporte?',      eyebrow: 'MULTIESPORTE' },
-  { key: 'iniciou_na_luta',        label: 'Começou pela Luta?',          eyebrow: 'ORIGEM' },
+  { key: 'tempoPratica',       label: 'Tempo de Prática',       eyebrow: 'EXPERIÊNCIA' },
+  { key: 'localPratica',       label: 'Local de Prática',       eyebrow: 'AMBIENTE'   },
+  { key: 'flagOutraModalidade', label: 'Pratica Outro Esporte?', eyebrow: 'MULTIESPORTE' },
+  { key: 'iniciouNaLuta',      label: 'Começou pela Luta?',     eyebrow: 'ORIGEM'     },
 ]
 
 const THEME = {
@@ -118,16 +118,16 @@ function StackTotals({ bars }: any) {
 }
 
 export function ExplorerPage() {
-  const { rows: competitions } = useSupabaseRows<CompetitionRow>('competitions')
-  const { rows: motorRows, loading } = useSupabaseRows<MotorRow>('vw_motor_dashboard')
-  const { rows: profileRows, loading: profileLoading } = useSupabaseRows<ProfileRow>('vw_profile_dashboard')
+  const { rows: competitions } = useApiRows<CompetitionRow>('/api/competitions')
+  const { rows: motorRows, loading } = useApiRows<MotorRow>('/api/dashboard/motor')
+  const { rows: profileRows, loading: profileLoading } = useApiRows<ProfileRow>('/api/dashboard/profiles')
 
   const allStyles = useMemo(
-    () => Array.from(new Set(motorRows.map((r) => r.Estilo))).filter(Boolean).sort(),
+    () => Array.from(new Set(motorRows.map((r) => r.estilo))).filter(Boolean).sort(),
     [motorRows]
   )
   const allCompetencias = useMemo(
-    () => Array.from(new Set(motorRows.map((r) => r.Competência))).filter(Boolean).sort(),
+    () => Array.from(new Set(motorRows.map((r) => r.competencia))).filter(Boolean).sort(),
     [motorRows]
   )
 
@@ -135,9 +135,9 @@ export function ExplorerPage() {
   const avaliacoesByComp = useMemo(() => {
     const map: Record<string, string[]> = {}
     for (const row of motorRows) {
-      if (!row.Competência || !row.Avaliação) continue
-      if (!map[row.Competência]) map[row.Competência] = []
-      if (!map[row.Competência].includes(row.Avaliação)) map[row.Competência].push(row.Avaliação)
+      if (!row.competencia || !row.avaliacao) continue
+      if (!map[row.competencia]) map[row.competencia] = []
+      if (!map[row.competencia].includes(row.avaliacao)) map[row.competencia].push(row.avaliacao)
     }
     return map
   }, [motorRows])
@@ -198,9 +198,9 @@ export function ExplorerPage() {
     () =>
       motorRows.filter(
         (r) =>
-          selectedEvents.includes(r.event_identifier) &&
-          (selectedStyles.length === 0 || selectedStyles.includes(r.Estilo)) &&
-          (selectedCompetencias.length === 0 || selectedCompetencias.includes(r.Competência))
+          selectedEvents.includes(r.eventIdentifier ?? '') &&
+          (selectedStyles.length === 0 || selectedStyles.includes(r.estilo ?? '')) &&
+          (selectedCompetencias.length === 0 || selectedCompetencias.includes(r.competencia ?? ''))
       ),
     [motorRows, selectedEvents, selectedStyles, selectedCompetencias]
   )
@@ -209,8 +209,8 @@ export function ExplorerPage() {
     () =>
       profileRows.filter(
         (r) =>
-          selectedEvents.includes(r.event_identifier) &&
-          (selectedStyles.length === 0 || selectedStyles.includes(r.Estilo))
+          selectedEvents.includes(r.eventIdentifier ?? '') &&
+          (selectedStyles.length === 0 || selectedStyles.includes(r.estilo ?? ''))
       ),
     [profileRows, selectedEvents, selectedStyles]
   )
@@ -221,17 +221,17 @@ export function ExplorerPage() {
       const obj: Record<string, string | number> = { label: cat }
       for (const ev of selectedEvents)
         obj[eventLabel[ev] ?? ev] = profileFiltered.filter(
-          (r) => r.event_identifier === ev && String(r[dimKey] || 'Sem registro') === cat
+          (r) => r.eventIdentifier === ev && String(r[dimKey] || 'Sem registro') === cat
         ).length
       return obj
     })
   }
 
   const total = filtered.length
-  const complete = filtered.filter((r) => r.Resultado === 'Completo').length
+  const complete = filtered.filter((r) => r.resultado === 'COMPLETE').length
 
   const allResultados = useMemo(
-    () => Array.from(new Set(motorRows.map((r) => r.Resultado || 'Sem registro'))),
+    () => Array.from(new Set(motorRows.map((r) => r.resultado || 'Sem registro'))),
     [motorRows]
   )
 
@@ -241,7 +241,7 @@ export function ExplorerPage() {
         const obj: Record<string, string | number> = { label: resultado }
         for (const ev of selectedEvents)
           obj[eventLabel[ev] ?? ev] = filtered.filter(
-            (r) => r.event_identifier === ev && (r.Resultado || 'Sem registro') === resultado
+            (r) => r.eventIdentifier === ev && (r.resultado || 'Sem registro') === resultado
           ).length
         return obj
       }),
@@ -255,7 +255,7 @@ export function ExplorerPage() {
         .map((comp) => {
           const obj: Record<string, string | number> = { label: comp }
           for (const ev of selectedEvents)
-            obj[eventLabel[ev] ?? ev] = filtered.filter((r) => r.event_identifier === ev && r.Competência === comp).length
+              obj[eventLabel[ev] ?? ev] = filtered.filter((r) => r.eventIdentifier === ev && r.competencia === comp).length
           return obj
         }),
     [filtered, selectedEvents, eventLabel, allCompetencias, selectedCompetencias]
@@ -407,7 +407,7 @@ export function ExplorerPage() {
                       const obj: Record<string, string | number> = { label: eventLabel[ev] ?? ev }
                       for (const res of resultados)
                         obj[res] = compRows.filter(
-                          (r) => r.event_identifier === ev && r.Avaliação === av && (r.Resultado || 'Sem registro') === res
+                          (r) => r.eventIdentifier === ev && r.avaliacao === av && (r.resultado || 'Sem registro') === res
                         ).length
                       return obj
                     })

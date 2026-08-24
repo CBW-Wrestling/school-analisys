@@ -2,17 +2,19 @@ import { ChevronDown, Medal } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Metric } from '../components/Metric'
 import { PageHeader } from '../components/PageHeader'
-import { useSupabaseRows } from '../lib/data'
+import { useApiRows } from '../lib/api'
+import { AthleteDetailPage } from './AthleteDetailPage'
 import type { CompetitionRow, ResultRow } from '../types'
 
 export function ResultsPage() {
   const [competitionId, setCompetitionId] = useState<string>('')
+  const [selectedEntry, setSelectedEntry] = useState<string | null>(null)
 
   const {
     rows: competitions,
     loading: competitionsLoading,
     error: competitionsError,
-  } = useSupabaseRows<CompetitionRow>('competitions')
+  } = useApiRows<CompetitionRow>('/api/competitions')
 
   useEffect(() => {
     if (!competitionId && competitions.length > 0) {
@@ -24,15 +26,27 @@ export function ResultsPage() {
     rows,
     loading: resultsLoading,
     error: resultsError,
-  } = useSupabaseRows<ResultRow>(
-    'vw_competition_results',
-    competitionId ? { competition_id: competitionId } : undefined
+  } = useApiRows<ResultRow>(
+    competitionId ? `/api/results?competitionId=${competitionId}` : '/api/results',
+    Boolean(competitionId)
   )
 
   const selectedCompetition = useMemo(
     () => competitions.find((c) => c.id === competitionId),
     [competitions, competitionId]
   )
+
+  if (selectedEntry) {
+    return (
+      <main className="results-page">
+        <PageHeader active="results" />
+        <AthleteDetailPage
+          entryId={selectedEntry}
+          onBack={() => setSelectedEntry(null)}
+        />
+      </main>
+    )
+  }
 
   const fights = rows.reduce((total, row) => total + Number(row.countFights || 0), 0)
   const statesCount = new Set(rows.map((row) => row.teamAlternateName)).size
@@ -133,7 +147,12 @@ export function ResultsPage() {
                     <tr><td colSpan={7}>Nenhum resultado encontrado.</td></tr>
                   ) : (
                     rows.slice(0, 18).map((row) => (
-                      <tr key={`${row.fullName}-${row.weightCategoryShortName}`}>
+                      <tr
+                        key={row.entry_id}
+                        className="result-row--clickable"
+                        onClick={() => setSelectedEntry(row.entryId)}
+                        title="Ver detalhe do atleta"
+                      >
                         <td className="rank">{row.rank}</td>
                         <td><strong>{row.fullName}</strong></td>
                         <td><span className="uf">{row.teamAlternateName}</span></td>
