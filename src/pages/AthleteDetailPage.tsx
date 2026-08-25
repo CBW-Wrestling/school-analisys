@@ -108,7 +108,6 @@ export function AthleteDetailPage({ entryId, onBack }: Props) {
 
         <DetailSection icon={<User size={15} />} title="Dados sociais">
           <DetailRow label="Escola" value={d.school} />
-          <DetailRow label="Nascimento" value={formatDate(d.birthDate)} />
           <DetailRow label="Tempo de prática" value={d.practiceTime} />
           <DetailRow label="Local de prática" value={d.practiceLocation} />
           {d.practiceLocationName && <DetailRow label="Nome do local" value={d.practiceLocationName} />}
