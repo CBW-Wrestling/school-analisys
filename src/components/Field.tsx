@@ -22,7 +22,7 @@ export function Field({
   required?: boolean
 }) {
   return (
-    <div className="field">
+    <div className="flex flex-col gap-1.5">
       <Label>{label}{required && <span aria-hidden="true"> *</span>}</Label>
       <Input type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} />
     </div>
@@ -45,7 +45,7 @@ export function Select({
   disabled?: boolean
 }) {
   return (
-    <div className={`field${disabled ? ' field--disabled' : ''}`}>
+    <div className={`flex flex-col gap-1.5${disabled ? ' pointer-events-none opacity-50' : ''}`}>
       <Label>{label}</Label>
       <SelectRoot value={value} disabled={disabled} onValueChange={onChange}>
         <SelectTrigger className="w-full"><SelectValue placeholder={placeholder || options[0]} /></SelectTrigger>
@@ -77,7 +77,7 @@ export function SelectPairs({
   disabled?: boolean
 }) {
   return (
-    <div className={`field${disabled ? ' field--disabled' : ''}`}>
+    <div className={`flex flex-col gap-1.5${disabled ? ' pointer-events-none opacity-50' : ''}`}>
       <Label>{label}</Label>
       <SelectRoot value={value} disabled={disabled} onValueChange={onChange}>
         <SelectTrigger className="w-full"><SelectValue placeholder={placeholder} /></SelectTrigger>

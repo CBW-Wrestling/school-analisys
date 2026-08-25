@@ -3,8 +3,11 @@ import { SqlImportFlow } from '../components/SqlImportFlow'
 
 export function CompetitionImportPage() {
   return (
-    <PageHeader active="competition-import">
-      <div style={{ padding: '48px 28px 58px' }}>
+    <PageHeader
+      active="competition-import"
+      breadcrumb={[{ label: 'Coleta', href: '?view=collection' }, { label: 'Criar competição' }]}
+    >
+      <div className="px-7 py-12">
         <SqlImportFlow importType="competition" />
       </div>
     </PageHeader>

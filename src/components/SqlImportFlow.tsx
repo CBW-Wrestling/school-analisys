@@ -5,6 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { cn } from '@/lib/utils'
 import {
   uploadImport,
   selectCompetition,
@@ -106,19 +107,22 @@ export function SqlImportFlow({ importType }: Props) {
   }
 
   return (
-    <section className="analysis-content" style={{ maxWidth: 560, margin: '0 auto' }}>
-      <p className="eyebrow">IMPORTAÇÃO</p>
-      <h1 style={{ margin: '0 0 8px', color: 'var(--navy)', fontSize: 30 }}>
+    <section className="mx-auto max-w-[560px]">
+      <p className="mb-2 text-xs font-bold tracking-wide text-muted-foreground">IMPORTAÇÃO</p>
+      <h1 className="font-heading text-3xl font-semibold text-foreground">
         {isResults ? 'Importar resultados' : 'Criar competição'}
       </h1>
-      <p style={{ color: 'var(--muted)', fontSize: 13, lineHeight: 1.6, margin: '0 0 32px' }}>
+      <p className="mt-2 mb-8 text-sm leading-relaxed text-muted-foreground">
         {subtitle}
       </p>
 
       {step === 'upload' && (
         <div>
           <div
-            className={`sql-dropzone${isDragging ? ' sql-dropzone--active' : ''}`}
+            className={cn(
+              'flex cursor-pointer flex-col items-center gap-1.5 rounded-lg border-2 border-dashed p-10 text-center transition-colors',
+              isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+            )}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -131,27 +135,27 @@ export function SqlImportFlow({ importType }: Props) {
               ref={fileRef}
               type="file"
               accept=".sql"
-              style={{ display: 'none' }}
+              className="hidden"
               onChange={handleFileChange}
             />
             {selectedFile ? (
               <>
-                <FileCode2 size={36} style={{ color: 'var(--green)' }} />
-                <strong style={{ color: 'var(--navy)', marginTop: 8 }}>{selectedFile.name}</strong>
-                <span>Clique para trocar o arquivo</span>
+                <FileCode2 className="size-9 text-primary" aria-hidden="true" />
+                <strong className="mt-2 text-sm font-semibold text-foreground">{selectedFile.name}</strong>
+                <span className="text-xs text-muted-foreground">Clique para trocar o arquivo</span>
               </>
             ) : (
               <>
-                <Upload size={36} style={{ color: 'var(--green)' }} />
-                <strong style={{ color: 'var(--navy)', marginTop: 8 }}>
+                <Upload className="size-9 text-primary" aria-hidden="true" />
+                <strong className="mt-2 text-sm font-semibold text-foreground">
                   Arraste um arquivo .sql aqui
                 </strong>
-                <span>ou clique para selecionar do seu computador</span>
+                <span className="text-xs text-muted-foreground">ou clique para selecionar do seu computador</span>
               </>
             )}
           </div>
           <Button
-            style={{ marginTop: 16, width: '100%', justifyContent: 'center' }}
+            className="mt-4 w-full"
             disabled={!selectedFile}
             onClick={() => selectedFile && handleUpload(selectedFile)}
           >
@@ -161,7 +165,7 @@ export function SqlImportFlow({ importType }: Props) {
       )}
 
       {step === 'processing' && (
-        <div style={{ marginTop: 40 }}>
+        <div className="mt-10">
           <LoadingSpinner
             size="lg"
             label={importId ? 'Processando dados no banco…' : 'Analisando arquivo SQL…'}
@@ -171,36 +175,32 @@ export function SqlImportFlow({ importType }: Props) {
 
       {step === 'select' && (
         <div>
-          <h3 style={{ margin: '0 0 16px', color: 'var(--navy)', fontSize: 17 }}>
+          <h3 className="mb-4 text-base font-semibold text-foreground">
             Selecione a competição
           </h3>
-          <RadioGroup value={selected} onValueChange={setSelected}>
+          <RadioGroup value={selected} onValueChange={setSelected} className="gap-2.5">
             {competitions.map((c) => (
               <label
                 key={c.id}
-                className="filter-check"
-                style={{
-                  padding: '12px 16px',
-                  border: `1px solid ${selected === c.id ? 'var(--green)' : 'var(--line)'}`,
-                  borderRadius: 7,
-                  background: selected === c.id ? 'var(--mint)' : 'var(--paper)',
-                  cursor: 'pointer',
-                }}
+                className={cn(
+                  'flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3',
+                  selected === c.id ? 'border-primary bg-primary/5' : 'border-border bg-card'
+                )}
               >
                 <RadioGroupItem
                   value={c.id}
                   aria-label={c.name}
                 />
-                <span style={{ fontWeight: 700, flex: 1 }}>{c.name}</span>
+                <span className="flex-1 text-sm font-semibold text-foreground">{c.name}</span>
                 {c.date && (
-                  <small style={{ color: 'var(--muted)', fontSize: 11, fontFamily: 'var(--font-mono)' }}>
+                  <small className="font-mono text-xs text-muted-foreground">
                     {c.date}
                   </small>
                 )}
               </label>
             ))}
           </RadioGroup>
-          <div style={{ marginTop: 20, display: 'flex', gap: 12 }}>
+          <div className="mt-5 flex gap-3">
             <Button variant="outline" onClick={reset}>Voltar</Button>
             <Button
               disabled={!selected}
@@ -213,29 +213,29 @@ export function SqlImportFlow({ importType }: Props) {
       )}
 
       {step === 'done' && (
-        <Card style={{ marginTop: 40, textAlign: 'center' }}>
-          <CardContent className="pt-6">
-          <CheckCircle size={52} style={{ color: 'var(--green)' }} />
-          <h3 style={{ margin: '16px 0 6px', color: 'var(--navy)', fontSize: 20 }}>
-            {isResults ? 'Resultados importados!' : 'Competição criada!'}
-          </h3>
-          <p style={{ color: 'var(--muted)', fontSize: 13 }}>
-            {isResults
-              ? 'Os resultados foram gravados com sucesso no banco.'
-              : 'A estrutura da competição foi criada com sucesso no banco.'}
-          </p>
-          <Button style={{ marginTop: 24 }} onClick={reset}>
-            Nova importação
-          </Button>
+        <Card className="mt-10 text-center">
+          <CardContent className="flex flex-col items-center gap-1 pt-6">
+            <CheckCircle className="size-[52px] text-primary" aria-hidden="true" />
+            <h3 className="mt-4 text-xl font-semibold text-foreground">
+              {isResults ? 'Resultados importados!' : 'Competição criada!'}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {isResults
+                ? 'Os resultados foram gravados com sucesso no banco.'
+                : 'A estrutura da competição foi criada com sucesso no banco.'}
+            </p>
+            <Button className="mt-6" onClick={reset}>
+              Nova importação
+            </Button>
           </CardContent>
         </Card>
       )}
 
       {step === 'error' && (
-        <Alert variant="destructive" style={{ marginTop: 40, textAlign: 'center' }}>
-          <AlertCircle size={52} style={{ color: 'var(--destructive)' }} />
-          <AlertTitle style={{ marginTop: 16, fontSize: 20 }}>Erro na importação</AlertTitle>
-          <AlertDescription style={{ maxWidth: 420, margin: '0 auto 24px' }}>
+        <Alert variant="destructive" className="mt-10 flex flex-col items-center text-center">
+          <AlertCircle className="size-[52px]" aria-hidden="true" />
+          <AlertTitle className="mt-4 text-xl">Erro na importação</AlertTitle>
+          <AlertDescription className="mx-auto mb-6 max-w-[420px]">
             {errorMsg}
           </AlertDescription>
           <Button variant="outline" onClick={reset}>Tentar novamente</Button>

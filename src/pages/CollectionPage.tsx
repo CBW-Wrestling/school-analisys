@@ -6,24 +6,31 @@ import type { FormKind } from '../types'
 
 function FormPicker({ onChoose }: { onChoose: (kind: FormKind) => void }) {
   return (
-    <section className="next-form">
-      <p className="eyebrow">NOVO REGISTRO</p>
-      <h1>Qual formulário deseja enviar agora?</h1>
-      <p>Escolha o próximo instrumento de coleta para este atleta.</p>
-      <div className="next-form-grid">
+    <section className="mx-auto flex min-h-svh max-w-[760px] flex-col items-center justify-center gap-6 px-5 py-12 text-center">
+      <div>
+        <p className="mb-2 text-xs font-bold tracking-wide text-muted-foreground">NOVO REGISTRO</p>
+        <h1 className="font-heading text-3xl font-semibold text-foreground">Qual formulário deseja enviar agora?</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Escolha o próximo instrumento de coleta para este atleta.</p>
+      </div>
+      <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3">
         {(Object.keys(details) as FormKind[]).map((kind) => {
           const item = details[kind]
           const Icon = item.icon
           return (
-            <button key={kind} onClick={() => onChoose(kind)}>
-              <span className={`card-icon ${item.color}`}><Icon /></span>
-              <strong>{item.label}</strong>
-              <ArrowRight size={17} />
+            <button
+              key={kind}
+              type="button"
+              className="flex flex-col items-start gap-3 rounded-xl border bg-card p-5 text-left shadow-xs transition-shadow hover:shadow-md"
+              onClick={() => onChoose(kind)}
+            >
+              <span className="inline-flex size-9 items-center justify-center rounded-md bg-primary/10 text-primary"><Icon aria-hidden="true" /></span>
+              <strong className="text-sm font-semibold text-foreground">{item.label}</strong>
+              <ArrowRight className="ml-auto size-4 text-muted-foreground" aria-hidden="true" />
             </button>
           )
         })}
       </div>
-      <a className="finish-link" href="/">Voltar ao painel</a>
+      <a className="text-sm font-medium text-primary underline-offset-4 hover:underline" href="?view=collection">Voltar à coleta</a>
     </section>
   )
 }
@@ -31,7 +38,7 @@ function FormPicker({ onChoose }: { onChoose: (kind: FormKind) => void }) {
 export function CollectionPage({ initialKind }: { initialKind: FormKind }) {
   const [kind, setKind] = useState<FormKind | null>(initialKind)
   return (
-    <main className="collection-page">
+    <main className="min-h-svh bg-background">
       {kind
         ? <AssessmentWizard key={kind} kind={kind} onAnother={() => setKind(null)} />
         : <FormPicker onChoose={setKind} />

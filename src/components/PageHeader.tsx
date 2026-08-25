@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import {
   Activity,
   BarChart3,
+  ChevronRight,
   ChevronsUpDown,
   ClipboardList,
   FileUp,
@@ -16,9 +17,11 @@ import {
 } from 'lucide-react'
 import type { ComponentType, ReactNode } from 'react'
 import logo from '../assets/logo.svg'
+import { details } from '../constants'
 import { fetchCurrentUser, logout, type UserInfo } from '../lib/auth'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from '@/components/ui/breadcrumb'
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,7 +43,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar'
@@ -62,10 +67,48 @@ const navigation: NavigationItem[] = [
 ]
 
 const operations: NavigationItem[] = [
-  { id: 'collection', label: 'Coleta', href: '?view=collection', icon: ClipboardList },
   { id: 'competition-import', label: 'Criar competição', href: '?view=competition-import', icon: Plus },
   { id: 'results-import', label: 'Importar resultados', href: '?view=results-import', icon: FileUp },
 ]
+
+const allNavItems = [
+  ...navigation,
+  { id: 'collection', label: 'Coleta', href: '?view=collection', icon: ClipboardList },
+  ...operations,
+]
+
+function CollectionNavItem({ active }: { active: string }) {
+  const isActive = active === 'collection'
+  return (
+    <Collapsible asChild defaultOpen={isActive} className="group/collapsible">
+      <SidebarMenuItem>
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton isActive={isActive} tooltip="Coleta">
+            <ClipboardList size={18} aria-hidden />
+            <span>Coleta</span>
+            <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" aria-hidden />
+          </SidebarMenuButton>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            <SidebarMenuSubItem>
+              <SidebarMenuSubButton asChild>
+                <a href="?view=collection">Início da coleta</a>
+              </SidebarMenuSubButton>
+            </SidebarMenuSubItem>
+            {(Object.keys(details) as (keyof typeof details)[]).map((kind) => (
+              <SidebarMenuSubItem key={kind}>
+                <SidebarMenuSubButton asChild>
+                  <a href={`?form=${kind}`}>{details[kind].label}</a>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            ))}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
+  )
+}
 
 function NavigationItems({ active, items }: { active: string; items: NavigationItem[] }) {
   return (
@@ -153,27 +196,40 @@ function NavUser({ active }: { active: string }) {
   )
 }
 
-export function PageHeader({ active, children }: { active: string; children?: ReactNode }) {
-  const pageLabel = [...navigation, ...operations].find((item) => item.id === active)?.label
+export function PageHeader({
+  active,
+  breadcrumb,
+  children,
+}: {
+  active: string
+  breadcrumb?: { label: string; href?: string }[]
+  children?: ReactNode
+}) {
+  const pageLabel = allNavItems.find((item) => item.id === active)?.label
     ?? (active === 'profile' ? 'Meu perfil' : 'CBW')
+  const crumbs = breadcrumb ?? [{ label: pageLabel }]
 
   return (
     <>
       <Sidebar collapsible="icon">
-        <SidebarHeader>
+        <SidebarHeader className="h-14 justify-center border-b border-sidebar-border">
           <a className="flex items-center gap-2 rounded-md px-2 py-1 text-sidebar-foreground" href="/" aria-label="CBW Gestão de Atletas, ir para o painel">
             <img className="size-8 shrink-0 object-contain" src={logo} alt="" />
             <span className="font-semibold group-data-[collapsible=icon]:hidden">CBW</span>
           </a>
         </SidebarHeader>
-        <SidebarSeparator />
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupContent><NavigationItems active={active} items={navigation} /></SidebarGroupContent>
           </SidebarGroup>
           <SidebarGroup>
             <SidebarGroupLabel>Operações</SidebarGroupLabel>
-            <SidebarGroupContent><NavigationItems active={active} items={operations} /></SidebarGroupContent>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <CollectionNavItem active={active} />
+              </SidebarMenu>
+              <NavigationItems active={active} items={operations} />
+            </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
@@ -186,9 +242,18 @@ export function PageHeader({ active, children }: { active: string; children?: Re
           <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
           <Breadcrumb>
             <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbPage>{pageLabel}</BreadcrumbPage>
-              </BreadcrumbItem>
+              {crumbs.map((crumb, index) => (
+                <Fragment key={crumb.label}>
+                  {index > 0 && <BreadcrumbSeparator />}
+                  <BreadcrumbItem>
+                    {crumb.href && index < crumbs.length - 1 ? (
+                      <BreadcrumbLink href={crumb.href}>{crumb.label}</BreadcrumbLink>
+                    ) : (
+                      <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                    )}
+                  </BreadcrumbItem>
+                </Fragment>
+              ))}
             </BreadcrumbList>
           </Breadcrumb>
         </header>

@@ -3,8 +3,11 @@ import { SqlImportFlow } from '../components/SqlImportFlow'
 
 export function ResultsImportPage() {
   return (
-    <PageHeader active="results-import">
-      <div style={{ padding: '48px 28px 58px' }}>
+    <PageHeader
+      active="results-import"
+      breadcrumb={[{ label: 'Coleta', href: '?view=collection' }, { label: 'Importar resultados' }]}
+    >
+      <div className="px-7 py-12">
         <SqlImportFlow importType="results" />
       </div>
     </PageHeader>

@@ -5,6 +5,11 @@ import { Metric } from '../components/Metric'
 import { PageHeader } from '../components/PageHeader'
 import { useApiRows } from '../lib/api'
 import type { CompetitionRow, MotorRow, ProfileRow } from '../types'
+import { Button } from '@/components/ui/button'
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Toggle } from '@/components/ui/toggle'
 
 const SOCIAL_DIMS: { key: keyof ProfileRow; label: string; eyebrow: string }[] = [
   { key: 'tempoPratica',       label: 'Tempo de Prática',       eyebrow: 'EXPERIÊNCIA' },
@@ -14,10 +19,10 @@ const SOCIAL_DIMS: { key: keyof ProfileRow; label: string; eyebrow: string }[] =
 ]
 
 const THEME = {
-  text: { fontSize: 11, fill: 'var(--muted)' },
+  text: { fontSize: 11, fill: 'var(--muted-foreground)' },
   axis: {
-    ticks: { text: { fill: 'var(--muted)', fontSize: 11 } },
-    legend: { text: { fill: 'var(--muted)', fontSize: 11 } },
+    ticks: { text: { fill: 'var(--muted-foreground)', fontSize: 11 } },
+    legend: { text: { fill: 'var(--muted-foreground)', fontSize: 11 } },
   },
   grid: { line: { stroke: 'var(--line)' } },
   tooltip: {
@@ -270,60 +275,70 @@ export function ExplorerPage() {
 
   return (
     <PageHeader active="explorer">
-      <div className="explorer-layout">
-        <aside className="explorer-filters">
-          <section className="filter-group">
-            <div className="filter-group-header">
-              <p className="eyebrow">COMPETIÇÕES</p>
-              <div className="filter-actions">
-                <button onClick={() => setSelectedEvents(competitions.map((c) => c.code))}>Todas</button>
-                <button onClick={() => setSelectedEvents([])}>Limpar</button>
-              </div>
-            </div>
-            {competitions.map((c) => (
-              <label key={c.id} className="filter-check">
-                <input type="checkbox" checked={selectedEvents.includes(c.code)} onChange={() => toggleEvent(c.code)} />
-                <span>{c.name}</span>
-                {c.year && <small>{c.year}</small>}
-              </label>
-            ))}
-          </section>
+      <div className="@container/main">
+      <div className="mx-auto max-w-[1300px] gap-6 px-7 py-7 @4xl/main:grid @4xl/main:grid-cols-[240px_1fr]">
+        <aside className="mb-6 flex flex-col gap-4 @4xl/main:sticky @4xl/main:top-4 @4xl/main:mb-0 @4xl/main:self-start">
+          <Card>
+            <CardHeader>
+              <CardDescription className="text-xs font-bold tracking-wide">COMPETIÇÕES</CardDescription>
+              <CardAction className="flex gap-1">
+                <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setSelectedEvents(competitions.map((c) => c.code))}>Todas</Button>
+                <span className="text-muted-foreground">·</span>
+                <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setSelectedEvents([])}>Limpar</Button>
+              </CardAction>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2.5">
+              {competitions.map((c) => (
+                <label key={c.id} className="flex cursor-pointer items-center gap-2 text-sm">
+                  <Checkbox checked={selectedEvents.includes(c.code)} onCheckedChange={() => toggleEvent(c.code)} />
+                  <span className="flex-1">{c.name}</span>
+                  {c.year && <small className="font-mono text-xs text-muted-foreground">{c.year}</small>}
+                </label>
+              ))}
+            </CardContent>
+          </Card>
 
-          <section className="filter-group">
-            <div className="filter-group-header">
-              <p className="eyebrow">ESTILOS</p>
-              <div className="filter-actions">
-                <button onClick={() => setSelectedStyles(allStyles)}>Todos</button>
-                <button onClick={() => setSelectedStyles([])}>Limpar</button>
-              </div>
-            </div>
-            {allStyles.map((style) => (
-              <label key={style} className="filter-check">
-                <input type="checkbox" checked={selectedStyles.includes(style)} onChange={() => toggleStyle(style)} />
-                <span>{style}</span>
-              </label>
-            ))}
-          </section>
+          <Card>
+            <CardHeader>
+              <CardDescription className="text-xs font-bold tracking-wide">ESTILOS</CardDescription>
+              <CardAction className="flex gap-1">
+                <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setSelectedStyles(allStyles)}>Todos</Button>
+                <span className="text-muted-foreground">·</span>
+                <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setSelectedStyles([])}>Limpar</Button>
+              </CardAction>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2.5">
+              {allStyles.map((style) => (
+                <label key={style} className="flex cursor-pointer items-center gap-2 text-sm">
+                  <Checkbox checked={selectedStyles.includes(style)} onCheckedChange={() => toggleStyle(style)} />
+                  <span>{style}</span>
+                </label>
+              ))}
+            </CardContent>
+          </Card>
 
-          <section className="filter-group">
-            <div className="filter-group-header">
-              <p className="eyebrow">COMPETÊNCIAS</p>
-              <div className="filter-actions">
-                <button onClick={() => setSelectedCompetencias(allCompetencias)}>Todas</button>
-                <button onClick={() => setSelectedCompetencias([])}>Limpar</button>
-              </div>
-            </div>
-            {allCompetencias.map((comp) => (
-              <label key={comp} className="filter-check">
-                <input type="checkbox" checked={selectedCompetencias.includes(comp)} onChange={() => toggleCompetencia(comp)} />
-                <span>{comp}</span>
-              </label>
-            ))}
-          </section>
+          <Card>
+            <CardHeader>
+              <CardDescription className="text-xs font-bold tracking-wide">COMPETÊNCIAS</CardDescription>
+              <CardAction className="flex gap-1">
+                <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setSelectedCompetencias(allCompetencias)}>Todas</Button>
+                <span className="text-muted-foreground">·</span>
+                <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setSelectedCompetencias([])}>Limpar</Button>
+              </CardAction>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2.5">
+              {allCompetencias.map((comp) => (
+                <label key={comp} className="flex cursor-pointer items-center gap-2 text-sm">
+                  <Checkbox checked={selectedCompetencias.includes(comp)} onCheckedChange={() => toggleCompetencia(comp)} />
+                  <span>{comp}</span>
+                </label>
+              ))}
+            </CardContent>
+          </Card>
         </aside>
 
-        <div className="explorer-content">
-          <div className="result-kpis">
+        <div className="min-w-0">
+          <div className="mb-3.5 grid grid-cols-2 gap-3.5 @xl/main:grid-cols-4">
             <Metric label="Movimentos avaliados" value={loading ? '—' : String(total)} />
             <Metric label="Execuções completas" value={loading ? '—' : String(complete)} />
             <Metric label="Taxa de domínio" value={loading ? '—' : total ? `${Math.round((complete / total) * 100)}%` : '—'} />
@@ -331,55 +346,63 @@ export function ExplorerPage() {
           </div>
 
           {loading ? (
-            <p className="explorer-loading">Carregando dados...</p>
+            <p className="py-12 text-center text-sm text-muted-foreground">Carregando dados...</p>
           ) : (
             <>
-              <div className="explorer-charts">
-                <section className="explorer-chart">
-                  <p className="eyebrow">TÉCNICO · RESULTADO</p>
-                  <h3>Qualidade da execução por evento</h3>
-                  <div className="chart-area">
-                    <ResponsiveBar
-                      data={resultadoData}
-                      keys={chartKeys}
-                      indexBy="label"
-                      groupMode="grouped"
-                      margin={barMargin(selectedEvents.length)}
-                      padding={0.25}
-                      innerPadding={2}
-                      colors={{ scheme: 'tableau10' }}
-                      theme={THEME}
-                      axisBottom={{ tickRotation: -15, tickSize: 0, tickPadding: 6 }}
-                      axisLeft={{ tickSize: 0, tickPadding: 8 }}
-                      enableLabel={false}
-                      borderRadius={2}
-                      legends={barLegends(selectedEvents.length)}
-                    />
-                  </div>
-                </section>
+              <div className="mb-3.5 grid grid-cols-1 gap-3.5 @2xl/main:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardDescription className="text-xs font-bold tracking-wide">TÉCNICO · RESULTADO</CardDescription>
+                    <CardTitle>Qualidade da execução por evento</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[260px]">
+                      <ResponsiveBar
+                        data={resultadoData}
+                        keys={chartKeys}
+                        indexBy="label"
+                        groupMode="grouped"
+                        margin={barMargin(selectedEvents.length)}
+                        padding={0.25}
+                        innerPadding={2}
+                        colors={{ scheme: 'tableau10' }}
+                        theme={THEME}
+                        axisBottom={{ tickRotation: -15, tickSize: 0, tickPadding: 6 }}
+                        axisLeft={{ tickSize: 0, tickPadding: 8 }}
+                        enableLabel={false}
+                        borderRadius={2}
+                        legends={barLegends(selectedEvents.length)}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
 
-                <section className="explorer-chart">
-                  <p className="eyebrow">TÉCNICO · COMPETÊNCIA</p>
-                  <h3>Movimentos por competência e evento</h3>
-                  <div className="chart-area">
-                    <ResponsiveBar
-                      data={competenciaData}
-                      keys={chartKeys}
-                      indexBy="label"
-                      groupMode="grouped"
-                      margin={barMargin(selectedEvents.length)}
-                      padding={0.25}
-                      innerPadding={2}
-                      colors={{ scheme: 'tableau10' }}
-                      theme={THEME}
-                      axisBottom={{ tickRotation: -15, tickSize: 0, tickPadding: 6 }}
-                      axisLeft={{ tickSize: 0, tickPadding: 8 }}
-                      enableLabel={false}
-                      borderRadius={2}
-                      legends={barLegends(selectedEvents.length)}
-                    />
-                  </div>
-                </section>
+                <Card>
+                  <CardHeader>
+                    <CardDescription className="text-xs font-bold tracking-wide">TÉCNICO · COMPETÊNCIA</CardDescription>
+                    <CardTitle>Movimentos por competência e evento</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[260px]">
+                      <ResponsiveBar
+                        data={competenciaData}
+                        keys={chartKeys}
+                        indexBy="label"
+                        groupMode="grouped"
+                        margin={barMargin(selectedEvents.length)}
+                        padding={0.25}
+                        innerPadding={2}
+                        colors={{ scheme: 'tableau10' }}
+                        theme={THEME}
+                        axisBottom={{ tickRotation: -15, tickSize: 0, tickPadding: 6 }}
+                        axisLeft={{ tickSize: 0, tickPadding: 8 }}
+                        enableLabel={false}
+                        borderRadius={2}
+                        legends={barLegends(selectedEvents.length)}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Drill-down por competência */}
@@ -413,75 +436,80 @@ export function ExplorerPage() {
                   })
 
                   return (
-                    <section key={comp} className="competencia-card">
-                      <button
-                        className="competencia-header"
-                        onClick={() => setExpandedCompetencia(isExpanded ? null : comp)}
-                      >
-                        <div className="competencia-info">
-                          <p className="eyebrow">TÉCNICO · MOTOR</p>
-                          <h3>{comp}</h3>
+                    <Collapsible
+                      key={comp}
+                      open={isExpanded}
+                      onOpenChange={(open) => setExpandedCompetencia(open ? comp : null)}
+                      className="mb-3 rounded-xl border bg-card"
+                    >
+                      <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left">
+                        <div>
+                          <p className="mb-0.5 text-xs font-bold tracking-wide text-muted-foreground">TÉCNICO · MOTOR</p>
+                          <h3 className="font-heading text-sm font-medium text-foreground">{comp}</h3>
                         </div>
-                        <div className="competencia-stats">
+                        <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
                           <span>{compRows.length} registros</span>
                           <span>
                             {compRows.length
                               ? `${Math.round((compComplete / compRows.length) * 100)}% domínio`
                               : '—'}
                           </span>
-                          {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                          {isExpanded ? <ChevronUp className="size-4" aria-hidden="true" /> : <ChevronDown className="size-4" aria-hidden="true" />}
                         </div>
-                      </button>
+                      </CollapsibleTrigger>
 
-                      {isExpanded && (
-                        <div className="competencia-detail">
-                          {/* movement filter */}
-                          <div className="avaliacao-filter">
-                            <div className="avaliacao-filter-header">
-                              <p className="eyebrow">MOVIMENTOS</p>
-                              <div className="filter-actions">
-                                <button onClick={() => setSelectedAvaliacoes((p) => ({ ...p, [comp]: allAvs }))}>
-                                  Todos
-                                </button>
-                                <button onClick={() => setSelectedAvaliacoes((p) => ({ ...p, [comp]: [] }))}>
-                                  Limpar
-                                </button>
-                              </div>
-                            </div>
-                            <div className="avaliacao-checks">
-                              {allAvs.map((av) => (
-                                <label key={av} className="filter-check filter-check--pill">
-                                  <input
-                                    type="checkbox"
-                                    checked={selAvs.includes(av)}
-                                    onChange={() => toggleAvaliacao(comp, av)}
-                                  />
-                                  <span>{av}</span>
-                                </label>
-                              ))}
+                      <CollapsibleContent className="px-5 pb-5">
+                        {/* movement filter */}
+                        <div className="mb-3.5 rounded-lg bg-muted/50 p-3.5">
+                          <div className="mb-2.5 flex items-center justify-between gap-3">
+                            <p className="text-xs font-bold tracking-wide text-muted-foreground">MOVIMENTOS</p>
+                            <div className="flex gap-1">
+                              <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setSelectedAvaliacoes((p) => ({ ...p, [comp]: allAvs }))}>
+                                Todos
+                              </Button>
+                              <span className="text-muted-foreground">·</span>
+                              <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setSelectedAvaliacoes((p) => ({ ...p, [comp]: [] }))}>
+                                Limpar
+                              </Button>
                             </div>
                           </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {allAvs.map((av) => (
+                              <Toggle
+                                key={av}
+                                size="sm"
+                                variant="outline"
+                                pressed={selAvs.includes(av)}
+                                onPressedChange={() => toggleAvaliacao(comp, av)}
+                                className="rounded-full text-xs"
+                              >
+                                {av}
+                              </Toggle>
+                            ))}
+                          </div>
+                        </div>
 
-                          {/* per-movement stacked charts: X = competitions */}
-                          <div className="comp-breakdowns">
-                            {perAvCharts.map(({ av, data }) => {
-                              const isAvExpanded = expandedAvs[comp] === av
-                              return (
-                                <section
-                                  key={av}
-                                  className={`explorer-chart${isAvExpanded ? ' explorer-chart--fullwidth' : ''}`}
-                                >
-                                  <div className="chart-title-row">
-                                    <h3>{av}</h3>
-                                    <button
-                                      className="expand-av-btn"
+                        {/* per-movement stacked charts: X = competitions */}
+                        <div className="grid grid-cols-1 gap-3.5 @2xl/main:grid-cols-2">
+                          {perAvCharts.map(({ av, data }) => {
+                            const isAvExpanded = expandedAvs[comp] === av
+                            return (
+                              <Card key={av} className={isAvExpanded ? '@2xl/main:col-span-2' : undefined}>
+                                <CardHeader>
+                                  <CardTitle className="text-sm">{av}</CardTitle>
+                                  <CardAction>
+                                    <Button
+                                      variant="outline"
+                                      size="icon-sm"
                                       onClick={() => toggleExpandAv(comp, av)}
                                       title={isAvExpanded ? 'Recolher' : 'Expandir'}
                                     >
-                                      {isAvExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                                    </button>
-                                  </div>
-                                  <div className={`chart-area${isAvExpanded ? ' chart-area--expanded' : ' chart-area--tall'}`}>
+                                      {isAvExpanded ? <ChevronUp aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
+                                    </Button>
+                                  </CardAction>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className={isAvExpanded ? 'h-[420px]' : 'h-[320px]'}>
                                     <ResponsiveBar
                                       data={data}
                                       keys={resultados}
@@ -510,23 +538,23 @@ export function ExplorerPage() {
                                       }]}
                                     />
                                   </div>
-                                </section>
-                              )
-                            })}
-                          </div>
+                                </CardContent>
+                              </Card>
+                            )
+                          })}
                         </div>
-                      )}
-                    </section>
+                      </CollapsibleContent>
+                    </Collapsible>
                   )
                 })}
 
               {/* ── PERFIL SOCIAL ─────────────────────────── */}
-              <div className="explorer-section-divider">
-                <p className="eyebrow">PERFIL DO ATLETA</p>
-                <h2>Dados socioesportivos</h2>
+              <div className="mt-7 mb-4 border-t pt-6">
+                <p className="mb-1 text-xs font-bold tracking-wide text-muted-foreground">PERFIL DO ATLETA</p>
+                <h2 className="font-heading text-xl font-semibold text-foreground">Dados socioesportivos</h2>
               </div>
 
-              <div className="result-kpis">
+              <div className="mb-3.5 grid grid-cols-2 gap-3.5 @xl/main:grid-cols-4">
                 <Metric label="Atletas com perfil" value={profileLoading ? '—' : String(profileFiltered.length)} />
                 <Metric
                   label="Fazem outro esporte"
@@ -546,32 +574,36 @@ export function ExplorerPage() {
               </div>
 
               {profileLoading ? (
-                <p className="explorer-loading">Carregando perfis...</p>
+                <p className="py-12 text-center text-sm text-muted-foreground">Carregando perfis...</p>
               ) : (
                 SOCIAL_DIMS.map(({ key, label, eyebrow }) => {
                   const isOpen = expandedSocial === key
                   const data = isOpen ? socialChartData(key) : []
                   return (
-                    <section key={key} className="competencia-card">
-                      <button
-                        className="competencia-header"
-                        onClick={() => setExpandedSocial(isOpen ? null : key)}
-                      >
-                        <div className="competencia-info">
-                          <p className="eyebrow">{eyebrow}</p>
-                          <h3>{label}</h3>
+                    <Collapsible
+                      key={key}
+                      open={isOpen}
+                      onOpenChange={(open) => setExpandedSocial(open ? key : null)}
+                      className="mb-3 rounded-xl border bg-card"
+                    >
+                      <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left">
+                        <div>
+                          <p className="mb-0.5 text-xs font-bold tracking-wide text-muted-foreground">{eyebrow}</p>
+                          <h3 className="font-heading text-sm font-medium text-foreground">{label}</h3>
                         </div>
-                        <div className="competencia-stats">
+                        <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
                           <span>{profileFiltered.length} registros</span>
-                          {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                          {isOpen ? <ChevronUp className="size-4" aria-hidden="true" /> : <ChevronDown className="size-4" aria-hidden="true" />}
                         </div>
-                      </button>
+                      </CollapsibleTrigger>
 
-                      {isOpen && (
-                        <div className="competencia-detail">
-                          <section className="explorer-chart">
-                            <h3>{label} por competição</h3>
-                            <div className="chart-area chart-area--tall">
+                      <CollapsibleContent className="px-5 pb-5">
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-sm">{label} por competição</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="h-[320px]">
                               <ResponsiveBar
                                 data={data}
                                 keys={chartKeys}
@@ -593,10 +625,10 @@ export function ExplorerPage() {
                                 legends={barLegends(selectedEvents.length)}
                               />
                             </div>
-                          </section>
-                        </div>
-                      )}
-                    </section>
+                          </CardContent>
+                        </Card>
+                      </CollapsibleContent>
+                    </Collapsible>
                   )
                 })
               )}
@@ -604,6 +636,7 @@ export function ExplorerPage() {
             </>
           )}
         </div>
+      </div>
       </div>
     </PageHeader>
   )
