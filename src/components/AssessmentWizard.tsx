@@ -22,6 +22,7 @@ function buildPayload(kind: FormKind, answers: Answers): SubmitPayload {
     gender: answers.gender,
     weight: answers.weight,
     age_code: answers.age_category_code,
+    entry_id: answers.entry_id ?? undefined,
   }
   if (kind === 'profile') {
     return {
@@ -34,7 +35,6 @@ function buildPayload(kind: FormKind, answers: Answers): SubmitPayload {
       other_sports: Object.entries(answers)
         .filter(([k, v]) => k.startsWith('sport-') && Boolean(v))
         .map(([, v]) => v),
-      birth: answers.birth,
       school: answers.school,
     }
   }
@@ -148,7 +148,6 @@ function IdentityFields({
         )}
         {kind === 'profile' && answers.entry_id && (
           <>
-            <Field label="Nascimento" type="date" value={answers.birth || ''} onChange={(v) => update('birth', v)} />
             <Field label="Escola" value={answers.school || ''} onChange={(v) => update('school', v)} />
           </>
         )}
