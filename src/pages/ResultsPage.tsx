@@ -38,13 +38,12 @@ export function ResultsPage() {
 
   if (selectedEntry) {
     return (
-      <main className="results-page">
-        <PageHeader active="results" />
+      <PageHeader active="results">
         <AthleteDetailPage
           entryId={selectedEntry}
           onBack={() => setSelectedEntry(null)}
         />
-      </main>
+      </PageHeader>
     )
   }
 
@@ -54,9 +53,7 @@ export function ResultsPage() {
   const loading = competitionsLoading || resultsLoading
 
   return (
-    <main className="results-page">
-      <PageHeader active="results" />
-
+    <PageHeader active="results">
       <section className="results-hero">
         <p className="eyebrow">RESULTADOS OFICIAIS</p>
         <h1>
@@ -148,7 +145,7 @@ export function ResultsPage() {
                   ) : (
                     rows.slice(0, 18).map((row) => (
                       <tr
-                        key={row.entry_id}
+                        key={row.entryId}
                         className="result-row--clickable"
                         onClick={() => setSelectedEntry(row.entryId)}
                         title="Ver detalhe do atleta"
@@ -160,7 +157,7 @@ export function ResultsPage() {
                         <td>{row.wins}-{row.losses}</td>
                         <td className="technical">{row.technicalPointsFor}</td>
                         <td className="positive">
-                          {row.technicalPointsDiff >= 0
+                          {row.technicalPointsDiff != null && row.technicalPointsDiff >= 0
                             ? `+${row.technicalPointsDiff}`
                             : row.technicalPointsDiff}
                         </td>
@@ -205,6 +202,6 @@ export function ResultsPage() {
           </aside>
         </div>
       </section>
-    </main>
+    </PageHeader>
   )
 }

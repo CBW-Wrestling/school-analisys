@@ -1,4 +1,12 @@
-import { ChevronDown } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select as SelectRoot,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export function Field({
   label,
@@ -14,10 +22,10 @@ export function Field({
   required?: boolean
 }) {
   return (
-    <label className="field">
-      <span>{label}{required && <b> *</b>}</span>
-      <input required={required} type={type} value={value} onChange={(e) => onChange(e.target.value)} />
-    </label>
+    <div className="field">
+      <Label>{label}{required && <span aria-hidden="true"> *</span>}</Label>
+      <Input type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} />
+    </div>
   )
 }
 
@@ -37,20 +45,19 @@ export function Select({
   disabled?: boolean
 }) {
   return (
-    <label className={`field${disabled ? ' field--disabled' : ''}`}>
-      <span>{label}</span>
-      <div className="select-wrap">
-        <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
-          <option value="">{placeholder || options[0]}</option>
+    <div className={`field${disabled ? ' field--disabled' : ''}`}>
+      <Label>{label}</Label>
+      <SelectRoot value={value} disabled={disabled} onValueChange={onChange}>
+        <SelectTrigger className="w-full"><SelectValue placeholder={placeholder || options[0]} /></SelectTrigger>
+        <SelectContent>
           {options.map((option) => (
-            <option key={option} value={option}>
+            <SelectItem key={option} value={option}>
               {option}{label.includes('Peso') ? ' kg' : ''}
-            </option>
+            </SelectItem>
           ))}
-        </select>
-        <ChevronDown size={15} aria-hidden="true" />
-      </div>
-    </label>
+        </SelectContent>
+      </SelectRoot>
+    </div>
   )
 }
 
@@ -70,17 +77,16 @@ export function SelectPairs({
   disabled?: boolean
 }) {
   return (
-    <label className={`field${disabled ? ' field--disabled' : ''}`}>
-      <span>{label}</span>
-      <div className="select-wrap">
-        <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
-          {placeholder && <option value="">{placeholder}</option>}
+    <div className={`field${disabled ? ' field--disabled' : ''}`}>
+      <Label>{label}</Label>
+      <SelectRoot value={value} disabled={disabled} onValueChange={onChange}>
+        <SelectTrigger className="w-full"><SelectValue placeholder={placeholder} /></SelectTrigger>
+        <SelectContent>
           {options.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
+            <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
           ))}
-        </select>
-        <ChevronDown size={15} aria-hidden="true" />
-      </div>
-    </label>
+        </SelectContent>
+      </SelectRoot>
+    </div>
   )
 }

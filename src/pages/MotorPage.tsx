@@ -9,8 +9,7 @@ export function MotorPage() {
   const { data: summary, loading } = useApiData<MotorSummary>('/api/dashboard/motor/summary')
 
   return (
-    <main className="analysis-page">
-      <PageHeader active="motor" />
+    <PageHeader active="motor">
       <PageIntro eyebrow="AVALIAÇÃO TÉCNICA" title="O movimento como base da evolução." text="Registros de movimentos fundamentais organizados por competência técnica." />
       <section className="analysis-content">
         <div className="result-kpis">
@@ -36,7 +35,7 @@ export function MotorPage() {
           </section>
         </div>
       </section>
-    </main>
+    </PageHeader>
   )
 }
 

@@ -41,12 +41,6 @@ function boolLabel(v: boolean | null, yes = 'Sim', no = 'Não') {
   return v ? yes : no
 }
 
-function formatDate(iso: string | null) {
-  if (!iso) return null
-  const [y, m, d] = iso.split('-')
-  return `${d}/${m}/${y}`
-}
-
 export function AthleteDetailPage({ entryId, onBack }: Props) {
   const { data: d, loading, error } = useApiData<AthleteDetail>(`/api/athletes/entries/${entryId}`)
 

@@ -1,6 +1,10 @@
 import { useRef, useState, useCallback } from 'react'
 import { Upload, FileCode2, CheckCircle, AlertCircle } from 'lucide-react'
 import { LoadingSpinner } from './LoadingSpinner'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   uploadImport,
   selectCompetition,
@@ -146,14 +150,13 @@ export function SqlImportFlow({ importType }: Props) {
               </>
             )}
           </div>
-          <button
-            className="primary"
+          <Button
             style={{ marginTop: 16, width: '100%', justifyContent: 'center' }}
             disabled={!selectedFile}
             onClick={() => selectedFile && handleUpload(selectedFile)}
           >
             Analisar arquivo
-          </button>
+          </Button>
         </div>
       )}
 
@@ -171,7 +174,7 @@ export function SqlImportFlow({ importType }: Props) {
           <h3 style={{ margin: '0 0 16px', color: 'var(--navy)', fontSize: 17 }}>
             Selecione a competição
           </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <RadioGroup value={selected} onValueChange={setSelected}>
             {competitions.map((c) => (
               <label
                 key={c.id}
@@ -180,41 +183,38 @@ export function SqlImportFlow({ importType }: Props) {
                   padding: '12px 16px',
                   border: `1px solid ${selected === c.id ? 'var(--green)' : 'var(--line)'}`,
                   borderRadius: 7,
-                  background: selected === c.id ? 'var(--mint)' : '#fff',
+                  background: selected === c.id ? 'var(--mint)' : 'var(--paper)',
                   cursor: 'pointer',
                 }}
               >
-                <input
-                  type="radio"
-                  name="competition"
+                <RadioGroupItem
                   value={c.id}
-                  checked={selected === c.id}
-                  onChange={() => setSelected(c.id)}
+                  aria-label={c.name}
                 />
                 <span style={{ fontWeight: 700, flex: 1 }}>{c.name}</span>
                 {c.date && (
-                  <small style={{ color: 'var(--muted)', fontSize: 11, fontFamily: "'DM Mono', monospace" }}>
+                  <small style={{ color: 'var(--muted)', fontSize: 11, fontFamily: 'var(--font-mono)' }}>
                     {c.date}
                   </small>
                 )}
               </label>
             ))}
-          </div>
+          </RadioGroup>
           <div style={{ marginTop: 20, display: 'flex', gap: 12 }}>
-            <button className="secondary" onClick={reset}>Voltar</button>
-            <button
-              className="primary"
+            <Button variant="outline" onClick={reset}>Voltar</Button>
+            <Button
               disabled={!selected}
               onClick={handleSelectCompetition}
             >
               {actionLabel}
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {step === 'done' && (
-        <div style={{ marginTop: 40, textAlign: 'center' }}>
+        <Card style={{ marginTop: 40, textAlign: 'center' }}>
+          <CardContent className="pt-6">
           <CheckCircle size={52} style={{ color: 'var(--green)' }} />
           <h3 style={{ margin: '16px 0 6px', color: 'var(--navy)', fontSize: 20 }}>
             {isResults ? 'Resultados importados!' : 'Competição criada!'}
@@ -224,23 +224,22 @@ export function SqlImportFlow({ importType }: Props) {
               ? 'Os resultados foram gravados com sucesso no banco.'
               : 'A estrutura da competição foi criada com sucesso no banco.'}
           </p>
-          <button className="primary" style={{ marginTop: 24 }} onClick={reset}>
+          <Button style={{ marginTop: 24 }} onClick={reset}>
             Nova importação
-          </button>
-        </div>
+          </Button>
+          </CardContent>
+        </Card>
       )}
 
       {step === 'error' && (
-        <div style={{ marginTop: 40, textAlign: 'center' }}>
-          <AlertCircle size={52} style={{ color: '#dc2626' }} />
-          <h3 style={{ margin: '16px 0 6px', color: 'var(--navy)', fontSize: 20 }}>
-            Erro na importação
-          </h3>
-          <p style={{ color: 'var(--muted)', fontSize: 13, maxWidth: 420, margin: '0 auto 24px' }}>
+        <Alert variant="destructive" style={{ marginTop: 40, textAlign: 'center' }}>
+          <AlertCircle size={52} style={{ color: 'var(--destructive)' }} />
+          <AlertTitle style={{ marginTop: 16, fontSize: 20 }}>Erro na importação</AlertTitle>
+          <AlertDescription style={{ maxWidth: 420, margin: '0 auto 24px' }}>
             {errorMsg}
-          </p>
-          <button className="secondary" onClick={reset}>Tentar novamente</button>
-        </div>
+          </AlertDescription>
+          <Button variant="outline" onClick={reset}>Tentar novamente</Button>
+        </Alert>
       )}
     </section>
   )

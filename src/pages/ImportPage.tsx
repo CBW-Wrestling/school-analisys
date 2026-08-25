@@ -58,9 +58,7 @@ export function ImportPage() {
   }
 
   return (
-    <main className="analysis-page">
-      <PageHeader active="collection" />
-
+    <PageHeader active="collection">
       <section className="analysis-content" style={{ maxWidth: 540, margin: '0 auto' }}>
         <p className="eyebrow">IMPORTAÇÃO</p>
         <h1>Importar arquivo SQL</h1>
@@ -125,6 +123,6 @@ export function ImportPage() {
           </div>
         )}
       </section>
-    </main>
+    </PageHeader>
   )
 }

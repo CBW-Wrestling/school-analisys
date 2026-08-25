@@ -14,6 +14,7 @@ import { MotorPage } from "./pages/MotorPage"
 import { PhysicalPage } from "./pages/PhysicalPage"
 import { ProfilesPage } from "./pages/ProfilesPage"
 import { ResultsPage } from "./pages/ResultsPage"
+import { SidebarProvider } from "./components/ui/sidebar"
 import type { FormKind } from "./types"
 
 function App() {
@@ -35,18 +36,20 @@ function App() {
 
   if (accessToken && refreshToken) return null // aguarda reload
 
-  if (requestedForm && requestedForm in details) return <CollectionPage initialKind={requestedForm as FormKind} />
-  if (requestedView === "explorer")   return <ExplorerPage />
-  if (requestedView === "results")    return <ResultsPage />
-  if (requestedView === "profiles")   return <ProfilesPage />
-  if (requestedView === "physical")   return <PhysicalPage />
-  if (requestedView === "motor")      return <MotorPage />
-  if (requestedView === "collection") return <CollectionHome />
-  if (requestedView === "import")     return <ImportPage />
-  if (requestedView === "competition-import") return <CompetitionImportPage />
-  if (requestedView === "results-import")    return <ResultsImportPage />
-  if (requestedView === "profile")    return <ProfilePage />
-  return <DashboardPage />
+  const page = requestedForm && requestedForm in details ? <CollectionPage initialKind={requestedForm as FormKind} />
+    : requestedView === "explorer" ? <ExplorerPage />
+    : requestedView === "results" ? <ResultsPage />
+    : requestedView === "profiles" ? <ProfilesPage />
+    : requestedView === "physical" ? <PhysicalPage />
+    : requestedView === "motor" ? <MotorPage />
+    : requestedView === "collection" ? <CollectionHome />
+    : requestedView === "import" ? <ImportPage />
+    : requestedView === "competition-import" ? <CompetitionImportPage />
+    : requestedView === "results-import" ? <ResultsImportPage />
+    : requestedView === "profile" ? <ProfilePage />
+    : <DashboardPage />
+
+  return <SidebarProvider defaultOpen>{page}</SidebarProvider>
 }
 
 export default App

@@ -5,8 +5,8 @@ import type { FormKind } from '../types'
 
 export function CollectionHome() {
   return (
-    <main className="app-shell">
-      <PageHeader active="collection" />
+    <PageHeader active="collection">
+      <div className="app-shell">
       <section className="hero" id="inicio">
         <div>
           <p className="eyebrow">CENTRO DE INTELIGÊNCIA E RESULTADOS</p>
@@ -66,6 +66,7 @@ export function CollectionHome() {
         </div>
       </section>
       <footer>Confederação Brasileira de Wrestling <span>·</span> Plataforma de inteligência esportiva</footer>
-    </main>
+      </div>
+    </PageHeader>
   )
 }

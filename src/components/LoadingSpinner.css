@@ -8,8 +8,8 @@
 }
 
 .spinner {
-  border: 3px solid rgba(16, 47, 92, 0.12);
-  border-top-color: #102f5c;
+  border: 3px solid color-mix(in srgb, var(--navy) 12%, transparent);
+  border-top-color: var(--navy);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
@@ -20,7 +20,7 @@
 
 .spinner-label {
   font-size: 14px;
-  color: #5e6f80;
+  color: var(--muted);
   margin: 0;
 }
 

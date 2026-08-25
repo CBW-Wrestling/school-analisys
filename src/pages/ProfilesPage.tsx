@@ -9,8 +9,7 @@ export function ProfilesPage() {
   const { data: summary, loading } = useApiData<ProfileSummary>('/api/dashboard/profiles/summary')
 
   return (
-    <main className="analysis-page">
-      <PageHeader active="profiles" />
+    <PageHeader active="profiles">
       <PageIntro eyebrow="PERFIL DE ATLETAS" title="A base que constrói o atleta." text="Contexto de formação, tempo de prática e hábitos esportivos registrados nos eventos escolares." />
       <section className="analysis-content">
         <div className="result-kpis">
@@ -43,6 +42,6 @@ export function ProfilesPage() {
           </section>
         </div>
       </section>
-    </main>
+    </PageHeader>
   )
 }

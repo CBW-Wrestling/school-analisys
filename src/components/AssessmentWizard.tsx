@@ -5,6 +5,9 @@ import { details, movements } from '../constants'
 import { apiPost, useApiRows } from '../lib/api'
 import type { Answers, CompetitionAthlete, CompetitionRow, FormKind, Props } from '../types'
 import { Field, Select, SelectPairs } from './Field'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 
 type SubmitPayload = Record<string, unknown>
 
@@ -179,19 +182,23 @@ function ProfileFields({ answers, update }: Props) {
       </div>
       <fieldset>
         <legend>Pratica outra modalidade?</legend>
-        <div className="choice-row">
+        <RadioGroup className="choice-row" value={answers.otherSport || ''} onValueChange={(value) => update('otherSport', value)}>
           {['Não pratico', 'Sim'].map((choice) => (
             <label key={choice}>
-              <input type="radio" name="otherSport" checked={answers.otherSport === choice} onChange={() => update('otherSport', choice)} />
+              <RadioGroupItem value={choice} aria-label={choice} />
               {choice}
             </label>
           ))}
-        </div>
+        </RadioGroup>
         {answers.otherSport === 'Sim' && (
           <div className="check-grid">
             {['Judô', 'Jiu-Jitsu / BJJ', 'Capoeira', 'MMA', 'Muay Thai', 'Vôlei', 'Outra'].map((item) => (
               <label key={item}>
-                <input type="checkbox" onChange={() => update(`sport-${item}`, item)} />
+                <Checkbox
+                  checked={Boolean(answers[`sport-${item}`])}
+                  onCheckedChange={(checked) => update(`sport-${item}`, checked === true ? item : '')}
+                  aria-label={item}
+                />
                 {item}
               </label>
             ))}
@@ -230,9 +237,9 @@ function MotorFields({ answers, update }: Props) {
       </div>
       <div className="competencies">
         {Object.keys(movements).map((item) => (
-          <button type="button" className={competency === item ? 'selected' : ''} key={item} onClick={() => update('competency', item)}>
+          <Button variant={competency === item ? 'default' : 'outline'} type="button" key={item} onClick={() => update('competency', item)}>
             {item}
-          </button>
+          </Button>
         ))}
       </div>
       <div className="movement-list">
@@ -372,15 +379,14 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
             />
             {duplicateError && <p className="form-error">{duplicateError}</p>}
             <div className="form-dup-actions">
-              <button
+              <Button
                 type="button"
-                className="primary"
                 disabled={!duplicateTarget || duplicateSubmitting}
                 onClick={handleDuplicate}
               >
                 {duplicateSubmitting ? 'Duplicando…' : <><Check size={15} /> Confirmar duplicação</>}
-              </button>
-              <button type="button" className="secondary" onClick={() => setDuplicating(false)}>Cancelar</button>
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setDuplicating(false)}>Cancelar</Button>
             </div>
           </div>
         </section>
@@ -395,17 +401,17 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
         {duplicateDone && <p className="form-dup-done">Formulário duplicado com sucesso.</p>}
         <p>Deseja enviar outro formulário ou finalizar a coleta?</p>
         <div>
-          <button className="primary" onClick={onAnother}>Enviar outro formulário <ArrowRight size={16} /></button>
-          <a className="secondary" href="/">Finalizar coleta</a>
+          <Button onClick={onAnother}>Enviar outro formulário <ArrowRight size={16} /></Button>
+          <Button asChild variant="outline"><a href="/">Finalizar coleta</a></Button>
         </div>
         {duplicateCandidates.length > 0 && !duplicateDone && (
-          <button
+          <Button
             type="button"
-            className="dup-btn"
+            variant="outline"
             onClick={() => { setDuplicating(true); setDuplicateTarget('') }}
           >
             <Copy size={14} /> Duplicar formulário
-          </button>
+          </Button>
         )}
       </section>
     )
@@ -460,14 +466,14 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
           {submitError && step === 3 && <p className="form-error">{submitError}</p>}
           <div className="form-actions">
             {step > 1
-              ? <button type="button" className="secondary" onClick={() => setStep(step - 1)}><ArrowLeft size={16} /> Voltar</button>
+              ? <Button type="button" variant="outline" onClick={() => setStep(step - 1)}><ArrowLeft size={16} /> Voltar</Button>
               : <span />
             }
             {step < totalSteps
-              ? <button type="button" className="primary" disabled={!canAdvance} onClick={() => setStep(step + 1)}>Continuar <ArrowRight size={16} /></button>
-              : <button className="primary" type="submit" disabled={submitting}>
+              ? <Button type="button" disabled={!canAdvance} onClick={() => setStep(step + 1)}>Continuar <ArrowRight size={16} /></Button>
+              : <Button type="submit" disabled={submitting}>
                   {submitting ? 'Enviando…' : <><Check size={16} /> Enviar registro</>}
-                </button>
+                </Button>
             }
           </div>
         </form>

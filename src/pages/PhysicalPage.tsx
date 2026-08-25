@@ -11,8 +11,7 @@ export function PhysicalPage() {
   const fmt = (v: number | null | undefined) => v != null ? `${v} cm` : '—'
 
   return (
-    <main className="analysis-page">
-      <PageHeader active="physical" />
+    <PageHeader active="physical">
       <PageIntro eyebrow="AVALIAÇÃO FÍSICA" title="Indicadores para orientar o desenvolvimento." text="Medições antropométricas e de força registradas nas avaliações de atletas." />
       <section className="analysis-content">
         <div className="result-kpis">
@@ -38,7 +37,7 @@ export function PhysicalPage() {
           </section>
         </div>
       </section>
-    </main>
+    </PageHeader>
   )
 }
 
