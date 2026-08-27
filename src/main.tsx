@@ -6,6 +6,10 @@ import './theme.css'
 import { AuthGate } from './components/Auth'
 import { TooltipProvider } from './components/ui/tooltip'
 
+const initialTheme = localStorage.getItem('theme') ?? 'dark'
+document.documentElement.classList.toggle('dark', initialTheme === 'dark')
+document.documentElement.dataset.theme = initialTheme
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <TooltipProvider>

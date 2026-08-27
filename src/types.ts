@@ -124,6 +124,17 @@ export type ProfileRow = {
   eventIdentifier: string | null
 }
 
+export type PhysicalRow = {
+  estado: string | null
+  estilo: string | null
+  peso: string | null
+  enverguturaCm: string | null
+  estaturaCm: string | null
+  prensaoManualD: string | null
+  prensaoManualE: string | null
+  eventIdentifier: string | null
+}
+
 // ── Coleta ─────────────────────────────────────────────────────────
 export type CompetitionAthlete = {
   entryId: string

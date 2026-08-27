@@ -54,18 +54,18 @@ export function AthleteDetailPage({ entryId, onBack }: Props) {
   const { data: d, loading, error } = useApiData<AthleteDetail>(`/api/athletes/entries/${entryId}`)
 
   if (loading) return (
-    <div className="mx-auto max-w-[1200px] px-7 py-16 text-center text-sm text-muted-foreground">Carregando dados do atleta…</div>
+    <div className="mx-auto w-full max-w-[1400px] px-4 py-16 text-center text-sm text-muted-foreground md:px-6">Carregando dados do atleta…</div>
   )
 
   if (error) return (
-    <div className="mx-auto max-w-[1200px] px-7 py-16 text-center">
+    <div className="mx-auto w-full max-w-[1400px] px-4 py-16 text-center md:px-6">
       <p className="mb-4 text-sm text-muted-foreground">Erro ao carregar dados: {error}</p>
       <Button variant="outline" size="sm" onClick={onBack}><ArrowLeft data-icon="inline-start" aria-hidden="true" /> Voltar</Button>
     </div>
   )
 
   if (!d) return (
-    <div className="mx-auto max-w-[1200px] px-7 py-16 text-center">
+    <div className="mx-auto w-full max-w-[1400px] px-4 py-16 text-center md:px-6">
       <p className="mb-4 text-sm text-muted-foreground">Atleta não encontrado.</p>
       <Button variant="outline" size="sm" onClick={onBack}><ArrowLeft data-icon="inline-start" aria-hidden="true" /> Voltar</Button>
     </div>
@@ -78,15 +78,15 @@ export function AthleteDetailPage({ entryId, onBack }: Props) {
 
   return (
     <div className="@container/main">
-      <div className="mx-auto max-w-[1200px] px-7 py-8">
+      <div className="mx-auto w-full max-w-[1400px] px-4 py-8 md:px-6">
         <Button variant="outline" size="sm" className="mb-6" onClick={onBack}>
           <ArrowLeft data-icon="inline-start" aria-hidden="true" /> Resultados
         </Button>
 
         <div className="mb-7 flex flex-col items-start justify-between gap-4 border-b pb-6 @xl/main:flex-row @xl/main:items-center">
           <div>
-            <p className="mb-1 text-xs font-bold tracking-wide text-muted-foreground">{d.competitionName}</p>
-            <h2 className="font-heading text-3xl font-semibold text-foreground">{d.athleteName}</h2>
+            <p className="mb-1 text-xs font-medium tracking-wide text-muted-foreground">{d.competitionName}</p>
+            <h1 className="text-3xl leading-none tracking-tight text-foreground">{d.athleteName}</h1>
             <div className="mt-3 flex flex-wrap gap-1.5">
               <Badge variant="secondary">{d.style}</Badge>
               <Badge variant="secondary">{d.gender === 'M' ? 'Masculino' : 'Feminino'}</Badge>
@@ -143,7 +143,7 @@ export function AthleteDetailPage({ entryId, onBack }: Props) {
             ) : (
               Object.entries(motorByComp).map(([comp, items]) => (
                 <div key={comp} className="mb-3 last:mb-0">
-                  <p className="mb-1.5 text-xs font-bold tracking-wide text-muted-foreground">{comp}</p>
+                  <p className="mb-1.5 text-xs font-medium tracking-wide text-muted-foreground">{comp}</p>
                   {items.map((item) => <DetailRow key={item.movement} label={item.movement} value={item.result} />)}
                 </div>
               ))

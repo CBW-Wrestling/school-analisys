@@ -1,127 +1,173 @@
-import { Activity, ArrowRight, Dumbbell, Medal, Trophy, UserRound } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Activity, ArrowRight, BarChart3, Dumbbell, Medal, Share2, UserRound } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
-import { useApiData, useApiRows } from '../lib/api'
-import type { CompetitionRow, MotorSummary, PhysicalSummary, ProfileSummary } from '../types'
-import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { BrazilHeatmap } from '../components/dashboard/BrazilHeatmap'
+import { useApiRows } from '../lib/api'
+import type { CompetitionRow, MotorRow, PhysicalRow, ProfileRow, ResultRow } from '../types'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 
-function DashboardLink({ href, icon, title, text }: { href: string; icon: React.ReactNode; title: string; text: string }) {
+const resultScores: Record<string, number> = {
+  COMPLETE: 2,
+  INCOMPLETE: 1,
+  DID_NOT_DO: 0,
+  DOES_NOT_KNOW: 0,
+}
+
+const dimensions = [
+  { label: 'Acrobacias', matches: (value: string) => /acrob/i.test(value) },
+  { label: 'Técnicas de solo', matches: (value: string) => /solo|ch[aã]o/i.test(value) },
+  { label: 'Técnicas em pé', matches: (value: string) => /(^|\s)p[eé](\s|$)|em p[eé]/i.test(value) },
+]
+
+function matchesFilters(row: { eventIdentifier: string | null; estilo?: string | null; estado?: string | null }, event: string, style: string, state: string | null) {
+  return (event === 'all' || row.eventIdentifier === event) && (style === 'all' || row.estilo === style) && (!state || row.estado === state)
+}
+
+function FilterBar({ competitions, events, styles, year, event, style, onYearChange, onEventChange, onStyleChange }: {
+  competitions: CompetitionRow[]
+  events: CompetitionRow[]
+  styles: string[]
+  year: string
+  event: string
+  style: string
+  onYearChange: (value: string) => void
+  onEventChange: (value: string) => void
+  onStyleChange: (value: string) => void
+}) {
+  const years = [...new Set(competitions.map((item) => item.year).filter((item): item is number => item !== null))].sort((a, b) => b - a)
+  const hasActiveFilter = year !== 'all' || event !== 'all' || style !== 'all'
+
   return (
-    <a className="block no-underline" href={href}>
-      <Card className="@container/card h-full min-w-0 bg-gradient-to-t from-primary/5 to-card shadow-xs transition-shadow hover:shadow-md">
-        <CardHeader>
-          <span className="mb-2 inline-flex size-9 items-center justify-center rounded-md bg-primary/10 text-primary">{icon}</span>
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>{text}</CardDescription>
-          <CardAction>
-            <ArrowRight className="size-4 text-muted-foreground" aria-hidden="true" />
-          </CardAction>
-        </CardHeader>
-      </Card>
-    </a>
+    <div className="flex flex-wrap items-end justify-start gap-2 @3xl/main:justify-end">
+        <div className="w-36 shrink-0">
+          <Select value={year} onValueChange={onYearChange}>
+            <SelectTrigger id="dashboard-year" size="sm" className="w-36"><SelectValue placeholder="Todos os anos" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os anos</SelectItem>
+              {years.map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="w-52 shrink-0">
+          <Select value={event} onValueChange={onEventChange}>
+            <SelectTrigger id="dashboard-event" size="sm" className="w-52"><SelectValue placeholder="Todos os eventos" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os eventos</SelectItem>
+              {events.map((item) => <SelectItem key={item.id} value={item.code}>{item.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="w-36 shrink-0">
+          <Select value={style} onValueChange={onStyleChange}>
+            <SelectTrigger id="dashboard-style" size="sm" className="w-36"><SelectValue placeholder="Todos os estilos" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os estilos</SelectItem>
+              {styles.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button size="sm" variant="outline" disabled={!hasActiveFilter} onClick={() => { onYearChange('all'); onEventChange('all'); onStyleChange('all') }}>Limpar</Button>
+    </div>
   )
 }
 
-function StatCard({ icon, label, value, loading, hint }: { icon: React.ReactNode; label: string; value: string; loading: boolean; hint: string }) {
+function KpiCard({ icon, label, value, description, loading }: { icon: React.ReactNode; label: string; value: string; description: string; loading?: boolean }) {
   return (
-    <Card className="@container/card min-w-0 bg-gradient-to-t from-primary/5 to-card shadow-xs">
-      <CardHeader>
-        <CardDescription className="flex items-center gap-1.5">
-          {icon}
-          {label}
-        </CardDescription>
-        <CardTitle className="text-2xl font-semibold tabular-nums @[180px]/card:text-3xl">
-          {loading ? '—' : value}
-        </CardTitle>
+    <Card className="min-w-0 bg-linear-to-t from-primary/5 to-card shadow-xs">
+      <CardHeader className="gap-3">
+        <div className="flex size-8 items-center justify-center rounded-lg border bg-muted text-muted-foreground">{icon}</div>
+        <CardDescription>{label}</CardDescription>
       </CardHeader>
-      <CardFooter className="text-muted-foreground">{hint}</CardFooter>
+      <CardContent className="flex flex-col gap-1">
+        {loading ? <Skeleton className="h-9 w-24" /> : <div className="text-3xl font-medium leading-none tracking-tight tabular-nums">{value}</div>}
+        {loading ? <Skeleton className="h-4 w-40" /> : <p className="text-sm text-muted-foreground">{description}</p>}
+      </CardContent>
     </Card>
+  )
+}
+
+function NavigationHub({ href, icon, title, description }: { href: string; icon: React.ReactNode; title: string; description: string }) {
+  return (
+    <a href={href} className="group flex min-h-28 flex-col justify-between rounded-lg border bg-card p-4 no-underline transition-colors hover:bg-muted/50">
+      <span className="flex size-9 items-center justify-center rounded-lg border bg-muted text-muted-foreground">{icon}</span>
+      <span className="mt-4 flex items-center justify-between gap-3">
+        <span><span className="block font-medium">{title}</span><span className="mt-1 block text-sm text-muted-foreground">{description}</span></span>
+        <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden />
+      </span>
+    </a>
   )
 }
 
 export function DashboardPage() {
   const { rows: competitions, loading: competitionsLoading } = useApiRows<CompetitionRow>('/api/competitions')
-  const { data: profileSummary, loading: profileLoading } = useApiData<ProfileSummary>('/api/dashboard/profiles/summary')
-  const { data: physicalSummary, loading: physicalLoading } = useApiData<PhysicalSummary>('/api/dashboard/physical/summary')
-  const { data: motorSummary, loading: motorLoading } = useApiData<MotorSummary>('/api/dashboard/motor/summary')
+  const { rows: profiles, loading: profilesLoading } = useApiRows<ProfileRow>('/api/dashboard/profiles')
+  const { rows: physical, loading: physicalLoading } = useApiRows<PhysicalRow>('/api/dashboard/physical')
+  const { rows: motor, loading: motorLoading } = useApiRows<MotorRow>('/api/dashboard/motor')
+  const [year, setYear] = useState('all')
+  const [event, setEvent] = useState('all')
+  const [style, setStyle] = useState('all')
+  const [selectedState, setSelectedState] = useState<string | null>(null)
+  const selectedEvent = event === 'all' ? 'all' : event
+  const events = useMemo(() => year === 'all' ? competitions : competitions.filter((item) => String(item.year) === year), [competitions, year])
+  const baseProfiles = profiles.filter((row) => matchesFilters(row, selectedEvent, style, null))
+  const basePhysical = physical.filter((row) => matchesFilters(row, selectedEvent, style, null))
+  const baseMotor = motor.filter((row) => matchesFilters(row, selectedEvent, style, null))
+  const filteredResultsPath = event !== 'all' ? `/api/results?competitionId=${encodeURIComponent(competitions.find((item) => item.code === event)?.id ?? event)}` : ''
+  const { rows: results } = useApiRows<ResultRow>(filteredResultsPath, event !== 'all')
+  const styles = useMemo(() => [...new Set([...profiles, ...physical, ...motor].map((row) => row.estilo).filter((value): value is string => Boolean(value)))].sort(), [profiles, physical, motor])
+  const stateValues = useMemo(() => {
+    const stateCodes = [...new Set(baseProfiles.map((row) => row.estado).filter((value): value is string => Boolean(value)))]
+    return stateCodes.map((code) => {
+      const stateMotor = baseMotor.filter((row) => row.estado === code)
+      const scored = stateMotor.map((row) => resultScores[row.resultado ?? ''] ?? 0)
+      const stateProfiles = baseProfiles.filter((row) => row.estado === code)
+      const statePhysical = basePhysical.filter((row) => row.estado === code)
+      return {
+        code,
+        name: code,
+        count: stateProfiles.length,
+        score: scored.length ? scored.reduce((sum, value) => sum + value, 0) / scored.length : null,
+        engagement: stateProfiles.length ? Math.round((statePhysical.length / stateProfiles.length) * 100) : 0,
+        dimensions: dimensions.map((dimension) => {
+          const dimensionScores = stateMotor.filter((row) => dimension.matches(row.competencia ?? '')).map((row) => resultScores[row.resultado ?? '']).filter((value): value is number => value !== undefined)
+          return { label: dimension.label, score: dimensionScores.length ? dimensionScores.reduce((sum, value) => sum + value, 0) / dimensionScores.length : null }
+        }),
+      }
+    })
+  }, [baseMotor, basePhysical, baseProfiles])
+  const nationalScores = baseMotor.map((row) => resultScores[row.resultado ?? '']).filter((value): value is number => value !== undefined)
+  const nationalAverage = nationalScores.length ? nationalScores.reduce((sum, value) => sum + value, 0) / nationalScores.length : null
+  const nationalStdDev = nationalScores.length > 1 && nationalAverage !== null ? Math.sqrt(nationalScores.reduce((sum, value) => sum + (value - nationalAverage) ** 2, 0) / nationalScores.length) : null
+  const averageScore = nationalAverage
+  const completion = baseProfiles.length ? Math.round((basePhysical.length / baseProfiles.length) * 100) : 0
+  const medals = event === 'all' ? null : results.filter((row) => row.rank !== null && row.rank <= 3).length
+  const formattedDate = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())
 
   return (
     <PageHeader active="dashboard">
       <div className="@container/main">
-        <section className="mx-auto flex max-w-[1200px] flex-col items-start gap-8 px-7 py-16 @2xl/main:flex-row @2xl/main:items-center @2xl/main:justify-between">
-          <div>
-            <p className="mb-2 text-xs font-bold tracking-wide text-muted-foreground">CENTRO DE INTELIGÊNCIA CBW</p>
-            <h1 className="font-heading text-4xl leading-tight font-semibold text-foreground">
-              Dados que fazem<br /><em className="not-italic">o wrestling avançar.</em>
-            </h1>
-            <p className="mt-3.5 mb-5 max-w-[510px] text-sm leading-relaxed text-muted-foreground">
-              Explore resultados, desenvolvimento físico e avaliação técnica das competições escolares brasileiras.
-            </p>
-            <Button onClick={() => window.location.assign('?view=results')}>
-              Ver resultados oficiais
-              <ArrowRight data-icon="inline-end" aria-hidden="true" />
-            </Button>
+        <main className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 p-4 md:gap-6 md:p-6">
+          <div className="flex flex-col gap-4 @3xl/main:flex-row @3xl/main:items-end @3xl/main:justify-between">
+            <div className="flex min-w-0 flex-col gap-1"><h1 className="text-3xl leading-none tracking-tight">Visão geral</h1><p className="text-sm capitalize text-muted-foreground">{formattedDate}</p></div>
+            <FilterBar competitions={competitions} events={events} styles={styles} year={year} event={event} style={style} onYearChange={(value) => { setYear(value); setEvent('all') }} onEventChange={setEvent} onStyleChange={setStyle} />
           </div>
-          <Card className="@container/card w-56 shrink-0 bg-gradient-to-t from-primary/5 to-card shadow-xs">
-            <CardHeader>
-              <CardDescription>BASE ATUAL</CardDescription>
-              <CardTitle className="text-2xl font-semibold">
-                {competitionsLoading ? '—' : `${competitions.length} competições`}
-              </CardTitle>
-            </CardHeader>
-            <CardFooter className="flex-col items-start gap-1 text-muted-foreground">
-              {competitionsLoading
-                ? 'Carregando...'
-                : competitions.slice(0, 2).map((c) => (
-                  <span key={c.id} className="line-clamp-1">{c.name}{c.year ? ` · ${c.year}` : ''}</span>
-                ))}
-            </CardFooter>
-          </Card>
-        </section>
-        <section className="mx-auto max-w-[1200px] px-7 pb-10">
-          <p className="mb-1 text-xs font-bold tracking-wide text-muted-foreground">NÚMEROS DA BASE</p>
-          <h2 className="font-heading mb-5 text-2xl font-semibold text-foreground">O que já está registrado.</h2>
-          <div className="grid grid-cols-1 gap-3.5 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
-            <StatCard
-              icon={<Trophy className="size-4" aria-hidden="true" />}
-              label="Competições"
-              value={String(competitions.length)}
-              loading={competitionsLoading}
-              hint="Eventos escolares cadastrados"
-            />
-            <StatCard
-              icon={<UserRound className="size-4" aria-hidden="true" />}
-              label="Perfis coletados"
-              value={String(profileSummary?.totalProfiles ?? 0)}
-              loading={profileLoading}
-              hint="Atletas com dados socioesportivos"
-            />
-            <StatCard
-              icon={<Dumbbell className="size-4" aria-hidden="true" />}
-              label="Avaliações físicas"
-              value={String(physicalSummary?.totalAssessments ?? 0)}
-              loading={physicalLoading}
-              hint="Medições antropométricas registradas"
-            />
-            <StatCard
-              icon={<Activity className="size-4" aria-hidden="true" />}
-              label="Domínio técnico"
-              value={`${motorSummary?.dominanceRate ?? 0}%`}
-              loading={motorLoading}
-              hint={`${motorSummary?.totalMovements ?? 0} movimentos avaliados`}
-            />
-          </div>
-        </section>
-        <section className="mx-auto max-w-[1200px] px-7 pb-14">
-          <p className="mb-1 text-xs font-bold tracking-wide text-muted-foreground">EXPLORAR DADOS</p>
-          <h2 className="font-heading mb-5 text-2xl font-semibold text-foreground">Uma visão para cada decisão.</h2>
-          <div className="grid grid-cols-1 gap-3.5 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
-            <DashboardLink href="?view=results" icon={<Medal aria-hidden="true" />} title="Resultados" text="Rankings, pódios, vitórias e pontos técnicos por categoria." />
-            <DashboardLink href="?view=profiles" icon={<UserRound aria-hidden="true" />} title="Perfil de atletas" text="Hábitos de prática e contexto de formação esportiva." />
-            <DashboardLink href="?view=physical" icon={<Dumbbell aria-hidden="true" />} title="Desenvolvimento físico" text="Antropometria e força por evento, estado e estilo." />
-            <DashboardLink href="?view=motor" icon={<Activity aria-hidden="true" />} title="Avaliação técnica" text="Domínio de movimentos fundamentais por competência." />
-          </div>
-        </section>
+          <section className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
+            <KpiCard loading={profilesLoading} icon={<UserRound className="size-4" />} label="Atletas avaliados" value={baseProfiles.length.toLocaleString('pt-BR')} description="Perfis socioesportivos na seleção" />
+            <KpiCard loading={profilesLoading || physicalLoading} icon={<Activity className="size-4" />} label="Compleção da amostra" value={`${completion}%`} description="Avaliações físicas sobre perfis" />
+            <KpiCard loading={motorLoading} icon={<BarChart3 className="size-4" />} label="Média técnica" value={averageScore === null ? '—' : averageScore.toFixed(2).replace('.', ',')} description="Escala técnica média" />
+            <KpiCard loading={event !== 'all' && competitionsLoading} icon={<Medal className="size-4" />} label="Medalhas" value={medals === null ? '—' : medals.toLocaleString('pt-BR')} description={medals === null ? 'Selecione um evento' : 'Pódios no evento selecionado'} />
+          </section>
+          <BrazilHeatmap loading={profilesLoading || physicalLoading || motorLoading} values={stateValues} selectedState={selectedState} nationalAverage={nationalAverage} nationalStdDev={nationalStdDev} onSelect={setSelectedState} />
+          <section className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
+            <NavigationHub href="?view=explorer" icon={<BarChart3 className="size-4" />} title="Raio-X técnico" description="Acrobacias, pé e solo." />
+            <NavigationHub href="?view=physical" icon={<Dumbbell className="size-4" />} title="Perfil físico" description="Biometria, força e envergadura." />
+            <NavigationHub href="?view=profiles" icon={<UserRound className="size-4" />} title="Contexto de prática" description="Clubes, projetos e frequência." />
+            <NavigationHub href="?view=results" icon={<Share2 className="size-4" />} title="Inteligência e correlações" description="Vitórias e execução técnica." />
+          </section>
+        </main>
       </div>
     </PageHeader>
   )

@@ -1,4 +1,16 @@
-const BASE = import.meta.env.VITE_API_URL as string
+const BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '')
+
+function apiUrl(path: string) {
+  return `${BASE ?? ''}${path}`
+}
+
+async function request(path: string, init: RequestInit) {
+  try {
+    return await fetch(apiUrl(path), init)
+  } catch {
+    throw new Error('Não foi possível conectar ao backend. Verifique se o servidor está ativo em http://localhost:8082.')
+  }
+}
 
 const KEYS = { access: 'cbw_access_token', refresh: 'cbw_refresh_token' } as const
 
@@ -33,25 +45,29 @@ export function isAuthenticated(): boolean {
 
 // ── API calls ──────────────────────────────────────────────────────
 export async function login(email: string, password: string) {
-  const res = await fetch(`${BASE}/api/auth/login`, {
+  const res = await request('/api/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email: email.trim(), password }),
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.message ?? 'Email ou senha incorretos.')
+    if (res.status === 401) throw new Error(body.message ?? 'Email ou senha incorretos.')
+    throw new Error(body.message ?? `O backend recusou o login (${res.status}).`)
   }
   const data = await res.json()
+  if (typeof data.accessToken !== 'string' || typeof data.refreshToken !== 'string') {
+    throw new Error('O backend respondeu sem os tokens de acesso esperados.')
+  }
   saveTokens(data.accessToken, data.refreshToken)
   return data
 }
 
 export async function register(email: string, password: string, name?: string) {
-  const res = await fetch(`${BASE}/api/auth/register`, {
+  const res = await request('/api/auth/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password, name }),
+    body: JSON.stringify({ email: email.trim(), password, name }),
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
@@ -63,7 +79,7 @@ export async function register(email: string, password: string, name?: string) {
 export async function logout() {
   const refreshToken = getRefreshToken()
   if (refreshToken) {
-    await fetch(`${BASE}/api/auth/logout`, {
+    await request('/api/auth/logout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getAccessToken() ?? ''}` },
       body: JSON.stringify({ refreshToken }),
@@ -76,13 +92,17 @@ export async function refreshTokens(): Promise<boolean> {
   const refreshToken = getRefreshToken()
   if (!refreshToken) return false
   try {
-    const res = await fetch(`${BASE}/api/auth/refresh`, {
+    const res = await request('/api/auth/refresh', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken }),
     })
     if (!res.ok) { clearTokens(); return false }
     const data = await res.json()
+    if (typeof data.accessToken !== 'string' || typeof data.refreshToken !== 'string') {
+      clearTokens()
+      return false
+    }
     saveTokens(data.accessToken, data.refreshToken)
     return true
   } catch {

@@ -1,26 +1,19 @@
-import { Fragment, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
-  Activity,
-  BarChart3,
   ChevronRight,
   ChevronsUpDown,
   ClipboardList,
-  FileUp,
-  LayoutDashboard,
   LogOut,
-  Medal,
-  Plus,
-  ShieldPlus,
   User,
   UserCircle,
-  UsersRound,
 } from 'lucide-react'
-import type { ComponentType, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import logo from '../assets/logo.svg'
 import { details } from '../constants'
 import { fetchCurrentUser, logout, type UserInfo } from '../lib/auth'
+import { allNavItems, navigation, operations, type NavigationItem } from '../navigation/sidebar-items'
+import { AppHeader } from './AppHeader'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   DropdownMenu,
@@ -30,7 +23,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Separator } from '@/components/ui/separator'
 import {
   Sidebar,
   SidebarContent,
@@ -46,36 +38,8 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-  SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar'
-
-type NavigationItem = {
-  id: string
-  label: string
-  href: string
-  icon: ComponentType<{ size?: number; 'aria-hidden'?: boolean }>
-}
-
-const navigation: NavigationItem[] = [
-  { id: 'dashboard', label: 'Painel', href: '/', icon: LayoutDashboard },
-  { id: 'explorer', label: 'Análise', href: '?view=explorer', icon: BarChart3 },
-  { id: 'results', label: 'Resultados', href: '?view=results', icon: Medal },
-  { id: 'profiles', label: 'Atletas', href: '?view=profiles', icon: UsersRound },
-  { id: 'physical', label: 'Físico', href: '?view=physical', icon: Activity },
-  { id: 'motor', label: 'Técnico', href: '?view=motor', icon: ShieldPlus },
-]
-
-const operations: NavigationItem[] = [
-  { id: 'competition-import', label: 'Criar competição', href: '?view=competition-import', icon: Plus },
-  { id: 'results-import', label: 'Importar resultados', href: '?view=results-import', icon: FileUp },
-]
-
-const allNavItems = [
-  ...navigation,
-  { id: 'collection', label: 'Coleta', href: '?view=collection', icon: ClipboardList },
-  ...operations,
-]
 
 function CollectionNavItem({ active }: { active: string }) {
   const isActive = active === 'collection'
@@ -211,8 +175,8 @@ export function PageHeader({
 
   return (
     <>
-      <Sidebar collapsible="icon">
-        <SidebarHeader className="h-14 justify-center border-b border-sidebar-border">
+      <Sidebar collapsible="icon" variant="inset">
+        <SidebarHeader className="h-12 justify-center border-b border-sidebar-border">
           <a className="flex items-center gap-2 rounded-md px-2 py-1 text-sidebar-foreground" href="/" aria-label="CBW Gestão de Atletas, ir para o painel">
             <img className="size-8 shrink-0 object-contain" src={logo} alt="" />
             <span className="font-semibold group-data-[collapsible=icon]:hidden">CBW</span>
@@ -236,27 +200,8 @@ export function PageHeader({
           <NavUser active={active} />
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger className="-ml-1" aria-label="Abrir navegação" />
-          <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              {crumbs.map((crumb, index) => (
-                <Fragment key={crumb.label}>
-                  {index > 0 && <BreadcrumbSeparator />}
-                  <BreadcrumbItem>
-                    {crumb.href && index < crumbs.length - 1 ? (
-                      <BreadcrumbLink href={crumb.href}>{crumb.label}</BreadcrumbLink>
-                    ) : (
-                      <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
-                    )}
-                  </BreadcrumbItem>
-                </Fragment>
-              ))}
-            </BreadcrumbList>
-          </Breadcrumb>
-        </header>
+      <SidebarInset className="peer-data-[variant=inset]:border">
+        <AppHeader crumbs={crumbs} />
         {children}
       </SidebarInset>
     </>

@@ -15,16 +15,16 @@ export function PhysicalPage() {
     <PageHeader active="physical">
       <PageIntro eyebrow="AVALIAÇÃO FÍSICA" title="Indicadores para orientar o desenvolvimento." text="Medições antropométricas e de força registradas nas avaliações de atletas." />
       <div className="@container/main">
-        <div className="mx-auto grid max-w-[1200px] grid-cols-2 gap-3.5 px-7 pb-3.5 @xl/main:grid-cols-4">
+        <div className="mx-auto grid w-full max-w-[1400px] grid-cols-2 gap-4 px-4 pb-2 md:px-6 @xl/main:grid-cols-4">
           <Metric label="Avaliações válidas" value={loading ? '—' : String(summary?.totalAssessments ?? 0)} />
           <Metric label="Estatura média" value={loading ? '—' : fmt(summary?.averageHeight)} />
           <Metric label="Envergadura média" value={loading ? '—' : fmt(summary?.averageArmSpan)} />
           <Metric label="Pensão direita média" value={loading ? '—' : String(summary?.averageHandGripRight ?? '—')} />
         </div>
-        <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-3.5 px-7 pb-14 @xl/main:grid-cols-2">
+        <div className="mx-auto grid w-full max-w-[1400px] grid-cols-1 gap-4 px-4 pb-8 md:px-6 @xl/main:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardDescription className="text-xs font-bold tracking-wide">DISTRIBUIÇÃO</CardDescription>
+              <CardDescription className="text-xs font-medium tracking-wide">DISTRIBUIÇÃO</CardDescription>
               <CardTitle>Avaliações por estado</CardTitle>
             </CardHeader>
             <CardContent>
@@ -35,7 +35,7 @@ export function PhysicalPage() {
           </Card>
           <Card>
             <CardHeader>
-              <CardDescription className="text-xs font-bold tracking-wide">ESTILOS</CardDescription>
+              <CardDescription className="text-xs font-medium tracking-wide">ESTILOS</CardDescription>
               <CardTitle>Registros por modalidade</CardTitle>
             </CardHeader>
             <CardContent>

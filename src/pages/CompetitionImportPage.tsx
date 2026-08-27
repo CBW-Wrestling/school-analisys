@@ -7,7 +7,7 @@ export function CompetitionImportPage() {
       active="competition-import"
       breadcrumb={[{ label: 'Coleta', href: '?view=collection' }, { label: 'Criar competição' }]}
     >
-      <div className="px-7 py-12">
+      <div className="mx-auto w-full max-w-[1400px] p-4 md:p-6">
         <SqlImportFlow importType="competition" />
       </div>
     </PageHeader>

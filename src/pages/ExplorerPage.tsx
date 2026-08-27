@@ -1,4 +1,4 @@
-import { ResponsiveBar } from '@nivo/bar'
+import { Bar, BarChart, CartesianGrid, Legend, XAxis, YAxis } from 'recharts'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Metric } from '../components/Metric'
@@ -10,6 +10,8 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { Checkbox } from '@/components/ui/checkbox'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Toggle } from '@/components/ui/toggle'
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const SOCIAL_DIMS: { key: keyof ProfileRow; label: string; eyebrow: string }[] = [
   { key: 'tempoPratica',       label: 'Tempo de Prática',       eyebrow: 'EXPERIÊNCIA' },
@@ -18,108 +20,25 @@ const SOCIAL_DIMS: { key: keyof ProfileRow; label: string; eyebrow: string }[] =
   { key: 'iniciouNaLuta',      label: 'Começou pela Luta?',     eyebrow: 'ORIGEM'     },
 ]
 
-const THEME = {
-  text: { fontSize: 11, fill: 'var(--muted-foreground)' },
-  axis: {
-    ticks: { text: { fill: 'var(--muted-foreground)', fontSize: 11 } },
-    legend: { text: { fill: 'var(--muted-foreground)', fontSize: 11 } },
-  },
-  grid: { line: { stroke: 'var(--line)' } },
-  tooltip: {
-    container: {
-      background: 'var(--paper)',
-      color: 'var(--navy)',
-      fontSize: 12,
-      border: '1px solid var(--line)',
-      borderRadius: 4,
-      boxShadow: '0 4px 12px color-mix(in srgb, var(--navy) 8%, transparent)',
-    },
-  },
-}
-
-function barLegends(count: number) {
-  if (count <= 1) return []
-  return [
-    {
-      dataFrom: 'keys' as const,
-      anchor: 'bottom' as const,
-      direction: 'row' as const,
-      translateY: 52,
-      itemWidth: 120,
-      itemHeight: 14,
-      symbolSize: 10,
-      symbolShape: 'circle' as const,
-    },
-  ]
-}
-
-function barMargin(eventCount: number) {
-  return { top: 10, right: 20, bottom: eventCount > 1 ? 58 : 40, left: 50 }
-}
-
-// custom layer: line connecting the per-movement average across all selected competitions
-function AverageLine({ bars }: any) {
-  const groupMap = new Map<string, { xs: number[]; ys: number[]; total: number }>()
-  for (const bar of bars) {
-    const idx = String(bar.data.indexValue)
-    if (!groupMap.has(idx)) groupMap.set(idx, { xs: [], ys: [], total: 0 })
-    const g = groupMap.get(idx)!
-    g.xs.push(bar.x + bar.width / 2)
-    g.ys.push(bar.y)
-    g.total += Number(bar.data.value) || 0
-  }
-  const points = Array.from(groupMap.values())
-    .map((g) => ({
-      x: g.xs.reduce((s, v) => s + v, 0) / g.xs.length,
-      y: g.ys.reduce((s, v) => s + v, 0) / g.ys.length,
-      total: g.total,
-    }))
-    .sort((a, b) => a.x - b.x)
-  if (points.length === 0) return null
-  const avg = points.reduce((s, p) => s + p.total, 0) / points.length
-  const d = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
-  const last = points[points.length - 1]
+function ExplorerBarChart({ data, keys, stacked = false, expanded = false }: { data: Record<string, string | number>[]; keys: string[]; stacked?: boolean; expanded?: boolean }) {
   return (
-    <g>
-      {points.length > 1 && (
-        <path d={d} stroke="var(--navy)" strokeWidth={2} fill="none" strokeDasharray="5 4" strokeLinejoin="round" />
-      )}
-      {points.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r={4} fill="var(--paper)" stroke="var(--navy)" strokeWidth={2} />
-      ))}
-      <text x={last.x + 10} y={last.y + 4} fontSize={10} fontWeight={700} fill="var(--navy)" textAnchor="start">
-        {`ø ${avg.toFixed(1)}`}
-      </text>
-    </g>
+    <ChartContainer config={{}} className={expanded ? 'aspect-auto h-[420px] w-full' : 'aspect-auto h-[320px] w-full'}>
+      <BarChart data={data} margin={{ top: 12, right: 12, bottom: 12, left: 0 }}>
+        <CartesianGrid vertical={false} />
+        <XAxis dataKey="label" axisLine={false} tickLine={false} tickMargin={8} angle={-15} textAnchor="end" height={52} />
+        <YAxis axisLine={false} tickLine={false} width={34} />
+        <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+        {keys.length > 1 && <Legend verticalAlign="top" align="right" height={28} />}
+        {keys.map((key, index) => (
+          <Bar key={key} dataKey={key} stackId={stacked ? 'status' : undefined} fill={`var(--chart-${(index % 5) + 1})`} radius={3} />
+        ))}
+      </BarChart>
+    </ChartContainer>
   )
 }
 
-// custom layer: total label on top of each stacked bar
-function StackTotals({ bars }: any) {
-  const totals = new Map<string, { x: number; minY: number; total: number }>()
-  for (const bar of bars) {
-    const idx = String(bar.data.indexValue)
-    const cx = bar.x + bar.width / 2
-    const val = Number(bar.data.value) || 0
-    if (!totals.has(idx)) {
-      totals.set(idx, { x: cx, minY: bar.y, total: val })
-    } else {
-      const e = totals.get(idx)!
-      e.total += val
-      if (bar.y < e.minY) e.minY = bar.y
-    }
-  }
-  return (
-    <g>
-      {Array.from(totals.values()).map(({ x, minY, total }, i) =>
-        total > 0 ? (
-          <text key={i} x={x} y={minY - 5} textAnchor="middle" fontSize={11} fontWeight={800} fill="var(--navy)">
-            {total}
-          </text>
-        ) : null
-      )}
-    </g>
-  )
+function FilterSkeleton() {
+  return <div className="grid gap-2.5"><Skeleton className="h-5 w-full" /><Skeleton className="h-5 w-4/5" /><Skeleton className="h-5 w-3/5" /></div>
 }
 
 export function ExplorerPage() {
@@ -276,11 +195,16 @@ export function ExplorerPage() {
   return (
     <PageHeader active="explorer">
       <div className="@container/main">
-      <div className="mx-auto max-w-[1300px] gap-6 px-7 py-7 @4xl/main:grid @4xl/main:grid-cols-[240px_1fr]">
-        <aside className="mb-6 flex flex-col gap-4 @4xl/main:sticky @4xl/main:top-4 @4xl/main:mb-0 @4xl/main:self-start">
+      <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 p-4 md:gap-6 md:p-6">
+        <div className="flex flex-col gap-1">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Análise exploratória</p>
+          <h1 className="text-3xl leading-none tracking-tight text-foreground">Leitura da base</h1>
+          <p className="text-sm text-muted-foreground">Cruze eventos, estilos e competências para encontrar padrões de execução.</p>
+        </div>
+        <aside className="grid grid-cols-1 gap-4 @xl/main:grid-cols-3">
           <Card>
             <CardHeader>
-              <CardDescription className="text-xs font-bold tracking-wide">COMPETIÇÕES</CardDescription>
+              <CardDescription className="text-xs font-medium tracking-wide">COMPETIÇÕES</CardDescription>
               <CardAction className="flex gap-1">
                 <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setSelectedEvents(competitions.map((c) => c.code))}>Todas</Button>
                 <span className="text-muted-foreground">·</span>
@@ -288,7 +212,7 @@ export function ExplorerPage() {
               </CardAction>
             </CardHeader>
             <CardContent className="flex flex-col gap-2.5">
-              {competitions.map((c) => (
+              {loading ? <FilterSkeleton /> : competitions.map((c) => (
                 <label key={c.id} className="flex cursor-pointer items-center gap-2 text-sm">
                   <Checkbox checked={selectedEvents.includes(c.code)} onCheckedChange={() => toggleEvent(c.code)} />
                   <span className="flex-1">{c.name}</span>
@@ -300,7 +224,7 @@ export function ExplorerPage() {
 
           <Card>
             <CardHeader>
-              <CardDescription className="text-xs font-bold tracking-wide">ESTILOS</CardDescription>
+              <CardDescription className="text-xs font-medium tracking-wide">ESTILOS</CardDescription>
               <CardAction className="flex gap-1">
                 <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setSelectedStyles(allStyles)}>Todos</Button>
                 <span className="text-muted-foreground">·</span>
@@ -308,7 +232,7 @@ export function ExplorerPage() {
               </CardAction>
             </CardHeader>
             <CardContent className="flex flex-col gap-2.5">
-              {allStyles.map((style) => (
+              {loading ? <FilterSkeleton /> : allStyles.map((style) => (
                 <label key={style} className="flex cursor-pointer items-center gap-2 text-sm">
                   <Checkbox checked={selectedStyles.includes(style)} onCheckedChange={() => toggleStyle(style)} />
                   <span>{style}</span>
@@ -319,7 +243,7 @@ export function ExplorerPage() {
 
           <Card>
             <CardHeader>
-              <CardDescription className="text-xs font-bold tracking-wide">COMPETÊNCIAS</CardDescription>
+              <CardDescription className="text-xs font-medium tracking-wide">COMPETÊNCIAS</CardDescription>
               <CardAction className="flex gap-1">
                 <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setSelectedCompetencias(allCompetencias)}>Todas</Button>
                 <span className="text-muted-foreground">·</span>
@@ -327,7 +251,7 @@ export function ExplorerPage() {
               </CardAction>
             </CardHeader>
             <CardContent className="flex flex-col gap-2.5">
-              {allCompetencias.map((comp) => (
+              {loading ? <FilterSkeleton /> : allCompetencias.map((comp) => (
                 <label key={comp} className="flex cursor-pointer items-center gap-2 text-sm">
                   <Checkbox checked={selectedCompetencias.includes(comp)} onCheckedChange={() => toggleCompetencia(comp)} />
                   <span>{comp}</span>
@@ -338,69 +262,35 @@ export function ExplorerPage() {
         </aside>
 
         <div className="min-w-0">
-          <div className="mb-3.5 grid grid-cols-2 gap-3.5 @xl/main:grid-cols-4">
-            <Metric label="Movimentos avaliados" value={loading ? '—' : String(total)} />
-            <Metric label="Execuções completas" value={loading ? '—' : String(complete)} />
-            <Metric label="Taxa de domínio" value={loading ? '—' : total ? `${Math.round((complete / total) * 100)}%` : '—'} />
-            <Metric label="Eventos selecionados" value={String(selectedEvents.length)} />
+          <div className="mb-4 grid grid-cols-2 gap-4 @xl/main:grid-cols-4">
+            <Metric loading={loading} label="Movimentos avaliados" value={String(total)} />
+            <Metric loading={loading} label="Execuções completas" value={String(complete)} />
+            <Metric loading={loading} label="Taxa de domínio" value={total ? `${Math.round((complete / total) * 100)}%` : '—'} />
+            <Metric loading={loading} label="Eventos selecionados" value={String(selectedEvents.length)} />
           </div>
 
           {loading ? (
-            <p className="py-12 text-center text-sm text-muted-foreground">Carregando dados...</p>
+            <div className="grid gap-4 @2xl/main:grid-cols-2"><Skeleton className="h-[320px] w-full rounded-lg" /><Skeleton className="h-[320px] w-full rounded-lg" /></div>
           ) : (
             <>
-              <div className="mb-3.5 grid grid-cols-1 gap-3.5 @2xl/main:grid-cols-2">
+              <div className="mb-4 grid grid-cols-1 gap-4 @2xl/main:grid-cols-2">
                 <Card>
                   <CardHeader>
-                    <CardDescription className="text-xs font-bold tracking-wide">TÉCNICO · RESULTADO</CardDescription>
+                    <CardDescription className="text-xs font-medium tracking-wide">TÉCNICO · RESULTADO</CardDescription>
                     <CardTitle>Qualidade da execução por evento</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="h-[260px]">
-                      <ResponsiveBar
-                        data={resultadoData}
-                        keys={chartKeys}
-                        indexBy="label"
-                        groupMode="grouped"
-                        margin={barMargin(selectedEvents.length)}
-                        padding={0.25}
-                        innerPadding={2}
-                        colors={{ scheme: 'tableau10' }}
-                        theme={THEME}
-                        axisBottom={{ tickRotation: -15, tickSize: 0, tickPadding: 6 }}
-                        axisLeft={{ tickSize: 0, tickPadding: 8 }}
-                        enableLabel={false}
-                        borderRadius={2}
-                        legends={barLegends(selectedEvents.length)}
-                      />
-                    </div>
+                    <ExplorerBarChart data={resultadoData} keys={chartKeys} />
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader>
-                    <CardDescription className="text-xs font-bold tracking-wide">TÉCNICO · COMPETÊNCIA</CardDescription>
+                    <CardDescription className="text-xs font-medium tracking-wide">TÉCNICO · COMPETÊNCIA</CardDescription>
                     <CardTitle>Movimentos por competência e evento</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="h-[260px]">
-                      <ResponsiveBar
-                        data={competenciaData}
-                        keys={chartKeys}
-                        indexBy="label"
-                        groupMode="grouped"
-                        margin={barMargin(selectedEvents.length)}
-                        padding={0.25}
-                        innerPadding={2}
-                        colors={{ scheme: 'tableau10' }}
-                        theme={THEME}
-                        axisBottom={{ tickRotation: -15, tickSize: 0, tickPadding: 6 }}
-                        axisLeft={{ tickSize: 0, tickPadding: 8 }}
-                        enableLabel={false}
-                        borderRadius={2}
-                        legends={barLegends(selectedEvents.length)}
-                      />
-                    </div>
+                    <ExplorerBarChart data={competenciaData} keys={chartKeys} />
                   </CardContent>
                 </Card>
               </div>
@@ -444,7 +334,7 @@ export function ExplorerPage() {
                     >
                       <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left">
                         <div>
-                          <p className="mb-0.5 text-xs font-bold tracking-wide text-muted-foreground">TÉCNICO · MOTOR</p>
+                          <p className="mb-0.5 text-xs font-medium tracking-wide text-muted-foreground">TÉCNICO · MOTOR</p>
                           <h3 className="font-heading text-sm font-medium text-foreground">{comp}</h3>
                         </div>
                         <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
@@ -462,7 +352,7 @@ export function ExplorerPage() {
                         {/* movement filter */}
                         <div className="mb-3.5 rounded-lg bg-muted/50 p-3.5">
                           <div className="mb-2.5 flex items-center justify-between gap-3">
-                            <p className="text-xs font-bold tracking-wide text-muted-foreground">MOVIMENTOS</p>
+                            <p className="text-xs font-medium tracking-wide text-muted-foreground">MOVIMENTOS</p>
                             <div className="flex gap-1">
                               <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setSelectedAvaliacoes((p) => ({ ...p, [comp]: allAvs }))}>
                                 Todos
@@ -490,7 +380,7 @@ export function ExplorerPage() {
                         </div>
 
                         {/* per-movement stacked charts: X = competitions */}
-                        <div className="grid grid-cols-1 gap-3.5 @2xl/main:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-4 @2xl/main:grid-cols-2">
                           {perAvCharts.map(({ av, data }) => {
                             const isAvExpanded = expandedAvs[comp] === av
                             return (
@@ -509,35 +399,7 @@ export function ExplorerPage() {
                                   </CardAction>
                                 </CardHeader>
                                 <CardContent>
-                                  <div className={isAvExpanded ? 'h-[420px]' : 'h-[320px]'}>
-                                    <ResponsiveBar
-                                      data={data}
-                                      keys={resultados}
-                                      indexBy="label"
-                                      margin={{ top: 28, right: 60, bottom: 60, left: 44 }}
-                                      padding={0.35}
-                                      colors={{ scheme: 'tableau10' }}
-                                      theme={THEME}
-                                      axisBottom={{ tickRotation: -25, tickSize: 0, tickPadding: 6 }}
-                                      axisLeft={{ tickSize: 0, tickPadding: 8 }}
-                                      enableLabel={true}
-                                      label={(d) => (Number(d.value) > 0 ? String(d.value) : '')}
-                                      labelSkipHeight={14}
-                                      labelTextColor={{ from: 'color', modifiers: [['darker', 2.5]] }}
-                                      borderRadius={2}
-                                      layers={['grid', 'axes', 'bars', StackTotals, AverageLine, 'markers', 'legends']}
-                                      legends={[{
-                                        dataFrom: 'keys',
-                                        anchor: 'bottom',
-                                        direction: 'row',
-                                        translateY: 56,
-                                        itemWidth: 120,
-                                        itemHeight: 14,
-                                        symbolSize: 10,
-                                        symbolShape: 'circle',
-                                      }]}
-                                    />
-                                  </div>
+                                    <ExplorerBarChart data={data} keys={resultados} stacked expanded={isAvExpanded} />
                                 </CardContent>
                               </Card>
                             )
@@ -550,11 +412,11 @@ export function ExplorerPage() {
 
               {/* ── PERFIL SOCIAL ─────────────────────────── */}
               <div className="mt-7 mb-4 border-t pt-6">
-                <p className="mb-1 text-xs font-bold tracking-wide text-muted-foreground">PERFIL DO ATLETA</p>
+                <p className="mb-1 text-xs font-medium tracking-wide text-muted-foreground">PERFIL DO ATLETA</p>
                 <h2 className="font-heading text-xl font-semibold text-foreground">Dados socioesportivos</h2>
               </div>
 
-              <div className="mb-3.5 grid grid-cols-2 gap-3.5 @xl/main:grid-cols-4">
+              <div className="mb-4 grid grid-cols-2 gap-4 @xl/main:grid-cols-4">
                 <Metric label="Atletas com perfil" value={profileLoading ? '—' : String(profileFiltered.length)} />
                 <Metric
                   label="Fazem outro esporte"
@@ -588,7 +450,7 @@ export function ExplorerPage() {
                     >
                       <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left">
                         <div>
-                          <p className="mb-0.5 text-xs font-bold tracking-wide text-muted-foreground">{eyebrow}</p>
+                          <p className="mb-0.5 text-xs font-medium tracking-wide text-muted-foreground">{eyebrow}</p>
                           <h3 className="font-heading text-sm font-medium text-foreground">{label}</h3>
                         </div>
                         <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
@@ -603,28 +465,7 @@ export function ExplorerPage() {
                             <CardTitle className="text-sm">{label} por competição</CardTitle>
                           </CardHeader>
                           <CardContent>
-                            <div className="h-[320px]">
-                              <ResponsiveBar
-                                data={data}
-                                keys={chartKeys}
-                                indexBy="label"
-                                groupMode="grouped"
-                                margin={{ top: 28, right: 60, bottom: 60, left: 44 }}
-                                padding={0.3}
-                                innerPadding={3}
-                                colors={{ scheme: 'tableau10' }}
-                                theme={THEME}
-                                axisBottom={{ tickRotation: -20, tickSize: 0, tickPadding: 6 }}
-                                axisLeft={{ tickSize: 0, tickPadding: 8 }}
-                                enableLabel={true}
-                                label={(d) => (Number(d.value) > 0 ? String(d.value) : '')}
-                                labelSkipHeight={14}
-                                labelTextColor={{ from: 'color', modifiers: [['darker', 2.5]] }}
-                                borderRadius={2}
-                                layers={['grid', 'axes', 'bars', AverageLine, 'markers', 'legends']}
-                                legends={barLegends(selectedEvents.length)}
-                              />
-                            </div>
+                            <ExplorerBarChart data={data} keys={chartKeys} />
                           </CardContent>
                         </Card>
                       </CollapsibleContent>

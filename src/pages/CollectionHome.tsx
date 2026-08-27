@@ -15,11 +15,11 @@ export function CollectionHome() {
   return (
     <PageHeader active="collection">
       <div className="@container/main">
-        <section className="mx-auto flex max-w-[1200px] flex-col items-start gap-8 px-7 py-14 @2xl/main:flex-row @2xl/main:items-center @2xl/main:justify-between">
+        <section className="mx-auto flex w-full max-w-[1400px] flex-col items-start gap-6 p-4 md:gap-8 md:p-6 @2xl/main:flex-row @2xl/main:items-center @2xl/main:justify-between">
           <div>
-            <p className="mb-2 text-xs font-bold tracking-wide text-muted-foreground">CENTRO DE INTELIGÊNCIA E RESULTADOS</p>
-            <h1 className="font-heading text-4xl leading-tight font-semibold text-foreground">A informação certa para<br />formar campeões.</h1>
-            <p className="mt-3.5 max-w-[540px] text-sm leading-relaxed text-muted-foreground">Registre dados de atletas com critérios claros e transforme cada avaliação em inteligência para o wrestling brasileiro.</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Centro de inteligência e resultados</p>
+            <h1 className="mt-1 text-3xl leading-none tracking-tight text-foreground">Coleta de avaliações</h1>
+            <p className="mt-1 max-w-[640px] text-sm leading-relaxed text-muted-foreground">Registre dados de atletas com critérios claros e transforme cada avaliação em inteligência para o wrestling brasileiro.</p>
           </div>
           <Card className="w-48 shrink-0 bg-gradient-to-t from-primary/5 to-card text-center shadow-xs">
             <CardHeader className="items-center">
@@ -30,11 +30,11 @@ export function CollectionHome() {
           </Card>
         </section>
 
-        <section className="mx-auto max-w-[1200px] px-7 pb-9">
-          <p className="mb-1 text-xs font-bold tracking-wide text-muted-foreground">NOVA COLETA</p>
-          <h2 className="font-heading mb-1 text-2xl font-semibold text-foreground">O que você deseja registrar?</h2>
-          <p className="mb-5 text-sm text-muted-foreground">Três instrumentos, uma base de dados confiável.</p>
-          <div className="grid grid-cols-1 gap-3.5 @xl/main:grid-cols-3">
+        <section className="mx-auto w-full max-w-[1400px] p-4 md:p-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nova coleta</p>
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">O que você deseja registrar?</h2>
+          <p className="mt-1 mb-5 text-sm text-muted-foreground">Três instrumentos, uma base de dados confiável.</p>
+          <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-3">
             {(Object.keys(details) as FormKind[]).map((formKind) => {
               const item = details[formKind]
               const Icon = item.icon
@@ -44,7 +44,7 @@ export function CollectionHome() {
                   <Card className="h-full transition-shadow hover:shadow-md">
                     <CardHeader>
                       <span className="mb-2 inline-flex size-9 items-center justify-center rounded-md bg-primary/10 text-primary"><Icon aria-hidden /></span>
-                      <CardDescription className="text-xs font-bold tracking-wide">{copy.kicker}</CardDescription>
+                      <CardDescription className="text-xs font-medium tracking-wide">{copy.kicker}</CardDescription>
                       <CardTitle>{item.label}</CardTitle>
                       <CardDescription>{copy.text}</CardDescription>
                     </CardHeader>
@@ -64,7 +64,7 @@ export function CollectionHome() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-[1200px] px-7 pb-9">
+        <section className="mx-auto w-full max-w-[1400px] px-4 pb-8 md:px-6">
           <Alert>
             <ShieldCheck aria-hidden="true" />
             <AlertTitle>Dados de menores exigem cuidado.</AlertTitle>
@@ -72,7 +72,7 @@ export function CollectionHome() {
           </Alert>
         </section>
 
-        <footer className="mx-auto max-w-[1200px] px-7 pb-10 text-center text-xs text-muted-foreground">
+        <footer className="mx-auto w-full max-w-[1400px] px-4 pb-8 text-center text-xs text-muted-foreground md:px-6">
           Confederação Brasileira de Wrestling <span className="mx-1">·</span> Plataforma de inteligência esportiva
         </footer>
       </div>

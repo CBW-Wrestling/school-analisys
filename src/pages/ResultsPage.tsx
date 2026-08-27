@@ -75,23 +75,16 @@ export function ResultsPage() {
   return (
     <PageHeader active="results">
       <div className="@container/main">
-        <section className="mx-auto max-w-[1200px] px-7 pt-14 pb-9">
-          <p className="mb-2 text-xs font-bold tracking-wide text-muted-foreground">RESULTADOS OFICIAIS</p>
-          <h1 className="font-heading text-4xl font-semibold text-foreground">
-            Classificações que contam
-            <br />
-            <em className="not-italic">a história no tapete.</em>
-          </h1>
-          <p className="mt-3 max-w-[590px] text-sm leading-relaxed text-muted-foreground">
-            Dados de desempenho e pódio consolidados a partir
-            dos resultados dos Jogos Escolares.
-          </p>
+        <section className="mx-auto flex w-full max-w-[1400px] flex-col gap-1 p-4 md:p-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Resultados oficiais</p>
+          <h1 className="text-3xl leading-none tracking-tight text-foreground">Classificações oficiais</h1>
+          <p className="text-sm leading-relaxed text-muted-foreground">Desempenho e pódio consolidados a partir dos resultados dos Jogos Escolares.</p>
         </section>
 
-        <section className="mx-auto max-w-[1200px] px-7 pb-14">
+        <section className="mx-auto w-full max-w-[1400px] px-4 pb-6 md:px-6 md:pb-8">
           <div className="mb-4 flex flex-col items-start justify-between gap-3 @xl/main:flex-row @xl/main:items-end">
             <div>
-              <p className="mb-1 text-xs font-bold tracking-wide text-muted-foreground">RANKING POR EVENTO</p>
+              <p className="mb-1 text-xs font-medium tracking-wide text-muted-foreground">RANKING POR EVENTO</p>
               <h2 className="font-heading text-2xl font-semibold text-foreground">Atletas classificados</h2>
             </div>
 
@@ -126,14 +119,14 @@ export function ResultsPage() {
             </Alert>
           )}
 
-          <div className="mb-3.5 grid grid-cols-2 gap-3.5 @xl/main:grid-cols-4">
+          <div className="mb-4 grid grid-cols-2 gap-4 @xl/main:grid-cols-4">
             <Metric label="Atletas classificados" value={loading ? '—' : String(rows.length)} />
             <Metric label="Lutas registradas" value={loading ? '—' : String(fights)} />
             <Metric label="Categorias de peso" value={loading ? '—' : String(categories)} />
             <Metric label="Estados representados" value={loading ? '—' : String(statesCount)} />
           </div>
 
-          <div className="grid grid-cols-1 gap-3.5 @4xl/main:grid-cols-[7fr_3fr]">
+          <div className="grid grid-cols-1 gap-4 @4xl/main:grid-cols-[7fr_3fr]">
             <Card className="gap-0 py-0">
               <CardHeader className="border-b py-4 [.border-b]:pb-4">
                 <div className="flex items-start justify-between gap-3">
@@ -145,15 +138,16 @@ export function ResultsPage() {
                         : 'Selecione uma competição'}
                     </CardDescription>
                   </div>
-                  {selectedCompetition && <Badge variant="outline">{selectedCompetition.code}</Badge>}
+                  {selectedCompetition && <Badge variant="outline" className="shrink-0">{selectedCompetition.code}</Badge>}
                 </div>
               </CardHeader>
-              <CardContent className="overflow-x-auto px-0">
-                <Table>
+              <CardContent className="flex flex-col gap-4 px-0">
+                <div className="overflow-x-auto">
+                <Table className="**:data-[slot='table-cell']:px-4 **:data-[slot='table-head']:px-4 **:data-[slot='table-cell']:py-4">
                   <TableCaption className="sr-only">
                     Classificação dos atletas do evento selecionado
                   </TableCaption>
-                  <TableHeader>
+                  <TableHeader className="border-t **:data-[slot='table-head']:h-11 **:data-[slot='table-head']:font-medium **:data-[slot='table-head']:text-foreground **:data-[slot='table-head']:text-sm">
                     <TableRow>
                       <TableHead>Pos.</TableHead>
                       <TableHead>Atleta</TableHead>
@@ -164,7 +158,7 @@ export function ResultsPage() {
                       <TableHead>Saldo</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
+                  <TableBody className="**:data-[slot='table-row']:border-border/50 **:data-[slot='table-row']:hover:bg-muted/30">
                     {resultsLoading ? (
                       <TableRow><TableCell colSpan={7}>Carregando resultados...</TableCell></TableRow>
                     ) : rows.length === 0 ? (
@@ -193,12 +187,14 @@ export function ResultsPage() {
                     )}
                   </TableBody>
                 </Table>
+                </div>
+                <p className="px-4 pb-1 text-sm text-muted-foreground">Visualizando {Math.min(rows.length, 18)} de {rows.length.toLocaleString('pt-BR')} atletas</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardDescription className="text-xs font-bold tracking-wide">DESTAQUES</CardDescription>
+                <CardDescription className="text-xs font-medium tracking-wide">DESTAQUES</CardDescription>
                 <CardTitle>Ouro por categoria</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">

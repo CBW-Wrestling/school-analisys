@@ -5,6 +5,7 @@ import { saveTokens } from "./lib/auth"
 import { CollectionHome } from "./pages/CollectionHome"
 import { CollectionPage } from "./pages/CollectionPage"
 import { DashboardPage } from "./pages/DashboardPage"
+import { DefaultPage } from "./pages/DefaultPage"
 import { ExplorerPage } from "./pages/ExplorerPage"
 import { ImportPage } from "./pages/ImportPage"
 import { CompetitionImportPage } from "./pages/CompetitionImportPage"
@@ -37,6 +38,7 @@ function App() {
   if (accessToken && refreshToken) return null // aguarda reload
 
   const page = requestedForm && requestedForm in details ? <CollectionPage initialKind={requestedForm as FormKind} />
+    : requestedView === "default" ? <DefaultPage />
     : requestedView === "explorer" ? <ExplorerPage />
     : requestedView === "results" ? <ResultsPage />
     : requestedView === "profiles" ? <ProfilesPage />

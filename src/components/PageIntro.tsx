@@ -1,9 +1,9 @@
 export function PageIntro({ eyebrow, title, text }: { eyebrow: string; title: string; text: string }) {
   return (
-    <section className="mx-auto max-w-[1200px] px-7 pt-14 pb-9">
-      <p className="mb-2 text-xs font-bold tracking-wide text-muted-foreground">{eyebrow}</p>
-      <h1 className="font-heading text-4xl font-semibold text-foreground">{title}</h1>
-      <p className="mt-3 max-w-[590px] text-sm leading-relaxed text-muted-foreground">{text}</p>
+    <section className="mx-auto w-full max-w-[1400px] px-4 py-4 md:px-6">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{eyebrow}</p>
+      <h1 className="mt-1 text-3xl font-normal leading-none tracking-tight text-foreground">{title}</h1>
+      <p className="mt-1 max-w-[640px] text-sm leading-relaxed text-muted-foreground">{text}</p>
     </section>
   )
 }

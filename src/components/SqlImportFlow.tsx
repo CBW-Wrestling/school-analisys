@@ -107,12 +107,12 @@ export function SqlImportFlow({ importType }: Props) {
   }
 
   return (
-    <section className="mx-auto max-w-[560px]">
-      <p className="mb-2 text-xs font-bold tracking-wide text-muted-foreground">IMPORTAÇÃO</p>
-      <h1 className="font-heading text-3xl font-semibold text-foreground">
+    <section className="mx-auto flex w-full max-w-[880px] flex-col gap-1 bg-background text-foreground">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Importação</p>
+      <h1 className="mt-1 text-3xl font-medium leading-none tracking-tight text-foreground">
         {isResults ? 'Importar resultados' : 'Criar competição'}
       </h1>
-      <p className="mt-2 mb-8 text-sm leading-relaxed text-muted-foreground">
+      <p className="mt-1 mb-6 max-w-[640px] text-sm leading-relaxed text-muted-foreground">
         {subtitle}
       </p>
 
@@ -120,7 +120,7 @@ export function SqlImportFlow({ importType }: Props) {
         <div>
           <div
             className={cn(
-              'flex cursor-pointer flex-col items-center gap-1.5 rounded-lg border-2 border-dashed p-10 text-center transition-colors',
+              'flex min-h-56 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed p-8 text-center transition-colors',
               isDragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
             )}
             onDrop={handleDrop}
@@ -175,9 +175,9 @@ export function SqlImportFlow({ importType }: Props) {
 
       {step === 'select' && (
         <div>
-          <h3 className="mb-4 text-base font-semibold text-foreground">
+          <h2 className="mb-4 text-xl font-semibold tracking-tight text-foreground">
             Selecione a competição
-          </h3>
+          </h2>
           <RadioGroup value={selected} onValueChange={setSelected} className="gap-2.5">
             {competitions.map((c) => (
               <label

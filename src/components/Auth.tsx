@@ -6,7 +6,7 @@ import heroImage from '../assets/hero.png'
 import { isAuthenticated, login, logout, refreshTokens, register } from '../lib/auth'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { CardContent } from '@/components/ui/card'
 import {
   Field,
   FieldDescription,
@@ -49,23 +49,26 @@ export function SignOutButton() {
 
 function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center bg-muted p-6 md:p-10">
-      <div className="w-full max-w-sm md:max-w-4xl">
-        <Card className="overflow-hidden p-0" aria-label="Acesso ao sistema">
-          <CardContent className="grid p-0 md:grid-cols-2">
-            {children}
-            <div className="relative hidden bg-muted md:block">
-              <img
-                src={heroImage}
-                alt=""
-                className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.3]"
-              />
+    <main className="min-h-dvh bg-background">
+      <div className="grid min-h-dvh justify-center p-2 lg:grid-cols-2">
+        <div className="relative order-2 hidden overflow-hidden rounded-3xl bg-primary lg:flex">
+          <img src={heroImage} alt="" className="absolute inset-0 size-full object-cover opacity-20 mix-blend-luminosity" />
+          <div className="relative z-10 flex w-full flex-col justify-between p-10 text-primary-foreground">
+            <div className="flex flex-col gap-2">
+              <img className="size-10 object-contain brightness-0 invert" src={logo} alt="" />
+              <h2 className="text-2xl font-medium">CBW Gestão de Atletas</h2>
+              <p className="text-sm text-primary-foreground/75">Inteligência esportiva para formar campeões.</p>
             </div>
-          </CardContent>
-        </Card>
-        <FieldDescription className="px-6 text-center">
-          Confederação Brasileira de Wrestling · Plataforma de inteligência esportiva
-        </FieldDescription>
+            <div className="grid gap-6 @2xl/main:grid-cols-2">
+              <div className="flex flex-col gap-1"><p className="font-medium">Dados que orientam</p><p className="text-sm text-primary-foreground/75">Acompanhe avaliações, resultados e evolução em um só lugar.</p></div>
+              <div className="flex flex-col gap-1"><p className="font-medium">Decisões melhores</p><p className="text-sm text-primary-foreground/75">Transforme cada coleta em uma leitura clara do atleta.</p></div>
+            </div>
+          </div>
+        </div>
+        <div className="relative order-1 flex min-h-dvh flex-col items-center justify-center px-6 py-16 md:px-10">
+          {children}
+          <p className="absolute bottom-5 text-center text-sm text-muted-foreground">Confederação Brasileira de Wrestling</p>
+        </div>
       </div>
     </main>
   )
@@ -86,7 +89,7 @@ function AuthHeader({ title, description }: { title: string; description: string
   return (
     <div className="flex flex-col items-center gap-2 text-center">
       <img className="size-10 object-contain" src={logo} alt="" />
-      <h1 className="text-2xl font-bold">{title}</h1>
+      <h1 className="text-3xl font-medium leading-none tracking-tight">{title}</h1>
       <p className="text-balance text-muted-foreground">{description}</p>
     </div>
   )
@@ -131,7 +134,7 @@ function LoginScreen({
 
   return (
     <AuthLayout>
-      <form className="p-6 md:p-8" onSubmit={(event) => { event.preventDefault(); void signIn() }}>
+      <form className="w-full max-w-sm" onSubmit={(event) => { event.preventDefault(); void signIn() }}>
         <FieldGroup>
           <AuthHeader title="Entrar na plataforma" description="Use suas credenciais para continuar." />
 
@@ -210,7 +213,7 @@ function RegisterScreen({ onBack }: { onBack: () => void }) {
 
   return (
     <AuthLayout>
-      <form className="p-6 md:p-8" onSubmit={(event) => { event.preventDefault(); void submit() }}>
+      <form className="w-full max-w-sm" onSubmit={(event) => { event.preventDefault(); void submit() }}>
         <FieldGroup>
           <AuthHeader title="Criar uma conta" description="Preencha seus dados para solicitar acesso." />
 

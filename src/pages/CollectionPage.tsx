@@ -6,11 +6,11 @@ import type { FormKind } from '../types'
 
 function FormPicker({ onChoose }: { onChoose: (kind: FormKind) => void }) {
   return (
-    <section className="mx-auto flex min-h-svh max-w-[760px] flex-col items-center justify-center gap-6 px-5 py-12 text-center">
+    <section className="mx-auto flex min-h-svh w-full max-w-[960px] flex-col items-center justify-center gap-8 p-6 text-center md:p-10">
       <div>
-        <p className="mb-2 text-xs font-bold tracking-wide text-muted-foreground">NOVO REGISTRO</p>
-        <h1 className="font-heading text-3xl font-semibold text-foreground">Qual formulário deseja enviar agora?</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Escolha o próximo instrumento de coleta para este atleta.</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Novo registro</p>
+        <h1 className="mt-1 text-3xl leading-none tracking-tight text-foreground">Qual formulário deseja enviar agora?</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Escolha o próximo instrumento de coleta para este atleta.</p>
       </div>
       <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3">
         {(Object.keys(details) as FormKind[]).map((kind) => {
@@ -38,7 +38,7 @@ function FormPicker({ onChoose }: { onChoose: (kind: FormKind) => void }) {
 export function CollectionPage({ initialKind }: { initialKind: FormKind }) {
   const [kind, setKind] = useState<FormKind | null>(initialKind)
   return (
-    <main className="min-h-svh bg-background">
+    <main className="min-h-svh w-screen min-w-full bg-background">
       {kind
         ? <AssessmentWizard key={kind} kind={kind} onAnother={() => setKind(null)} />
         : <FormPicker onChoose={setKind} />
