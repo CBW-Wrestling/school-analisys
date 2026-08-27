@@ -1,6 +1,7 @@
 import { addHours, endOfToday, format, parseISO, subHours } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 import { Area, CartesianGrid, ComposedChart, Line, XAxis } from 'recharts'
-import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   type ChartConfig,
@@ -10,15 +11,6 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 
 // Série sintética (mesma forma/magnitude do bloco de referência dashboard-01) — sem dado real de negócio.
 function seededRandom(seed: number) {
@@ -43,15 +35,15 @@ const chartData = chartValues.map((point, index) => ({
 
 const chartConfig = {
   newCustomers: {
-    label: 'New Customers',
+    label: 'Novos cadastros',
     color: 'var(--chart-1)',
   },
   activeAccounts: {
-    label: 'Active Accounts',
+    label: 'Contas ativas',
     color: 'var(--chart-2)',
   },
   returningUsers: {
-    label: 'Returning Users',
+    label: 'Retornos',
     color: 'var(--chart-3)',
   },
 } satisfies ChartConfig
@@ -60,46 +52,23 @@ export function PerformanceOverview() {
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle className="leading-none">Customer Activity</CardTitle>
+        <CardTitle className="leading-none">Atividade de exemplo</CardTitle>
         <CardDescription>
-          <span className="hidden @[540px]/card:block">Customer activity for the last 3 months</span>
-          <span className="@[540px]/card:hidden">Last 3 months</span>
+          <span className="hidden @[540px]/card:block">Série sintética para demonstrar a visualização de três meses</span>
+          <span className="@[540px]/card:hidden">Série demonstrativa</span>
         </CardDescription>
-        <CardAction className="flex items-center gap-2">
-          <Select defaultValue="quarter">
-            <SelectTrigger size="sm" className="w-28">
-              <SelectValue placeholder="3 months" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Period</SelectLabel>
-                <SelectItem value="quarter">3 months</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-
-          <Select defaultValue="all">
-            <SelectTrigger size="sm" className="w-32">
-              <SelectValue placeholder="All segments" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Segments</SelectLabel>
-                <SelectItem value="all">All segments</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="organic">Organic</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-
-          <Button variant="outline" size="sm">
-            View report
-          </Button>
+        <CardAction>
+          <Badge variant="outline">Demonstração</Badge>
         </CardAction>
       </CardHeader>
 
       <CardContent>
-        <ChartContainer config={chartConfig} className="aspect-auto h-80 w-full">
+        <ChartContainer
+          config={chartConfig}
+          className="aspect-auto h-80 w-full"
+          role="img"
+          aria-label="Gráfico demonstrativo de atividade com séries sintéticas de novos cadastros, contas ativas e retornos em três meses"
+        >
           <ComposedChart data={chartData} margin={{ top: 0 }}>
             <defs>
               <linearGradient id="fillNewCustomers" x1="0" y1="0" x2="0" y2="1">
@@ -116,7 +85,7 @@ export function PerformanceOverview() {
               tickMargin={8}
               minTickGap={48}
               tickFormatter={(value) =>
-                parseISO(value).toLocaleDateString('en-US', {
+                parseISO(value).toLocaleDateString('pt-BR', {
                   month: 'short',
                   day: 'numeric',
                 })
@@ -129,7 +98,7 @@ export function PerformanceOverview() {
                 <ChartTooltipContent
                   className="w-50"
                   indicator="line"
-                  labelFormatter={(value) => format(parseISO(String(value)), 'd MMMM yyyy')}
+                  labelFormatter={(value) => format(parseISO(String(value)), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
                 />
               }
             />

@@ -38,7 +38,7 @@ function FormPicker({ onChoose }: { onChoose: (kind: FormKind) => void }) {
 export function CollectionPage({ initialKind }: { initialKind: FormKind }) {
   const [kind, setKind] = useState<FormKind | null>(initialKind)
   return (
-    <main className="min-h-svh w-screen min-w-full bg-background">
+    <main className="min-h-svh w-full min-w-0 overflow-x-hidden bg-background">
       {kind
         ? <AssessmentWizard key={kind} kind={kind} onAnother={() => setKind(null)} />
         : <FormPicker onChoose={setKind} />

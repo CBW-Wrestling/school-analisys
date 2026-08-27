@@ -1,5 +1,5 @@
 import { Bar, BarChart, CartesianGrid, Legend, XAxis, YAxis } from 'recharts'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, RotateCcw } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Metric } from '../components/Metric'
 import { PageHeader } from '../components/PageHeader'
@@ -12,6 +12,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Toggle } from '@/components/ui/toggle'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { explorerMockCompetitions, explorerMockMotorRows, explorerMockProfileRows } from '../mocks/explorer'
 
 const SOCIAL_DIMS: { key: keyof ProfileRow; label: string; eyebrow: string }[] = [
   { key: 'tempoPratica',       label: 'Tempo de Prática',       eyebrow: 'EXPERIÊNCIA' },
@@ -20,9 +22,14 @@ const SOCIAL_DIMS: { key: keyof ProfileRow; label: string; eyebrow: string }[] =
   { key: 'iniciouNaLuta',      label: 'Começou pela Luta?',     eyebrow: 'ORIGEM'     },
 ]
 
-function ExplorerBarChart({ data, keys, stacked = false, expanded = false }: { data: Record<string, string | number>[]; keys: string[]; stacked?: boolean; expanded?: boolean }) {
+function ExplorerBarChart({ data, keys, label, stacked = false, expanded = false }: { data: Record<string, string | number>[]; keys: string[]; label: string; stacked?: boolean; expanded?: boolean }) {
   return (
-    <ChartContainer config={{}} className={expanded ? 'aspect-auto h-[420px] w-full' : 'aspect-auto h-[320px] w-full'}>
+    <ChartContainer
+      config={{}}
+      className={expanded ? 'aspect-auto h-[420px] w-full' : 'aspect-auto h-[320px] w-full'}
+      role="img"
+      aria-label={label}
+    >
       <BarChart data={data} margin={{ top: 12, right: 12, bottom: 12, left: 0 }}>
         <CartesianGrid vertical={false} />
         <XAxis dataKey="label" axisLine={false} tickLine={false} tickMargin={8} angle={-15} textAnchor="end" height={52} />
@@ -42,9 +49,16 @@ function FilterSkeleton() {
 }
 
 export function ExplorerPage() {
-  const { rows: competitions } = useApiRows<CompetitionRow>('/api/competitions')
-  const { rows: motorRows, loading } = useApiRows<MotorRow>('/api/dashboard/motor')
-  const { rows: profileRows, loading: profileLoading } = useApiRows<ProfileRow>('/api/dashboard/profiles')
+  const { rows: competitionRows, loading: competitionsLoading, error: competitionsError } = useApiRows<CompetitionRow>('/api/competitions')
+  const { rows: motorResponseRows, loading, error: motorError } = useApiRows<MotorRow>('/api/dashboard/motor')
+  const { rows: profileResponseRows, loading: profileLoading, error: profileError } = useApiRows<ProfileRow>('/api/dashboard/profiles')
+  const useMockCompetitions = !competitionsLoading && (Boolean(competitionsError) || competitionRows.length === 0)
+  const useMockMotorRows = !loading && (Boolean(motorError) || motorResponseRows.length === 0)
+  const useMockProfileRows = !profileLoading && (Boolean(profileError) || profileResponseRows.length === 0)
+  const competitions = useMockCompetitions ? explorerMockCompetitions : competitionRows
+  const motorRows = useMockMotorRows ? explorerMockMotorRows : motorResponseRows
+  const profileRows = useMockProfileRows ? explorerMockProfileRows : profileResponseRows
+  const usingMockData = useMockCompetitions || useMockMotorRows || useMockProfileRows
 
   const allStyles = useMemo(
     () => Array.from(new Set(motorRows.map((r) => r.estilo))).filter((s): s is string => Boolean(s)).sort(),
@@ -192,15 +206,48 @@ export function ExplorerPage() {
   const toggleCompetencia = (c: string) =>
     setSelectedCompetencias((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]))
 
+  const resetFilters = () => {
+    setSelectedEvents(competitions.map((competition) => competition.code))
+    setSelectedStyles(allStyles)
+    setSelectedCompetencias(allCompetencias)
+    setSelectedAvaliacoes(avaliacoesByComp)
+  }
+
+  const hasCustomFilters =
+    selectedEvents.length !== competitions.length || competitions.some((competition) => !selectedEvents.includes(competition.code)) ||
+    selectedStyles.length !== allStyles.length || allStyles.some((style) => !selectedStyles.includes(style)) ||
+    selectedCompetencias.length !== allCompetencias.length || allCompetencias.some((competencia) => !selectedCompetencias.includes(competencia))
+
   return (
     <PageHeader active="explorer">
       <div className="@container/main">
       <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 p-4 md:gap-6 md:p-6">
-        <div className="flex flex-col gap-1">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Análise exploratória</p>
-          <h1 className="text-3xl leading-none tracking-tight text-foreground">Leitura da base</h1>
-          <p className="text-sm text-muted-foreground">Cruze eventos, estilos e competências para encontrar padrões de execução.</p>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex flex-col gap-1">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Análise exploratória</p>
+            <h1 className="text-3xl leading-none tracking-tight text-foreground">Leitura da base</h1>
+            <p className="text-sm text-muted-foreground">Cruze eventos, estilos e competências para encontrar padrões de execução.</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={resetFilters} disabled={!hasCustomFilters}>
+            <RotateCcw aria-hidden="true" />
+            Restaurar filtros
+          </Button>
         </div>
+
+        {usingMockData && (
+          <Alert>
+            <AlertTitle>Visão de demonstração</AlertTitle>
+            <AlertDescription>Uma ou mais fontes de análise não estão disponíveis. Os indicadores desta tela usam dados simulados para validação de interface.</AlertDescription>
+          </Alert>
+        )}
+
+        <div className="grid grid-cols-2 gap-4 @xl/main:grid-cols-4">
+          <Metric loading={loading} label="Movimentos avaliados" value={String(total)} />
+          <Metric loading={loading} label="Execuções completas" value={String(complete)} />
+          <Metric loading={loading} label="Taxa de domínio" value={total ? `${Math.round((complete / total) * 100)}%` : '—'} />
+          <Metric loading={loading} label="Eventos selecionados" value={String(selectedEvents.length)} />
+        </div>
+
         <aside className="grid grid-cols-1 gap-4 @xl/main:grid-cols-3">
           <Card>
             <CardHeader>
@@ -211,7 +258,9 @@ export function ExplorerPage() {
                 <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setSelectedEvents([])}>Limpar</Button>
               </CardAction>
             </CardHeader>
-            <CardContent className="flex flex-col gap-2.5">
+            <CardContent>
+              <fieldset className="flex flex-col gap-2.5">
+              <legend className="sr-only">Competições</legend>
               {loading ? <FilterSkeleton /> : competitions.map((c) => (
                 <label key={c.id} className="flex cursor-pointer items-center gap-2 text-sm">
                   <Checkbox checked={selectedEvents.includes(c.code)} onCheckedChange={() => toggleEvent(c.code)} />
@@ -219,6 +268,7 @@ export function ExplorerPage() {
                   {c.year && <small className="font-mono text-xs text-muted-foreground">{c.year}</small>}
                 </label>
               ))}
+              </fieldset>
             </CardContent>
           </Card>
 
@@ -231,13 +281,16 @@ export function ExplorerPage() {
                 <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setSelectedStyles([])}>Limpar</Button>
               </CardAction>
             </CardHeader>
-            <CardContent className="flex flex-col gap-2.5">
+            <CardContent>
+              <fieldset className="flex flex-col gap-2.5">
+              <legend className="sr-only">Estilos</legend>
               {loading ? <FilterSkeleton /> : allStyles.map((style) => (
                 <label key={style} className="flex cursor-pointer items-center gap-2 text-sm">
                   <Checkbox checked={selectedStyles.includes(style)} onCheckedChange={() => toggleStyle(style)} />
                   <span>{style}</span>
                 </label>
               ))}
+              </fieldset>
             </CardContent>
           </Card>
 
@@ -250,25 +303,20 @@ export function ExplorerPage() {
                 <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setSelectedCompetencias([])}>Limpar</Button>
               </CardAction>
             </CardHeader>
-            <CardContent className="flex flex-col gap-2.5">
+            <CardContent>
+              <fieldset className="flex flex-col gap-2.5">
+              <legend className="sr-only">Competências</legend>
               {loading ? <FilterSkeleton /> : allCompetencias.map((comp) => (
                 <label key={comp} className="flex cursor-pointer items-center gap-2 text-sm">
                   <Checkbox checked={selectedCompetencias.includes(comp)} onCheckedChange={() => toggleCompetencia(comp)} />
                   <span>{comp}</span>
                 </label>
               ))}
+              </fieldset>
             </CardContent>
           </Card>
         </aside>
-
         <div className="min-w-0">
-          <div className="mb-4 grid grid-cols-2 gap-4 @xl/main:grid-cols-4">
-            <Metric loading={loading} label="Movimentos avaliados" value={String(total)} />
-            <Metric loading={loading} label="Execuções completas" value={String(complete)} />
-            <Metric loading={loading} label="Taxa de domínio" value={total ? `${Math.round((complete / total) * 100)}%` : '—'} />
-            <Metric loading={loading} label="Eventos selecionados" value={String(selectedEvents.length)} />
-          </div>
-
           {loading ? (
             <div className="grid gap-4 @2xl/main:grid-cols-2"><Skeleton className="h-[320px] w-full rounded-lg" /><Skeleton className="h-[320px] w-full rounded-lg" /></div>
           ) : (
@@ -280,7 +328,7 @@ export function ExplorerPage() {
                     <CardTitle>Qualidade da execução por evento</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <ExplorerBarChart data={resultadoData} keys={chartKeys} />
+                    <ExplorerBarChart data={resultadoData} keys={chartKeys} label="Gráfico de barras que compara os resultados de execução entre eventos selecionados." />
                   </CardContent>
                 </Card>
 
@@ -290,7 +338,7 @@ export function ExplorerPage() {
                     <CardTitle>Movimentos por competência e evento</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <ExplorerBarChart data={competenciaData} keys={chartKeys} />
+                    <ExplorerBarChart data={competenciaData} keys={chartKeys} label="Gráfico de barras que compara movimentos por competência entre eventos selecionados." />
                   </CardContent>
                 </Card>
               </div>
@@ -304,7 +352,7 @@ export function ExplorerPage() {
                   const rawSel = selectedAvaliacoes[comp] ?? allAvs
                   const selAvs = allAvs.filter((av) => rawSel.includes(av))
                   const compRows = filtered.filter((r) => r.competencia === comp)
-                  const compComplete = compRows.filter((r) => r.resultado === 'Completo').length
+                  const compComplete = compRows.filter((r) => r.resultado === 'COMPLETE').length
                   const isExpanded = expandedCompetencia === comp
 
                   // grouped bar: X = selAvs, keys = competitions (chartKeys)
@@ -352,7 +400,7 @@ export function ExplorerPage() {
                         {/* movement filter */}
                         <div className="mb-3.5 rounded-lg bg-muted/50 p-3.5">
                           <div className="mb-2.5 flex items-center justify-between gap-3">
-                            <p className="text-xs font-medium tracking-wide text-muted-foreground">MOVIMENTOS</p>
+                            <p id={`movements-label-${comp}`} className="text-xs font-medium tracking-wide text-muted-foreground">MOVIMENTOS</p>
                             <div className="flex gap-1">
                               <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setSelectedAvaliacoes((p) => ({ ...p, [comp]: allAvs }))}>
                                 Todos
@@ -363,7 +411,7 @@ export function ExplorerPage() {
                               </Button>
                             </div>
                           </div>
-                          <div className="flex flex-wrap gap-1.5">
+                          <div role="group" aria-labelledby={`movements-label-${comp}`} className="flex flex-wrap gap-1.5">
                             {allAvs.map((av) => (
                               <Toggle
                                 key={av}
@@ -392,6 +440,7 @@ export function ExplorerPage() {
                                       variant="outline"
                                       size="icon-sm"
                                       onClick={() => toggleExpandAv(comp, av)}
+                                      aria-label={isAvExpanded ? `Recolher gráfico de ${av}` : `Expandir gráfico de ${av}`}
                                       title={isAvExpanded ? 'Recolher' : 'Expandir'}
                                     >
                                       {isAvExpanded ? <ChevronUp aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
@@ -399,7 +448,7 @@ export function ExplorerPage() {
                                   </CardAction>
                                 </CardHeader>
                                 <CardContent>
-                                    <ExplorerBarChart data={data} keys={resultados} stacked expanded={isAvExpanded} />
+                                    <ExplorerBarChart data={data} keys={resultados} label={`Gráfico de barras empilhadas dos resultados de ${av} por evento.`} stacked expanded={isAvExpanded} />
                                 </CardContent>
                               </Card>
                             )
@@ -460,14 +509,10 @@ export function ExplorerPage() {
                       </CollapsibleTrigger>
 
                       <CollapsibleContent className="px-5 pb-5">
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="text-sm">{label} por competição</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <ExplorerBarChart data={data} keys={chartKeys} />
-                          </CardContent>
-                        </Card>
+                        <div className="border-t pt-4">
+                          <p className="mb-3 text-sm font-medium">{label} por competição</p>
+                          <ExplorerBarChart data={data} keys={chartKeys} label={`Gráfico de barras de ${label.toLowerCase()} por competição.`} />
+                        </div>
                       </CollapsibleContent>
                     </Collapsible>
                   )

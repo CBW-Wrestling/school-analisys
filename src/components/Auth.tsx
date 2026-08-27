@@ -17,6 +17,7 @@ import {
 import { Input } from '@/components/ui/input'
 
 type AuthScreen = 'login' | 'register'
+const DEMO_SESSION_KEY = 'cbw_demo_mode'
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const [authed, setAuthed] = useState(false)
@@ -25,7 +26,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const check = async () => {
-      setAuthed(isAuthenticated() || await refreshTokens())
+      const demoMode = import.meta.env.DEV && sessionStorage.getItem(DEMO_SESSION_KEY) === 'true'
+      setAuthed(demoMode || isAuthenticated() || await refreshTokens())
       setReady(true)
     }
     void check()
@@ -35,7 +37,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (authed) return <>{children}</>
 
   return screen === 'login'
-    ? <LoginScreen onAuthenticated={() => setAuthed(true)} onRegister={() => setScreen('register')} />
+    ? <LoginScreen onAuthenticated={() => setAuthed(true)} onRegister={() => setScreen('register')} onDemo={() => { sessionStorage.setItem(DEMO_SESSION_KEY, 'true'); setAuthed(true) }} />
     : <RegisterScreen onBack={() => setScreen('login')} />
 }
 
@@ -50,8 +52,8 @@ export function SignOutButton() {
 function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <main className="min-h-dvh bg-background">
-      <div className="grid min-h-dvh justify-center p-2 lg:grid-cols-2">
-        <div className="relative order-2 hidden overflow-hidden rounded-3xl bg-primary lg:flex">
+      <div className="grid min-h-dvh grid-cols-1 justify-center lg:grid-cols-2">
+        <div className="relative order-2 hidden overflow-hidden rounded-3xl bg-primary lg:flex lg:rounded-none">
           <img src={heroImage} alt="" className="absolute inset-0 size-full object-cover opacity-20 mix-blend-luminosity" />
           <div className="relative z-10 flex w-full flex-col justify-between p-10 text-primary-foreground">
             <div className="flex flex-col gap-2">
@@ -109,9 +111,11 @@ function AuthError({ message }: { message: string | null }) {
 function LoginScreen({
   onAuthenticated,
   onRegister,
+  onDemo,
 }: {
   onAuthenticated: () => void
   onRegister: () => void
+  onDemo: () => void
 }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -165,6 +169,11 @@ function LoginScreen({
           <FieldDescription className="text-center">
             Ainda não tem conta? <a href="#" onClick={(event) => { event.preventDefault(); onRegister() }}>Criar conta</a>
           </FieldDescription>
+          {import.meta.env.DEV && (
+            <Button type="button" variant="ghost" size="sm" onClick={onDemo}>
+              Explorar demonstração
+            </Button>
+          )}
         </FieldGroup>
       </form>
     </AuthLayout>

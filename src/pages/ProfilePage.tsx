@@ -11,10 +11,25 @@ import { Skeleton } from '@/components/ui/skeleton'
 export function ProfilePage() {
   const [user, setUser] = useState<UserInfo | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
-  useEffect(() => {
-    fetchCurrentUser().then((u) => { setUser(u); setLoading(false) })
-  }, [])
+  const resolveUser = (request: ReturnType<typeof fetchCurrentUser>) => {
+    request
+      .then((u) => setUser(u))
+      .catch(() => {
+        setUser(null)
+        setError(true)
+      })
+      .finally(() => setLoading(false))
+  }
+
+  const loadUser = () => {
+    setLoading(true)
+    setError(false)
+    resolveUser(fetchCurrentUser())
+  }
+
+  useEffect(() => { resolveUser(fetchCurrentUser()) }, [])
 
   const handleLogout = async () => {
     await logout()
@@ -28,7 +43,7 @@ export function ProfilePage() {
           <div className="flex flex-col gap-1">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Conta</p>
             <h1 className="text-3xl leading-none tracking-tight text-foreground">Meu perfil</h1>
-            <p className="text-sm text-muted-foreground">Gerencie seus dados de acesso à plataforma.</p>
+            <p className="text-sm text-muted-foreground">Consulte seus dados de acesso à plataforma.</p>
           </div>
 
           {loading ? (
@@ -70,11 +85,14 @@ export function ProfilePage() {
                 </Button>
               </CardContent>
             </Card>
-          ) : (
+          ) : error ? (
             <Alert variant="destructive">
-              <AlertDescription>Não foi possível carregar os dados.</AlertDescription>
+              <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+                <span>Não foi possível carregar os dados.</span>
+                <Button variant="outline" size="sm" onClick={loadUser}>Tentar novamente</Button>
+              </AlertDescription>
             </Alert>
-          )}
+          ) : null}
         </section>
       </div>
     </PageHeader>

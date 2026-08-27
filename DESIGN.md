@@ -1,6 +1,6 @@
 # CBW Design System
 
-Este documento registra os padrões visuais e de interação adotados do template `next-shadcn-admin-dashboard` e sua tradução para o CBW. Ele funciona como referência para novas telas e refactors.
+Este documento registra os padrões visuais e de interação adotados do template `next-shadcn-admin-dashboard` e sua tradução para o CBW. Ele funciona como referência para novas telas e refactors. Consulte também o [catálogo de padrões](references/template-patterns.md) para escolher uma tela fonte antes de implementar.
 
 ## Direção visual
 
@@ -73,6 +73,8 @@ Padrão de topo:
 
 - Gráficos ficam dentro de `ChartContainer` com `ChartConfig` semântico.
 - Recharts é o padrão: `ComposedChart` para séries combinadas, `LineChart`/`BarChart` para comparações e `PieChart` para composição.
+- Escolha a visualização pela pergunta: evolução no tempo usa linha/área; comparação entre categorias usa barras; composição com poucas partes usa pizza; composição no tempo usa barras empilhadas; distribuição usa histograma/barras; relação entre duas medidas usa dispersão; UF usa `BrazilHeatmap`.
+- Antes de implementar, registre `pergunta -> gráfico -> motivo` e confirme medida, dimensão, período, unidade, cardinalidade e tratamento de nulos. Quando não houver decisão visual clara, prefira KPI ou tabela.
 - Altura estável (`h-68`, `h-80` ou equivalente) e `ResponsiveContainer`; nunca deixar o gráfico depender de altura automática.
 - Remover bordas e linhas visuais desnecessárias: `CartesianGrid vertical={false}`, eixos sem linha e ticks discretos.
 - Tooltip e legenda vêm dos componentes shadcn (`ChartTooltipContent`, `ChartLegendContent`).
@@ -106,6 +108,8 @@ Padrão de topo:
 | Login v2 | Autenticação Google/e-mail do CBW |
 | Tasks / Forms | Coleta de perfil, físico e técnico |
 | Opportunities table | Resultados, atletas e importações |
+| File Manager | Importação, validação e histórico de arquivos |
+| Analytics / Finance | Análises com KPIs, filtros e gráficos de decisão |
 
 ## Regra de implementação
 

@@ -265,39 +265,49 @@ const REVIEW_LABELS: Record<string, string> = {
   'Estatura (cm)': 'Estatura (cm)',
 }
 
-function Review({ kind, answers, confirmed, onConfirmedChange }: { kind: FormKind; answers: Answers; confirmed: boolean; onConfirmedChange: (confirmed: boolean) => void }) {
-  const reviewLabels: Record<string, string> = {
-    ...REVIEW_LABELS,
-    school: 'Escola',
-    place: 'Local de prática',
-    locationName: 'Nome do local',
-    otherSport: 'Outra modalidade',
-    placement: 'Colocação',
-  }
-  const commonLabels = ['event', 'name', 'state', 'style', 'weight', ...(kind === 'profile' ? ['school', 'practiceTime', 'place', 'locationName', 'frequency', 'otherSport'] : ['gender'])]
-  const physicalLabels = ['Envergadura (cm)', 'Estatura (cm)', 'Prensão manual (D)', 'Prensão manual (E)', 'Envergadura e base', 'Antebraço (D)', 'Antebraço (E)', 'placement']
-  const selectedSports = Object.entries(answers).filter(([key, value]) => key.startsWith('sport-') && value).map(([, value]) => value).join(', ')
+const REVIEW_LABELS_EXTENDED: Record<string, string> = {
+  ...REVIEW_LABELS,
+  school: 'Escola',
+  place: 'Local de prática',
+  locationName: 'Nome do local',
+  otherSport: 'Outra modalidade',
+  placement: 'Colocação',
+}
 
-  const ReviewGrid = ({ labels }: { labels: string[] }) => (
+function formatReviewValue(key: string, answers: Answers, selectedSports: string) {
+  if (key === 'gender') return answers[key] === 'M' ? 'Masculino' : answers[key] === 'W' ? 'Feminino' : 'Não informado'
+  if (key === 'otherSport' && selectedSports) return `${answers[key]}: ${selectedSports}`
+  return answers[key] || 'Não informado'
+}
+
+function ReviewGrid({ labels, answers, selectedSports }: { labels: string[]; answers: Answers; selectedSports: string }) {
+  return (
     <dl className="grid gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-2">
       {labels.map((key) => (
         <div key={key} className="flex min-w-0 flex-col gap-1 bg-card px-4 py-3">
-          <dt className="text-[14px] font-medium text-muted-foreground">{reviewLabels[key] ?? key}</dt>
-          <dd className="truncate text-[14px] font-semibold text-foreground">{key === 'gender' ? (answers[key] === 'M' ? 'Masculino' : answers[key] === 'W' ? 'Feminino' : 'Não informado') : key === 'otherSport' && selectedSports ? `${answers[key]}: ${selectedSports}` : answers[key] || 'Não informado'}</dd>
+          <dt className="text-[14px] font-medium text-muted-foreground">{REVIEW_LABELS_EXTENDED[key] ?? key}</dt>
+          <dd className="truncate text-[14px] font-semibold text-foreground">{formatReviewValue(key, answers, selectedSports)}</dd>
         </div>
       ))}
     </dl>
   )
+}
+
+/** Final confirmation screen; submission remains disabled until the reviewer confirms the summary. */
+function Review({ kind, answers, confirmed, onConfirmedChange }: { kind: FormKind; answers: Answers; confirmed: boolean; onConfirmedChange: (confirmed: boolean) => void }) {
+  const commonLabels = ['event', 'name', 'state', 'style', 'weight', ...(kind === 'profile' ? ['school', 'practiceTime', 'place', 'locationName', 'frequency', 'otherSport'] : ['gender'])]
+  const physicalLabels = ['Envergadura (cm)', 'Estatura (cm)', 'Prensão manual (D)', 'Prensão manual (E)', 'Envergadura e base', 'Antebraço (D)', 'Antebraço (E)', 'placement']
+  const selectedSports = Object.entries(answers).filter(([key, value]) => key.startsWith('sport-') && value).map(([, value]) => value).join(', ')
 
   return (
     <div className="flex flex-col gap-6">
       <FieldsIntro title="Revise antes de enviar" text="Confira todos os dados. O envio só começa após sua confirmação explícita." />
-      <ReviewGrid labels={commonLabels} />
-      {kind === 'physical' && <ReviewGrid labels={physicalLabels} />}
+      <ReviewGrid labels={commonLabels} answers={answers} selectedSports={selectedSports} />
+      {kind === 'physical' && <ReviewGrid labels={physicalLabels} answers={answers} selectedSports={selectedSports} />}
       {kind === 'motor' && Object.entries(movements).map(([competency, competencyMovements]) => (
         <section key={competency} className="grid gap-2">
           <h3 className="text-sm font-semibold tracking-tight text-foreground">{competency}</h3>
-          <ReviewGrid labels={competencyMovements} />
+          <ReviewGrid labels={competencyMovements} answers={answers} selectedSports={selectedSports} />
         </section>
       ))}
       <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-input bg-muted/30 p-4 text-sm transition-colors hover:bg-muted/50 has-[:focus-visible]:border-ring has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/20">
@@ -340,6 +350,7 @@ function Stepper({ step, totalSteps, kind }: { step: number; totalSteps: number;
   )
 }
 
+/** Three-step assessment flow used by profile, physical, and motor data collection. */
 export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnother: () => void }) {
   const [step, setStep] = useState(1)
   const [answers, setAnswers] = useState<Answers>({ competency: 'Acrobacias' })
@@ -481,7 +492,7 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
   }
 
   return (
-    <section className="min-h-dvh w-screen min-w-full bg-background text-foreground" aria-labelledby="form-title">
+    <section className="min-h-dvh w-full min-w-0 overflow-x-hidden bg-background text-foreground" aria-labelledby="form-title">
       <header className="flex h-12 w-full items-center justify-between border-b border-border bg-background px-4 md:px-6">
         <a className="flex items-center gap-2 text-sm font-semibold text-foreground" href="/">
           <img className="size-7 object-contain" src={logo} alt="" />

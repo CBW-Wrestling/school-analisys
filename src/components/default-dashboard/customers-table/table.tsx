@@ -124,10 +124,12 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
       <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative w-full lg:w-80">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Label htmlFor="recent-customers-search" className="sr-only">Buscar registros demonstrativos</Label>
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
             <Input
+              id="recent-customers-search"
               className="h-7 rounded-[min(var(--radius-md),12px)] pl-8"
-              placeholder="Search customers..."
+              placeholder="Buscar registros..."
               value={searchQuery}
               onChange={(event) => {
                 table.getColumn('search')?.setFilterValue(event.target.value || undefined)
@@ -137,8 +139,8 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <UsersRound />
+              <Button variant="outline" size="sm" aria-label="Filtrar por status">
+                <UsersRound aria-hidden="true" />
                 Status
               </Button>
             </DropdownMenuTrigger>
@@ -160,9 +162,9 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
           </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <CalendarDays />
-                Joined date
+              <Button variant="outline" size="sm" aria-label="Filtrar por data de cadastro">
+                <CalendarDays aria-hidden="true" />
+                Data de cadastro
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-40" align="start">
@@ -185,9 +187,9 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center xl:w-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <CreditCard />
-                Billing
+              <Button variant="outline" size="sm" aria-label="Filtrar por cobrança">
+                <CreditCard aria-hidden="true" />
+                Cobrança
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
@@ -208,9 +210,9 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
           </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <ArrowUpDown />
-                Sort
+              <Button variant="outline" size="sm" aria-label="Ordenar registros">
+                <ArrowUpDown aria-hidden="true" />
+                Ordenar
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
@@ -233,7 +235,7 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
       </div>
 
       <div className="overflow-hidden rounded-lg border bg-card">
-        <Table>
+        <Table aria-label="Tabela de registros demonstrativos">
           <TableHeader className="bg-muted/15">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -259,7 +261,7 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
             ) : (
               <TableRow>
                 <TableCell colSpan={table.getVisibleLeafColumns().length} className="h-24 text-center">
-                  No results.
+                  Nenhum registro encontrado.
                 </TableCell>
               </TableRow>
             )}
@@ -269,13 +271,13 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
 
       <div className="flex items-center justify-between px-1">
         <div className="hidden flex-1 text-sm text-muted-foreground lg:flex">
-          {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s)
-          selected.
+          {table.getFilteredSelectedRowModel().rows.length} de {table.getFilteredRowModel().rows.length} registro(s)
+          selecionado(s).
         </div>
         <div className="flex w-full items-center gap-8 lg:w-fit">
           <div className="hidden items-center gap-2 lg:flex">
             <Label htmlFor="recent-customers-rows-per-page" className="text-sm font-medium">
-              Rows per page
+              Linhas por página
             </Label>
             <Select
               value={`${table.getState().pagination.pageSize}`}
@@ -298,7 +300,7 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
             </Select>
           </div>
           <div className="flex w-fit items-center justify-center text-sm font-medium">
-            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+            Página {table.getState().pagination.pageIndex + 1} de {table.getPageCount()}
           </div>
           <div className="ml-auto flex items-center gap-2 lg:ml-0">
             <Button
@@ -308,8 +310,8 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
               onClick={() => table.setPageIndex(0)}
               disabled={!table.getCanPreviousPage()}
             >
-              <span className="sr-only">Go to first page</span>
-              <ChevronsLeft className="size-4" />
+              <span className="sr-only">Ir para a primeira página</span>
+              <ChevronsLeft className="size-4" aria-hidden="true" />
             </Button>
             <Button
               variant="outline"
@@ -318,8 +320,8 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
             >
-              <span className="sr-only">Go to previous page</span>
-              <ChevronLeft className="size-4" />
+              <span className="sr-only">Ir para a página anterior</span>
+              <ChevronLeft className="size-4" aria-hidden="true" />
             </Button>
             <Button
               variant="outline"
@@ -328,8 +330,8 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
             >
-              <span className="sr-only">Go to next page</span>
-              <ChevronRight className="size-4" />
+              <span className="sr-only">Ir para a próxima página</span>
+              <ChevronRight className="size-4" aria-hidden="true" />
             </Button>
             <Button
               variant="outline"
@@ -338,8 +340,8 @@ export function RecentCustomersTable({ data }: { data: RecentCustomerRow[] }) {
               onClick={() => table.setPageIndex(table.getPageCount() - 1)}
               disabled={!table.getCanNextPage()}
             >
-              <span className="sr-only">Go to last page</span>
-              <ChevronsRight className="size-4" />
+              <span className="sr-only">Ir para a última página</span>
+              <ChevronsRight className="size-4" aria-hidden="true" />
             </Button>
           </div>
         </div>

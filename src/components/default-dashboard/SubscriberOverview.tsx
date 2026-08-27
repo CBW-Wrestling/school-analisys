@@ -1,5 +1,4 @@
-import { Download } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { recentCustomers } from './customers-table/data'
 import { RecentCustomersTable } from './customers-table/table'
@@ -8,13 +7,10 @@ export function SubscriberOverview() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="leading-none">{recentCustomers.length.toLocaleString()} Customers</CardTitle>
-        <CardDescription>Recent customer records with plan, billing, status, and signup activity.</CardDescription>
+        <CardTitle className="leading-none">{recentCustomers.length.toLocaleString('pt-BR')} registros de exemplo</CardTitle>
+        <CardDescription>Registros sintéticos para demonstrar a tabela, seus estados e sua densidade de informação.</CardDescription>
         <CardAction>
-          <Button variant="outline" size="sm">
-            <Download />
-            Export
-          </Button>
+          <Badge variant="outline">Demonstração</Badge>
         </CardAction>
       </CardHeader>
 

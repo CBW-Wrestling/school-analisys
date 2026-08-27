@@ -26,6 +26,7 @@ export function getRefreshToken() { return localStorage.getItem(KEYS.refresh) }
 export function clearTokens() {
   localStorage.removeItem(KEYS.access)
   localStorage.removeItem(KEYS.refresh)
+  sessionStorage.removeItem('cbw_demo_mode')
 }
 
 // Decode JWT payload without a library

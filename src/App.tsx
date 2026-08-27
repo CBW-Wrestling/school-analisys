@@ -6,7 +6,7 @@ import { CollectionHome } from "./pages/CollectionHome"
 import { CollectionPage } from "./pages/CollectionPage"
 import { DashboardPage } from "./pages/DashboardPage"
 import { DefaultPage } from "./pages/DefaultPage"
-import { ExplorerPage } from "./pages/ExplorerPage"
+import { TechnicalAssessmentsPage } from "./pages/TechnicalAssessmentsPage"
 import { ImportPage } from "./pages/ImportPage"
 import { CompetitionImportPage } from "./pages/CompetitionImportPage"
 import { ResultsImportPage } from "./pages/ResultsImportPage"
@@ -39,7 +39,7 @@ function App() {
 
   const page = requestedForm && requestedForm in details ? <CollectionPage initialKind={requestedForm as FormKind} />
     : requestedView === "default" ? <DefaultPage />
-    : requestedView === "explorer" ? <ExplorerPage />
+    : requestedView === "explorer" ? <TechnicalAssessmentsPage />
     : requestedView === "results" ? <ResultsPage />
     : requestedView === "profiles" ? <ProfilesPage />
     : requestedView === "physical" ? <PhysicalPage />
