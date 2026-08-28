@@ -135,6 +135,22 @@ export type PhysicalRow = {
   eventIdentifier: string | null
 }
 
+// ── Coleta — vocabulário do formulário (backend) ───────────────────
+export type EnumOption = { code: string; label: string }
+
+export type MotorMovementOption = { id: string; code: string; label: string }
+
+export type MotorMovementGroup = {
+  id: string
+  code: string
+  name: string
+  movements: MotorMovementOption[]
+}
+
+export type PhysicalField = { key: string; label: string; required: boolean }
+
+export type PlacementOption = { code: number | null; label: string }
+
 // ── Coleta ─────────────────────────────────────────────────────────
 export type CompetitionAthlete = {
   entryId: string

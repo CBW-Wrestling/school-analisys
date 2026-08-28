@@ -12,8 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Toggle } from '@/components/ui/toggle'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { explorerMockCompetitions, explorerMockMotorRows, explorerMockProfileRows } from '../mocks/explorer'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 const SOCIAL_DIMS: { key: keyof ProfileRow; label: string; eyebrow: string }[] = [
   { key: 'tempoPratica',       label: 'Tempo de Prática',       eyebrow: 'EXPERIÊNCIA' },
@@ -49,16 +48,9 @@ function FilterSkeleton() {
 }
 
 export function ExplorerPage() {
-  const { rows: competitionRows, loading: competitionsLoading, error: competitionsError } = useApiRows<CompetitionRow>('/api/competitions')
-  const { rows: motorResponseRows, loading, error: motorError } = useApiRows<MotorRow>('/api/dashboard/motor')
-  const { rows: profileResponseRows, loading: profileLoading, error: profileError } = useApiRows<ProfileRow>('/api/dashboard/profiles')
-  const useMockCompetitions = !competitionsLoading && (Boolean(competitionsError) || competitionRows.length === 0)
-  const useMockMotorRows = !loading && (Boolean(motorError) || motorResponseRows.length === 0)
-  const useMockProfileRows = !profileLoading && (Boolean(profileError) || profileResponseRows.length === 0)
-  const competitions = useMockCompetitions ? explorerMockCompetitions : competitionRows
-  const motorRows = useMockMotorRows ? explorerMockMotorRows : motorResponseRows
-  const profileRows = useMockProfileRows ? explorerMockProfileRows : profileResponseRows
-  const usingMockData = useMockCompetitions || useMockMotorRows || useMockProfileRows
+  const { rows: competitions, error: competitionsError } = useApiRows<CompetitionRow>('/api/competitions')
+  const { rows: motorRows, loading, error: motorError } = useApiRows<MotorRow>('/api/dashboard/motor')
+  const { rows: profileRows, loading: profileLoading, error: profileError } = useApiRows<ProfileRow>('/api/dashboard/profiles')
 
   const allStyles = useMemo(
     () => Array.from(new Set(motorRows.map((r) => r.estilo))).filter((s): s is string => Boolean(s)).sort(),
@@ -234,11 +226,14 @@ export function ExplorerPage() {
           </Button>
         </div>
 
-        {usingMockData && (
-          <Alert>
-            <AlertTitle>Visão de demonstração</AlertTitle>
-            <AlertDescription>Uma ou mais fontes de análise não estão disponíveis. Os indicadores desta tela usam dados simulados para validação de interface.</AlertDescription>
-          </Alert>
+        {competitionsError && (
+          <Alert variant="destructive"><AlertDescription>Não foi possível carregar as competições.</AlertDescription></Alert>
+        )}
+        {motorError && (
+          <Alert variant="destructive"><AlertDescription>Não foi possível carregar os dados técnicos.</AlertDescription></Alert>
+        )}
+        {profileError && (
+          <Alert variant="destructive"><AlertDescription>Não foi possível carregar os perfis.</AlertDescription></Alert>
         )}
 
         <div className="grid grid-cols-2 gap-4 @xl/main:grid-cols-4">

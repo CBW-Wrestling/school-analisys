@@ -5,13 +5,12 @@ import { Metric } from '../components/Metric'
 import { PageHeader } from '../components/PageHeader'
 import { useApiRows } from '../lib/api'
 import type { CompetitionRow, MotorRow } from '../types'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { explorerMockCompetitions, explorerMockMotorRows } from '../mocks/explorer'
 
 const DIMENSIONS = ['Acrobacias', 'Pé', 'Solo'] as const
 const REGION_ORDER = ['Sudeste', 'Centro-Oeste', 'Nordeste', 'Sul', 'Norte']
@@ -42,12 +41,8 @@ function labelForStyle(style: string) {
 }
 
 export function TechnicalAssessmentsPage() {
-  const { rows: competitionResponse, loading: competitionsLoading, error: competitionsError } = useApiRows<CompetitionRow>('/api/competitions')
-  const { rows: motorResponse, loading: motorLoading, error: motorError } = useApiRows<MotorRow>('/api/dashboard/motor')
-  const useMockCompetitions = !competitionsLoading && (Boolean(competitionsError) || competitionResponse.length === 0)
-  const useMockMotorRows = !motorLoading && (Boolean(motorError) || motorResponse.length === 0)
-  const competitions = useMockCompetitions ? explorerMockCompetitions : competitionResponse
-  const motorRows = useMockMotorRows ? explorerMockMotorRows : motorResponse
+  const { rows: competitions, loading: competitionsLoading, error: competitionsError } = useApiRows<CompetitionRow>('/api/competitions')
+  const { rows: motorRows, loading: motorLoading, error: motorError } = useApiRows<MotorRow>('/api/dashboard/motor')
   const loading = competitionsLoading || motorLoading
   const styles = useMemo(() => Array.from(new Set(motorRows.map((row) => row.estilo).filter((style): style is string => Boolean(style)))).sort(), [motorRows])
   const events = useMemo(() => competitions.map((competition) => ({ value: competition.code, label: `${competition.name}${competition.year ? ` - ${competition.year}` : ''}` })), [competitions])
@@ -87,7 +82,8 @@ export function TechnicalAssessmentsPage() {
             <Button variant="outline" size="sm" onClick={resetFilters} disabled={!hasCustomFilters}><RotateCcw aria-hidden="true" />Restaurar filtros</Button>
           </div>
 
-          {(useMockCompetitions || useMockMotorRows) && <Alert><AlertTitle>Visão de demonstração</AlertTitle><AlertDescription>Os dados técnicos desta tela são simulados porque uma ou mais fontes não estão disponíveis.</AlertDescription></Alert>}
+          {competitionsError && <Alert variant="destructive"><AlertDescription>Não foi possível carregar as competições.</AlertDescription></Alert>}
+          {motorError && <Alert variant="destructive"><AlertDescription>Não foi possível carregar os dados técnicos.</AlertDescription></Alert>}
           <p className="sr-only" aria-live="polite" aria-atomic="true">{loading ? 'Atualizando análise técnica.' : `${rows.length} movimentos no recorte atual.`}</p>
 
           <div className="grid gap-4 @2xl/main:grid-cols-[minmax(0,1fr)_minmax(360px,0.6fr)]">

@@ -1,10 +1,10 @@
 import { ArrowLeft, ArrowRight, Check, Copy } from 'lucide-react'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { details, movements } from '../constants'
+import { details } from '../constants'
 import logo from '../assets/logo.svg'
 import { apiPost, useApiRows } from '../lib/api'
-import type { Answers, CompetitionAthlete, CompetitionRow, FormKind, Props } from '../types'
+import type { Answers, CompetitionAthlete, CompetitionRow, EnumOption, FormKind, MotorMovementGroup, PhysicalField, PlacementOption, Props } from '../types'
 import { ChoiceCards, Field, SelectPairs } from './Field'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -17,7 +17,11 @@ async function submitAssessment(payload: SubmitPayload) {
   return apiPost('/api/assessments', payload)
 }
 
-function buildPayload(kind: FormKind, answers: Answers): SubmitPayload {
+function toSnakeCase(key: string) {
+  return key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)
+}
+
+function buildPayload(kind: FormKind, answers: Answers, physicalFields: PhysicalField[], motorMovementCodes: string[]): SubmitPayload {
   const base: SubmitPayload = {
     kind,
     event: answers.event,
@@ -44,22 +48,13 @@ function buildPayload(kind: FormKind, answers: Answers): SubmitPayload {
     }
   }
   if (kind === 'physical') {
-    return {
-      ...base,
-      arm_span_cm: answers['Envergadura (cm)'],
-      height_cm: answers['Estatura (cm)'],
-      hand_grip_right: answers['Prensão manual (D)'],
-      hand_grip_left: answers['Prensão manual (E)'],
-      base_cm: answers['Envergadura e base'],
-      forearm_right_cm: answers['Antebraço (D)'],
-      forearm_left_cm: answers['Antebraço (E)'],
-      placement: answers.placement,
-    }
+    const payload: SubmitPayload = { ...base }
+    for (const field of physicalFields) payload[toSnakeCase(field.key)] = answers[field.key]
+    return payload
   }
-  const allMovements = Object.values(movements).flat()
   return {
     ...base,
-    results: allMovements
+    results: motorMovementCodes
       .filter(m => answers[m])
       .map(m => ({ movement: m, result: answers[m] })),
   }
@@ -149,9 +144,7 @@ function IdentityFields({
         />
         {athletesError && (
           <p className="col-span-full text-sm text-destructive">
-            {athletesError.includes('PGRST202') || athletesError.includes('schema cache')
-              ? 'Configuração pendente: execute o arquivo sql/07_get_competition_athletes_rpc.sql no Supabase e recarregue o schema.'
-              : `Erro ao carregar atletas: ${athletesError}`}
+            Erro ao carregar atletas: {athletesError}
           </p>
         )}
         {kind !== 'profile' && answers.entry_id && (
@@ -173,14 +166,37 @@ function IdentityFields({
   )
 }
 
-function ProfileFields({ answers, update }: Props) {
+function ProfileFields({ answers, update, practiceTimes, practiceLocations, weeklyFrequencies, otherSports }: Props & {
+  practiceTimes: EnumOption[]
+  practiceLocations: EnumOption[]
+  weeklyFrequencies: EnumOption[]
+  otherSports: EnumOption[]
+}) {
   return (
     <div className="flex flex-col gap-6">
       <FieldsIntro title="Contexto de prática" text="As faixas de tempo foram padronizadas para análises consistentes." />
       <div className="grid grid-cols-1 gap-4">
-        <ChoiceCards label="Tempo de prática" value={answers.practiceTime || ''} options={['Menos de 6 meses', '6 meses a 1 ano', '1 a 2 anos', '2 a 3 anos', 'Mais de 3 anos']} onChange={(value) => update('practiceTime', value)} />
-        <ChoiceCards label="Local de prática" value={answers.place || ''} options={['Projeto social', 'Academia', 'Escola', 'Clube']} onChange={(value) => update('place', value)} />
-        <ChoiceCards label="Frequência semanal" value={answers.frequency || ''} options={['1 vez', '2 vezes', '3 vezes', '4 vezes', '5 vezes', 'Mais de 5 vezes']} onChange={(value) => update('frequency', value)} />
+        <ChoiceCards
+          label="Tempo de prática"
+          value={answers.practiceTime || ''}
+          options={practiceTimes.map((o) => o.code)}
+          optionLabels={Object.fromEntries(practiceTimes.map((o) => [o.code, o.label]))}
+          onChange={(value) => update('practiceTime', value)}
+        />
+        <ChoiceCards
+          label="Local de prática"
+          value={answers.place || ''}
+          options={practiceLocations.map((o) => o.code)}
+          optionLabels={Object.fromEntries(practiceLocations.map((o) => [o.code, o.label]))}
+          onChange={(value) => update('place', value)}
+        />
+        <ChoiceCards
+          label="Frequência semanal"
+          value={answers.frequency || ''}
+          options={weeklyFrequencies.map((o) => o.code)}
+          optionLabels={Object.fromEntries(weeklyFrequencies.map((o) => [o.code, o.label]))}
+          onChange={(value) => update('frequency', value)}
+        />
         <Field label="Nome do local de prática" value={answers.locationName || ''} onChange={(value) => update('locationName', value)} />
       </div>
       <fieldset className="flex flex-col gap-3">
@@ -195,14 +211,14 @@ function ProfileFields({ answers, update }: Props) {
         </RadioGroup>
         {answers.otherSport === 'Sim' && (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {['Judô', 'Jiu-Jitsu / BJJ', 'Capoeira', 'MMA', 'Muay Thai', 'Vôlei', 'Outra'].map((item) => (
-              <label key={item} className="flex items-center gap-2 text-[14px]">
+            {otherSports.map((item) => (
+              <label key={item.code} className="flex items-center gap-2 text-[14px]">
                 <Checkbox
-                  checked={Boolean(answers[`sport-${item}`])}
-                  onCheckedChange={(checked) => update(`sport-${item}`, checked === true ? item : '')}
-                  aria-label={item}
+                  checked={Boolean(answers[`sport-${item.label}`])}
+                  onCheckedChange={(checked) => update(`sport-${item.label}`, checked === true ? item.label : '')}
+                  aria-label={item.label}
                 />
-                {item}
+                {item.label}
               </label>
             ))}
           </div>
@@ -212,38 +228,54 @@ function ProfileFields({ answers, update }: Props) {
   )
 }
 
-function PhysicalFields({ answers, update }: Props) {
-  const measures = ['Envergadura (cm)', 'Estatura (cm)', 'Prensão manual (D)', 'Prensão manual (E)', 'Envergadura e base', 'Antebraço (D)', 'Antebraço (E)']
+function PhysicalFields({ answers, update, physicalFields, placementOptions }: Props & {
+  physicalFields: PhysicalField[]
+  placementOptions: PlacementOption[]
+}) {
+  const measures = physicalFields.filter((field) => field.key !== 'placement')
+  const placementChoices = placementOptions.filter((option) => option.code !== null)
   return (
     <div className="flex flex-col gap-6">
       <FieldsIntro title="Medidas antropométricas" text="Informe apenas números. Decimais com vírgula ou ponto são aceitos." />
       <div className="grid grid-cols-1 gap-4">
-        {measures.map((measure) => (
-          <Field key={measure} label={measure} type="number" value={answers[measure] || ''} onChange={(value) => update(measure, value)} />
+        {measures.map((field) => (
+          <Field key={field.key} label={field.label} type="number" value={answers[field.key] || ''} onChange={(value) => update(field.key, value)} required={field.required} />
         ))}
-        <ChoiceCards label="Colocação (opcional)" value={answers.placement || ''} options={['1', '2', '3']} onChange={(value) => update('placement', value)} />
+        <ChoiceCards
+          label="Colocação (opcional)"
+          value={answers.placement || ''}
+          options={placementChoices.map((option) => String(option.code))}
+          optionLabels={Object.fromEntries(placementChoices.map((option) => [String(option.code), option.label]))}
+          onChange={(value) => update('placement', value)}
+        />
       </div>
     </div>
   )
 }
 
-function MotorFields({ answers, update }: Props) {
-  const competency = answers.competency || 'Acrobacias'
+function MotorFields({ answers, update, motorMovementGroups, motorResults }: Props & {
+  motorMovementGroups: MotorMovementGroup[]
+  motorResults: EnumOption[]
+}) {
+  const competency = answers.competency || motorMovementGroups[0]?.name || ''
+  const activeGroup = motorMovementGroups.find((group) => group.name === competency)
+  const resultOptions = motorResults.map((o) => o.code)
+  const resultLabels = Object.fromEntries(motorResults.map((o) => [o.code, o.label]))
   return (
     <div className="flex flex-col gap-6">
-      <FieldsIntro title="Avaliação por movimento" text="Complete os quatro movimentos desta competência e troque de aba para continuar." />
+      <FieldsIntro title="Avaliação por movimento" text="Complete os movimentos desta competência e troque de aba para continuar." />
       <div className="flex flex-wrap gap-2">
-        {Object.keys(movements).map((item) => (
-          <Button variant={competency === item ? 'default' : 'outline'} type="button" key={item} onClick={() => update('competency', item)}>
-            {item}
+        {motorMovementGroups.map((group) => (
+          <Button variant={competency === group.name ? 'default' : 'outline'} type="button" key={group.id} onClick={() => update('competency', group.name)}>
+            {group.name}
           </Button>
         ))}
       </div>
       <div className="grid grid-cols-1 gap-4">
-        {movements[competency].map((movement) => (
-          <div className="flex flex-col gap-1.5" key={movement}>
-            <strong className="text-[14px] font-medium text-foreground">{movement}</strong>
-            <ChoiceCards label="Resultado" value={answers[movement] || ''} options={['Completo', 'Incompleto', 'Não Fez', 'Não Sabe']} onChange={(value) => update(movement, value)} />
+        {(activeGroup?.movements ?? []).map((movement) => (
+          <div className="flex flex-col gap-1.5" key={movement.id}>
+            <strong className="text-[14px] font-medium text-foreground">{movement.label}</strong>
+            <ChoiceCards label="Resultado" value={answers[movement.code] || ''} options={resultOptions} optionLabels={resultLabels} onChange={(value) => update(movement.code, value)} />
           </div>
         ))}
       </div>
@@ -261,8 +293,6 @@ const REVIEW_LABELS: Record<string, string> = {
   practiceTime: 'Tempo de prática',
   frequency: 'Frequência semanal',
   competency: 'Competência',
-  'Envergadura (cm)': 'Envergadura (cm)',
-  'Estatura (cm)': 'Estatura (cm)',
 }
 
 const REVIEW_LABELS_EXTENDED: Record<string, string> = {
@@ -274,19 +304,21 @@ const REVIEW_LABELS_EXTENDED: Record<string, string> = {
   placement: 'Colocação',
 }
 
-function formatReviewValue(key: string, answers: Answers, selectedSports: string) {
+function formatReviewValue(key: string, answers: Answers, selectedSports: string, codeToLabel: Record<string, string>) {
   if (key === 'gender') return answers[key] === 'M' ? 'Masculino' : answers[key] === 'W' ? 'Feminino' : 'Não informado'
   if (key === 'otherSport' && selectedSports) return `${answers[key]}: ${selectedSports}`
-  return answers[key] || 'Não informado'
+  const raw = answers[key]
+  if (!raw) return 'Não informado'
+  return codeToLabel[raw] ?? raw
 }
 
-function ReviewGrid({ labels, answers, selectedSports }: { labels: string[]; answers: Answers; selectedSports: string }) {
+function ReviewGrid({ labels, answers, selectedSports, codeToLabel }: { labels: string[]; answers: Answers; selectedSports: string; codeToLabel: Record<string, string> }) {
   return (
     <dl className="grid gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-2">
       {labels.map((key) => (
         <div key={key} className="flex min-w-0 flex-col gap-1 bg-card px-4 py-3">
-          <dt className="text-[14px] font-medium text-muted-foreground">{REVIEW_LABELS_EXTENDED[key] ?? key}</dt>
-          <dd className="truncate text-[14px] font-semibold text-foreground">{formatReviewValue(key, answers, selectedSports)}</dd>
+          <dt className="text-[14px] font-medium text-muted-foreground">{REVIEW_LABELS_EXTENDED[key] ?? codeToLabel[key] ?? key}</dt>
+          <dd className="truncate text-[14px] font-semibold text-foreground">{formatReviewValue(key, answers, selectedSports, codeToLabel)}</dd>
         </div>
       ))}
     </dl>
@@ -294,20 +326,28 @@ function ReviewGrid({ labels, answers, selectedSports }: { labels: string[]; ans
 }
 
 /** Final confirmation screen; submission remains disabled until the reviewer confirms the summary. */
-function Review({ kind, answers, confirmed, onConfirmedChange }: { kind: FormKind; answers: Answers; confirmed: boolean; onConfirmedChange: (confirmed: boolean) => void }) {
+function Review({ kind, answers, confirmed, onConfirmedChange, physicalFields, motorMovementGroups, codeToLabel }: {
+  kind: FormKind
+  answers: Answers
+  confirmed: boolean
+  onConfirmedChange: (confirmed: boolean) => void
+  physicalFields: PhysicalField[]
+  motorMovementGroups: MotorMovementGroup[]
+  codeToLabel: Record<string, string>
+}) {
   const commonLabels = ['event', 'name', 'state', 'style', 'weight', ...(kind === 'profile' ? ['school', 'practiceTime', 'place', 'locationName', 'frequency', 'otherSport'] : ['gender'])]
-  const physicalLabels = ['Envergadura (cm)', 'Estatura (cm)', 'Prensão manual (D)', 'Prensão manual (E)', 'Envergadura e base', 'Antebraço (D)', 'Antebraço (E)', 'placement']
+  const physicalLabels = physicalFields.map((field) => field.key)
   const selectedSports = Object.entries(answers).filter(([key, value]) => key.startsWith('sport-') && value).map(([, value]) => value).join(', ')
 
   return (
     <div className="flex flex-col gap-6">
       <FieldsIntro title="Revise antes de enviar" text="Confira todos os dados. O envio só começa após sua confirmação explícita." />
-      <ReviewGrid labels={commonLabels} answers={answers} selectedSports={selectedSports} />
-      {kind === 'physical' && <ReviewGrid labels={physicalLabels} answers={answers} selectedSports={selectedSports} />}
-      {kind === 'motor' && Object.entries(movements).map(([competency, competencyMovements]) => (
-        <section key={competency} className="grid gap-2">
-          <h3 className="text-sm font-semibold tracking-tight text-foreground">{competency}</h3>
-          <ReviewGrid labels={competencyMovements} answers={answers} selectedSports={selectedSports} />
+      <ReviewGrid labels={commonLabels} answers={answers} selectedSports={selectedSports} codeToLabel={codeToLabel} />
+      {kind === 'physical' && <ReviewGrid labels={physicalLabels} answers={answers} selectedSports={selectedSports} codeToLabel={codeToLabel} />}
+      {kind === 'motor' && motorMovementGroups.map((group) => (
+        <section key={group.id} className="grid gap-2">
+          <h3 className="text-sm font-semibold tracking-tight text-foreground">{group.name}</h3>
+          <ReviewGrid labels={group.movements.map((movement) => movement.code)} answers={answers} selectedSports={selectedSports} codeToLabel={codeToLabel} />
         </section>
       ))}
       <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-input bg-muted/30 p-4 text-sm transition-colors hover:bg-muted/50 has-[:focus-visible]:border-ring has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/20">
@@ -353,7 +393,7 @@ function Stepper({ step, totalSteps, kind }: { step: number; totalSteps: number;
 /** Three-step assessment flow used by profile, physical, and motor data collection. */
 export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnother: () => void }) {
   const [step, setStep] = useState(1)
-  const [answers, setAnswers] = useState<Answers>({ competency: 'Acrobacias' })
+  const [answers, setAnswers] = useState<Answers>({})
   const [sent, setSent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -370,6 +410,24 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
     Boolean(answers.event)
   )
 
+  const { rows: motorMovementGroups } = useApiRows<MotorMovementGroup>(
+    answers.style ? `/api/motor/movements?style=${answers.style}` : '/api/motor/movements',
+    kind === 'motor'
+  )
+  const { rows: motorResults } = useApiRows<EnumOption>('/api/enums/motor-results', kind === 'motor')
+  const { rows: practiceTimes } = useApiRows<EnumOption>('/api/enums/practice-times', kind === 'profile')
+  const { rows: practiceLocations } = useApiRows<EnumOption>('/api/enums/practice-locations', kind === 'profile')
+  const { rows: weeklyFrequencies } = useApiRows<EnumOption>('/api/enums/weekly-frequencies', kind === 'profile')
+  const { rows: otherSports } = useApiRows<EnumOption>('/api/enums/other-sports', kind === 'profile')
+  const { rows: physicalFields } = useApiRows<PhysicalField>('/api/physical/fields', kind === 'physical')
+  const { rows: placementOptions } = useApiRows<PlacementOption>('/api/physical/placement-options', kind === 'physical')
+
+  const motorMovementCodes = motorMovementGroups.flatMap((group) => group.movements.map((movement) => movement.code))
+  const codeToLabel: Record<string, string> = {}
+  for (const option of [...practiceTimes, ...practiceLocations, ...weeklyFrequencies, ...motorResults]) codeToLabel[option.code] = option.label
+  for (const group of motorMovementGroups) for (const movement of group.movements) codeToLabel[movement.code] = movement.label
+  for (const field of physicalFields) codeToLabel[field.key] = field.label
+
   const info = details[kind]
   const Icon = info.icon
   const totalSteps = 3
@@ -377,8 +435,8 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
   const requiredFields = kind === 'profile'
     ? ['practiceTime', 'place', 'frequency']
     : kind === 'physical'
-      ? ['Envergadura (cm)', 'Estatura (cm)', 'Prensão manual (D)', 'Prensão manual (E)', 'Envergadura e base', 'Antebraço (D)', 'Antebraço (E)']
-      : Object.values(movements).flat()
+      ? physicalFields.filter((field) => field.required).map((field) => field.key)
+      : motorMovementCodes
   const formComplete = Boolean(answers.entry_id) && requiredFields.every((key) => Boolean(answers[key]))
   const stepComplete = step === 1 ? identityComplete : formComplete
   const update = (key: string, value: string) => setAnswers(current => ({ ...current, [key]: value }))
@@ -392,7 +450,7 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
     setSubmitting(true)
     setSubmitError(null)
     try {
-      await submitAssessment(buildPayload(kind, answers))
+      await submitAssessment(buildPayload(kind, answers, physicalFields, motorMovementCodes))
       setSent(true)
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Erro ao enviar. Tente novamente.')
@@ -417,7 +475,7 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
         age_category_code: target.ageCategoryCode,
         entry_id: target.entryId,
       }
-      await submitAssessment(buildPayload(kind, dupAnswers))
+      await submitAssessment(buildPayload(kind, dupAnswers, physicalFields, motorMovementCodes))
       setDuplicateDone(true)
       setDuplicating(false)
     } catch (err) {
@@ -524,12 +582,22 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
           )}
           {step === 2 && (
             kind === 'profile'
-              ? <ProfileFields answers={answers} update={update} />
+              ? <ProfileFields answers={answers} update={update} practiceTimes={practiceTimes} practiceLocations={practiceLocations} weeklyFrequencies={weeklyFrequencies} otherSports={otherSports} />
               : kind === 'physical'
-                ? <PhysicalFields answers={answers} update={update} />
-                : <MotorFields answers={answers} update={update} />
+                ? <PhysicalFields answers={answers} update={update} physicalFields={physicalFields} placementOptions={placementOptions} />
+                : <MotorFields answers={answers} update={update} motorMovementGroups={motorMovementGroups} motorResults={motorResults} />
           )}
-          {step === 3 && <Review kind={kind} answers={answers} confirmed={reviewConfirmed} onConfirmedChange={setReviewConfirmed} />}
+          {step === 3 && (
+            <Review
+              kind={kind}
+              answers={answers}
+              confirmed={reviewConfirmed}
+              onConfirmedChange={setReviewConfirmed}
+              physicalFields={physicalFields}
+              motorMovementGroups={motorMovementGroups}
+              codeToLabel={codeToLabel}
+            />
+          )}
           {submitError && step === 3 && <p className="text-sm text-destructive">{submitError}</p>}
           <div className="flex items-center justify-between border-t pt-4">
             {step > 1

@@ -13,6 +13,7 @@ async function request(path: string, init: RequestInit) {
 }
 
 const KEYS = { access: 'cbw_access_token', refresh: 'cbw_refresh_token' } as const
+const DEMO_SESSION_KEY = 'cbw_demo_mode'
 
 // ── Token storage ──────────────────────────────────────────────────
 export function saveTokens(accessToken: string, refreshToken: string) {
@@ -26,7 +27,19 @@ export function getRefreshToken() { return localStorage.getItem(KEYS.refresh) }
 export function clearTokens() {
   localStorage.removeItem(KEYS.access)
   localStorage.removeItem(KEYS.refresh)
-  sessionStorage.removeItem('cbw_demo_mode')
+  sessionStorage.removeItem(DEMO_SESSION_KEY)
+}
+
+// ── Modo demonstração ────────────────────────────────────────────────
+// Bypassa o login (só em dev) sem emitir tokens reais. Endpoints protegidos
+// continuam retornando 401 nesse modo — quem trata a resposta precisa saber
+// disso para não tratar como sessão expirada (ver isDemoMode em api.ts).
+export function isDemoMode(): boolean {
+  return import.meta.env.DEV && sessionStorage.getItem(DEMO_SESSION_KEY) === 'true'
+}
+
+export function enableDemoMode() {
+  sessionStorage.setItem(DEMO_SESSION_KEY, 'true')
 }
 
 // Decode JWT payload without a library

@@ -61,24 +61,24 @@ export function ProfilesPage() {
   const { data: summary, loading } = useApiData<ProfileSummary>('/api/dashboard/profiles/summary')
 
   const [selectedEntry, setSelectedEntry] = useState<string | null>(null)
-  const [competitionId, setCompetitionId] = useState<string>('')
+  const [competitionCode, setCompetitionCode] = useState<string>('')
   const [search, setSearch] = useState('')
 
   const { rows: competitions, loading: competitionsLoading } = useApiRows<CompetitionRow>('/api/competitions')
 
   useEffect(() => {
-    if (!competitionId && competitions.length > 0) {
-      setCompetitionId(competitions[0].id)
+    if (!competitionCode && competitions.length > 0) {
+      setCompetitionCode(competitions[0].code)
     }
-  }, [competitions, competitionId])
+  }, [competitions, competitionCode])
 
   const {
     rows: athletes,
     loading: athletesLoading,
     error: athletesError,
   } = useApiRows<CompetitionAthlete>(
-    competitionId ? `/api/competitions/${competitionId}/athletes` : '/api/competitions/__none__/athletes',
-    Boolean(competitionId)
+    competitionCode ? `/api/competitions/${competitionCode}/athletes` : '/api/competitions/__none__/athletes',
+    Boolean(competitionCode)
   )
 
   const filteredAthletes = useMemo(
@@ -146,14 +146,14 @@ export function ProfilesPage() {
                   <CardDescription>Busque e veja o perfil detalhado de cada atleta</CardDescription>
                 </div>
                 <div className="flex flex-col gap-2 @xl/main:flex-row">
-                  <Select value={competitionId} onValueChange={setCompetitionId} disabled={competitionsLoading}>
+                  <Select value={competitionCode} onValueChange={setCompetitionCode} disabled={competitionsLoading}>
                     <SelectTrigger className="w-56" aria-label="Selecionar competição">
                       <SelectValue placeholder="Competição" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
                         {competitions.map((competition) => (
-                          <SelectItem key={competition.id} value={competition.id}>
+                          <SelectItem key={competition.id} value={competition.code}>
                             {competition.name} · {competition.year}
                           </SelectItem>
                         ))}

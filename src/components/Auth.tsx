@@ -3,7 +3,7 @@ import type { ChangeEvent, ReactNode } from 'react'
 import { CheckCircle2 } from 'lucide-react'
 import logo from '../assets/logo.svg'
 import heroImage from '../assets/hero.png'
-import { isAuthenticated, login, logout, refreshTokens, register } from '../lib/auth'
+import { enableDemoMode, isAuthenticated, isDemoMode, login, logout, refreshTokens, register } from '../lib/auth'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { CardContent } from '@/components/ui/card'
@@ -17,7 +17,6 @@ import {
 import { Input } from '@/components/ui/input'
 
 type AuthScreen = 'login' | 'register'
-const DEMO_SESSION_KEY = 'cbw_demo_mode'
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const [authed, setAuthed] = useState(false)
@@ -26,8 +25,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const check = async () => {
-      const demoMode = import.meta.env.DEV && sessionStorage.getItem(DEMO_SESSION_KEY) === 'true'
-      setAuthed(demoMode || isAuthenticated() || await refreshTokens())
+      setAuthed(isDemoMode() || isAuthenticated() || await refreshTokens())
       setReady(true)
     }
     void check()
@@ -37,7 +35,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (authed) return <>{children}</>
 
   return screen === 'login'
-    ? <LoginScreen onAuthenticated={() => setAuthed(true)} onRegister={() => setScreen('register')} onDemo={() => { sessionStorage.setItem(DEMO_SESSION_KEY, 'true'); setAuthed(true) }} />
+    ? <LoginScreen onAuthenticated={() => setAuthed(true)} onRegister={() => setScreen('register')} onDemo={() => { enableDemoMode(); setAuthed(true) }} />
     : <RegisterScreen onBack={() => setScreen('login')} />
 }
 
