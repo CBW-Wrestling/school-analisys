@@ -1,6 +1,7 @@
-import { ArrowLeft, Medal, User, Dumbbell, Brain } from 'lucide-react'
+import { ArrowLeft, Brain, Dumbbell, Info, Medal, User } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { useApiData } from '../lib/api'
-import type { AthleteDetail, MotorItem } from '../types'
+import type { AthleteDetail, AthleteDetailItem } from '../types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,12 +11,25 @@ interface Props {
   onBack: () => void
 }
 
-function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
+// Ícones conhecidos que o backend pode enviar por seção; qualquer valor não
+// mapeado cai no ícone neutro (Info) em vez de quebrar a renderização.
+const SECTION_ICONS: Record<string, LucideIcon> = {
+  medal: Medal,
+  user: User,
+  dumbbell: Dumbbell,
+  brain: Brain,
+}
+
+function iconFor(icon: string): LucideIcon {
+  return SECTION_ICONS[icon] ?? Info
+}
+
+function DetailRow({ item }: { item: AthleteDetailItem }) {
   return (
     <div className="flex items-baseline justify-between gap-3 border-b py-1.5 last:border-b-0">
-      <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+      <dt className="text-xs font-medium text-muted-foreground">{item.label}</dt>
       <dd className="text-right text-sm font-medium text-foreground">
-        {value ?? <span className="font-normal text-muted-foreground">—</span>}
+        {item.value || <span className="font-normal text-muted-foreground">—</span>}
       </dd>
     </div>
   )
@@ -45,11 +59,6 @@ function DetailSection({
   )
 }
 
-function boolLabel(v: boolean | null, yes = 'Sim', no = 'Não') {
-  if (v === null || v === undefined) return null
-  return v ? yes : no
-}
-
 export function AthleteDetailPage({ entryId, onBack }: Props) {
   const { data: d, loading, error } = useApiData<AthleteDetail>(`/api/athletes/entries/${entryId}`)
 
@@ -71,11 +80,6 @@ export function AthleteDetailPage({ entryId, onBack }: Props) {
     </div>
   )
 
-  const motorByComp = (d.motorData ?? []).reduce<Record<string, MotorItem[]>>(
-    (acc, item) => { (acc[item.competency] ??= []).push(item); return acc },
-    {},
-  )
-
   return (
     <div className="@container/main">
       <div className="mx-auto w-full max-w-[1400px] px-4 py-8 md:px-6">
@@ -87,13 +91,11 @@ export function AthleteDetailPage({ entryId, onBack }: Props) {
           <div>
             <p className="mb-1 text-xs font-medium tracking-wide text-muted-foreground">{d.competitionName}</p>
             <h1 className="text-3xl leading-none tracking-tight text-foreground">{d.athleteName}</h1>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              <Badge variant="secondary">{d.style}</Badge>
-              <Badge variant="secondary">{d.gender === 'M' ? 'Masculino' : 'Feminino'}</Badge>
-              <Badge variant="secondary">{d.ageCategoryCode}</Badge>
-              {d.state && <Badge variant="secondary">{d.state}</Badge>}
-              {d.weight > 0 && <Badge variant="secondary">{d.weight} kg</Badge>}
-            </div>
+            {d.tags.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {d.tags.map((tag) => <Badge key={tag} variant="secondary">{tag}</Badge>)}
+              </div>
+            )}
           </div>
           {d.rank != null && (
             <div className="flex shrink-0 flex-col items-center gap-1 rounded-lg border bg-card px-5 py-3.5">
@@ -103,53 +105,24 @@ export function AthleteDetailPage({ entryId, onBack }: Props) {
           )}
         </div>
 
-        <div className="grid grid-cols-1 gap-3.5 @xl/main:grid-cols-2">
-          <DetailSection icon={<Medal className="size-4" aria-hidden="true" />} title="Resultado na competição">
-            <DetailRow label="Colocação" value={d.rank != null ? `${d.rank}º` : null} />
-            <DetailRow label="Vitórias / Derrotas" value={d.wins != null ? `${d.wins}V — ${d.losses}D` : null} />
-            <DetailRow label="Lutas" value={d.countFights} />
-            <DetailRow label="Pontos marcados" value={d.technicalPointsFor} />
-            <DetailRow label="Pontos sofridos" value={d.technicalPointsAgainst} />
-            <DetailRow label="Saldo de pontos" value={d.technicalPointsDiff != null ? (d.technicalPointsDiff >= 0 ? `+${d.technicalPointsDiff}` : d.technicalPointsDiff) : null} />
-            <DetailRow label="Finalista ouro" value={boolLabel(d.isFinalistGold)} />
-            <DetailRow label="Não classificado" value={boolLabel(d.isNotRanked, 'Sim', 'Não')} />
-          </DetailSection>
-
-          <DetailSection icon={<User className="size-4" aria-hidden="true" />} title="Dados sociais">
-            <DetailRow label="Escola" value={d.school} />
-            <DetailRow label="Tempo de prática" value={d.practiceTime} />
-            <DetailRow label="Local de prática" value={d.practiceLocation} />
-            {d.practiceLocationName && <DetailRow label="Nome do local" value={d.practiceLocationName} />}
-            <DetailRow label="Freq. semanal" value={d.weeklyFrequency} />
-            <DetailRow label="Pratica outra modalidade" value={boolLabel(d.practicesOtherSport)} />
-            {d.otherSports && d.otherSports.length > 0 && <DetailRow label="Outras modalidades" value={d.otherSports.join(', ')} />}
-            <DetailRow label="Iniciou na luta" value={boolLabel(d.startedInWrestling)} />
-          </DetailSection>
-
-          <DetailSection icon={<Dumbbell className="size-4" aria-hidden="true" />} title="Avaliação física">
-            <DetailRow label="Estatura" value={d.heightCm != null ? `${d.heightCm} cm` : null} />
-            <DetailRow label="Envergadura" value={d.armSpanCm != null ? `${d.armSpanCm} cm` : null} />
-            <DetailRow label="Base" value={d.baseCm != null ? `${d.baseCm} cm` : null} />
-            <DetailRow label="Antebraço D" value={d.forearmRightCm != null ? `${d.forearmRightCm} cm` : null} />
-            <DetailRow label="Antebraço E" value={d.forearmLeftCm != null ? `${d.forearmLeftCm} cm` : null} />
-            <DetailRow label="Prensão D" value={d.handGripRight != null ? `${d.handGripRight} kgf` : null} />
-            <DetailRow label="Prensão E" value={d.handGripLeft != null ? `${d.handGripLeft} kgf` : null} />
-            <DetailRow label="Placement" value={d.placement} />
-          </DetailSection>
-
-          <DetailSection icon={<Brain className="size-4" aria-hidden="true" />} title="Avaliação motora">
-            {Object.keys(motorByComp).length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sem avaliação motora registrada.</p>
-            ) : (
-              Object.entries(motorByComp).map(([comp, items]) => (
-                <div key={comp} className="mb-3 last:mb-0">
-                  <p className="mb-1.5 text-xs font-medium tracking-wide text-muted-foreground">{comp}</p>
-                  {items.map((item) => <DetailRow key={item.movement} label={item.movement} value={item.result} />)}
-                </div>
-              ))
-            )}
-          </DetailSection>
-        </div>
+        {d.sections.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhuma informação adicional disponível.</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-3.5 @xl/main:grid-cols-2">
+            {d.sections.map((section) => {
+              const Icon = iconFor(section.icon)
+              return (
+                <DetailSection key={section.code} icon={<Icon className="size-4" aria-hidden="true" />} title={section.title}>
+                  {section.items.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">Nenhum dado registrado.</p>
+                  ) : (
+                    section.items.map((item) => <DetailRow key={item.code} item={item} />)
+                  )}
+                </DetailSection>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )

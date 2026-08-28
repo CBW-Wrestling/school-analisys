@@ -26,48 +26,26 @@ export type ResultRow = {
   isNotRanked: boolean
 }
 
-// ── Detalhe do atleta ──────────────────────────────────────────────
-export type MotorItem = {
-  competency: string
-  movement: string
-  result: string
+// ── Detalhe do atleta (BFF: backend monta seções/itens já formatados) ──
+export type AthleteDetailItem = {
+  code: string
+  label: string
+  value: string | null
+}
+
+export type AthleteDetailSection = {
+  code: string
+  title: string
+  icon: string
+  items: AthleteDetailItem[]
 }
 
 export type AthleteDetail = {
   athleteName: string
-  school: string | null
-  style: string
-  weight: number
-  state: string
-  gender: string
-  ageCategoryCode: string
-  competitionCode: string
   competitionName: string
+  tags: string[]
   rank: number | null
-  wins: number | null
-  losses: number | null
-  technicalPointsFor: number | null
-  technicalPointsAgainst: number | null
-  technicalPointsDiff: number | null
-  countFights: number | null
-  isFinalistGold: boolean | null
-  isNotRanked: boolean | null
-  practiceTime: string | null
-  practiceLocation: string | null
-  practiceLocationName: string | null
-  weeklyFrequency: string | null
-  practicesOtherSport: boolean | null
-  otherSports: string[] | null
-  startedInWrestling: boolean | null
-  armSpanCm: number | null
-  heightCm: number | null
-  handGripRight: number | null
-  handGripLeft: number | null
-  baseCm: number | null
-  forearmRightCm: number | null
-  forearmLeftCm: number | null
-  placement: number | null
-  motorData: MotorItem[] | null
+  sections: AthleteDetailSection[]
 }
 
 // ── Dashboard — resumos ────────────────────────────────────────────

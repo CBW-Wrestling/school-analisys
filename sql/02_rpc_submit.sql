@@ -36,6 +36,7 @@ declare
   v_wc_id         uuid;
   v_athlete_id    uuid;
   v_entry_id      uuid;
+  v_payload_entry_id uuid := nullif(payload->>'entry_id','')::uuid;
   v_ma_id         uuid;
   v_mov record;
 begin
@@ -67,46 +68,64 @@ begin
   select id into v_state_id from states where code = v_state;
   -- state_id é nullable; se não achar, segue null
 
-  -- competition_category (cria se não existir)
-  select id into v_cc_id from competition_categories
-   where competition_id = v_competition_id and age_category_id = v_age_id
-     and style_id = v_style_id and gender = v_gender;
-  if v_cc_id is null then
-    insert into competition_categories (competition_id, age_category_id, style_id, gender)
-    values (v_competition_id, v_age_id, v_style_id, v_gender)
-    returning id into v_cc_id;
-  end if;
+  if v_payload_entry_id is not null then
+    -- entry_id veio do front: usa a participação já selecionada pelo
+    -- usuário em vez de resolver o atleta de novo por nome (nome não é
+    -- identificador único — homônimos causariam associação incorreta).
+    select ae.id, ae.athlete_id, ae.competition_category_id, ae.weight_category_id
+      into v_entry_id, v_athlete_id, v_cc_id, v_wc_id
+      from athlete_entries ae
+     where ae.id = v_payload_entry_id;
 
-  -- weight_category (cria se não existir, respeitando a FK composta)
-  select id into v_wc_id from weight_categories
-   where competition_category_id = v_cc_id and weight_kg = v_weight;
-  if v_wc_id is null then
-    insert into weight_categories (competition_category_id, weight_kg)
-    values (v_cc_id, v_weight)
-    returning id into v_wc_id;
-  end if;
+    if v_entry_id is null then
+      raise exception 'Entry % inexistente', v_payload_entry_id;
+    end if;
+  else
+    -- sem entry_id no payload: comportamento legado, resolve/cria por nome
+    -- e categorias (mantido para não quebrar chamadores que não enviam
+    -- entry_id).
 
-  -- atleta (cria se não existir por nome; dados pessoais opcionais)
-  select id into v_athlete_id from athletes where name = v_name limit 1;
-  if v_athlete_id is null then
-    insert into athletes (name, birth_date, email, school)
-    values (
-      v_name,
-      nullif(payload->>'birth','')::date,
-      nullif(payload->>'school',''),   -- só grava se vier; trate base legal!
-      nullif(payload->>'email','')
-    )
-    returning id into v_athlete_id;
-  end if;
+    -- competition_category (cria se não existir)
+    select id into v_cc_id from competition_categories
+     where competition_id = v_competition_id and age_category_id = v_age_id
+       and style_id = v_style_id and gender = v_gender;
+    if v_cc_id is null then
+      insert into competition_categories (competition_id, age_category_id, style_id, gender)
+      values (v_competition_id, v_age_id, v_style_id, v_gender)
+      returning id into v_cc_id;
+    end if;
 
-  -- entry (participação) — cria se não existir
-  select id into v_entry_id from athlete_entries
-   where athlete_id = v_athlete_id and competition_category_id = v_cc_id
-     and weight_category_id = v_wc_id;
-  if v_entry_id is null then
-    insert into athlete_entries (athlete_id, competition_category_id, weight_category_id, state_id)
-    values (v_athlete_id, v_cc_id, v_wc_id, v_state_id)
-    returning id into v_entry_id;
+    -- weight_category (cria se não existir, respeitando a FK composta)
+    select id into v_wc_id from weight_categories
+     where competition_category_id = v_cc_id and weight_kg = v_weight;
+    if v_wc_id is null then
+      insert into weight_categories (competition_category_id, weight_kg)
+      values (v_cc_id, v_weight)
+      returning id into v_wc_id;
+    end if;
+
+    -- atleta (cria se não existir por nome; dados pessoais opcionais)
+    select id into v_athlete_id from athletes where name = v_name limit 1;
+    if v_athlete_id is null then
+      insert into athletes (name, birth_date, email, school)
+      values (
+        v_name,
+        nullif(payload->>'birth','')::date,
+        nullif(payload->>'email',''),
+        nullif(payload->>'school','')   -- só grava se vier; trate base legal!
+      )
+      returning id into v_athlete_id;
+    end if;
+
+    -- entry (participação) — cria se não existir
+    select id into v_entry_id from athlete_entries
+     where athlete_id = v_athlete_id and competition_category_id = v_cc_id
+       and weight_category_id = v_wc_id;
+    if v_entry_id is null then
+      insert into athlete_entries (athlete_id, competition_category_id, weight_category_id, state_id)
+      values (v_athlete_id, v_cc_id, v_wc_id, v_state_id)
+      returning id into v_entry_id;
+    end if;
   end if;
 
   -- ---------- grava conforme o tipo ----------

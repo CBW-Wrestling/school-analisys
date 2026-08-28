@@ -7,7 +7,6 @@ import { CollectionPage } from "./pages/CollectionPage"
 import { DashboardPage } from "./pages/DashboardPage"
 import { DefaultPage } from "./pages/DefaultPage"
 import { TechnicalAssessmentsPage } from "./pages/TechnicalAssessmentsPage"
-import { ImportPage } from "./pages/ImportPage"
 import { CompetitionImportPage } from "./pages/CompetitionImportPage"
 import { ResultsImportPage } from "./pages/ResultsImportPage"
 import { ProfilePage } from "./pages/ProfilePage"
@@ -45,7 +44,6 @@ function App() {
     : requestedView === "physical" ? <PhysicalPage />
     : requestedView === "motor" ? <MotorPage />
     : requestedView === "collection" ? <CollectionHome />
-    : requestedView === "import" ? <ImportPage />
     : requestedView === "competition-import" ? <CompetitionImportPage />
     : requestedView === "results-import" ? <ResultsImportPage />
     : requestedView === "profile" ? <ProfilePage />
