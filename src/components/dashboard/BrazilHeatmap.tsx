@@ -22,6 +22,8 @@ type Props = {
   nationalAverage: number | null
   nationalStdDev: number | null
   loading?: boolean
+  showEngagement?: boolean
+  countLabel?: string
   onSelect: (state: string | null) => void
 }
 
@@ -35,7 +37,7 @@ function colorForValue(value: StateValue, maximum: number) {
   return `color-mix(in oklab, var(--chart-2) ${Math.round(18 + intensity * 62)}%, var(--background))`
 }
 
-export function BrazilHeatmap({ values, selectedState, nationalAverage, nationalStdDev, loading = false, onSelect }: Props) {
+export function BrazilHeatmap({ values, selectedState, nationalAverage, nationalStdDev, loading = false, showEngagement = true, countLabel = 'Atletas avaliados', onSelect }: Props) {
   const lookup = new Map(values.map((value) => [value.code.toLowerCase(), value]))
   const maximum = Math.max(...values.map((value) => value.count), 1)
   const statesWithData = values.filter((value) => value.count > 0)
@@ -115,7 +117,7 @@ export function BrazilHeatmap({ values, selectedState, nationalAverage, national
                 <div className={cn('rounded-md border px-3 py-2 text-sm', zScore === null ? 'text-muted-foreground' : zScore >= 0 ? 'border-emerald-500/30 text-emerald-700 dark:text-emerald-400' : 'border-red-500/30 text-red-700 dark:text-red-400')}>
                   {difference === null ? 'Comparativo indisponível' : `Variação: ${difference >= 0 ? '+' : ''}${difference.toFixed(2)}${zScore === null ? '' : ` | Z-Score: ${zScore >= 0 ? '+' : ''}${zScore.toFixed(2)}`}`}
                 </div>
-                <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Engajamento estadual</p><p className="mt-1 text-sm">{selected.engagement}% de compleção da amostra</p></div>
+                {showEngagement && <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Engajamento estadual</p><p className="mt-1 text-sm">{selected.engagement}% de compleção da amostra</p></div>}
                 <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Raio-X das dimensões</p><div className="mt-2 grid grid-cols-3 gap-2">{selected.dimensions.map((dimension) => <div key={dimension.label} className="grid min-w-0 gap-1.5"><div className="grid gap-1 text-xs"><span className="truncate" title={dimension.label}>{dimension.label}</span><span className="font-medium tabular-nums">{dimension.score === null ? '—' : dimension.score.toFixed(2)}</span></div><Progress value={dimension.score === null ? 0 : dimension.score / 2 * 100} aria-label={`${dimension.label}: ${dimension.score === null ? 'sem dados' : dimension.score.toFixed(2)}`} /></div>)}</div></div>
                 <div className="rounded-md bg-muted/50 p-3 text-sm">{selected.dimensions.length && selected.dimensions.some((dimension) => dimension.score !== null) ? `Diferente do cenário nacional, a principal oportunidade de desenvolvimento em ${stateNames[selected.code]} está em ${selected.dimensions.reduce((lowest, current) => (current.score !== null && (lowest.score === null || current.score < lowest.score) ? current : lowest)).label}.` : 'Ainda não há dados técnicos suficientes para uma inferência regional.'}</div>
               </>
@@ -126,8 +128,8 @@ export function BrazilHeatmap({ values, selectedState, nationalAverage, national
                 <div className="rounded-md border p-2"><p className="text-xs text-muted-foreground">Estados com dados</p><p className="font-semibold tabular-nums">{statesWithData.length}</p></div>
                 <div className="rounded-md border p-2"><p className="text-xs text-muted-foreground">Média nacional</p><p className="font-semibold tabular-nums">{nationalAverage === null ? '—' : nationalAverage.toFixed(2)}</p></div>
               </div>
-              <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Atletas avaliados</p><p className="mt-1 text-sm">{totalCount.toLocaleString('pt-BR')} no total, em todo o país</p></div>
-              <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Engajamento médio</p><p className="mt-1 text-sm">{nationalEngagement}% de compleção da amostra</p></div>
+              <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{countLabel}</p><p className="mt-1 text-sm">{totalCount.toLocaleString('pt-BR')} no total, em todo o país</p></div>
+              {showEngagement && <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Engajamento médio</p><p className="mt-1 text-sm">{nationalEngagement}% de compleção da amostra</p></div>}
               {nationalDimensions.length > 0 && <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Raio-X das dimensões (nacional)</p><div className="mt-2 grid grid-cols-3 gap-2">{nationalDimensions.map((dimension) => <div key={dimension.label} className="grid min-w-0 gap-1.5"><div className="grid gap-1 text-xs"><span className="truncate" title={dimension.label}>{dimension.label}</span><span className="font-medium tabular-nums">{dimension.score === null ? '—' : dimension.score.toFixed(2)}</span></div><Progress value={dimension.score === null ? 0 : dimension.score / 2 * 100} aria-label={`${dimension.label}: ${dimension.score === null ? 'sem dados' : dimension.score.toFixed(2)}`} /></div>)}</div></div>}
               <p className="text-sm text-muted-foreground">Selecione um estado no mapa para ver o comparativo local.</p>
             </>
