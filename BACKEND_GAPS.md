@@ -53,7 +53,22 @@ em `src/mocks/dashboard-gaps.ts` com comentário `// MOCK: remover quando ...`.
 - **Contrato sugerido**: `ProfileSummaryDto` ganhar `byOtherSport: CountByCode[]`, agregando o
   array `other_sports` por valor.
 
----
+## GAP 5 — Persistência do fluxo de importação de resultados
+
+- **Onde é usado**: `ResultsImportPage.tsx` por meio de `src/lib/importApi.ts`.
+- **Problema**: o frontend chama `POST /api/results-imports`,
+  `POST /api/results-imports/{importId}/competition` e
+  `GET /api/results-imports/{importId}`, mas o SQL versionado só define a tabela `imports`
+  para o fluxo de atletas em `sql/10_imports_table.sql`.
+- **Impacto**: não é mock visual; sem uma persistência ou mecanismo equivalente no backend, o
+  estado da importação de resultados não sobrevive entre requisições e o fluxo não pode ser
+  concluído com segurança.
+- **Contrato sugerido**: criar `results_imports` espelhando os campos de `imports` ou generalizar
+  a tabela atual com uma coluna `kind` (`ATHLETES`/`RESULTS`). O retorno de todos os endpoints
+  deve seguir `ImportResponse`/`ImportStatus` de `src/lib/importApi.ts`: `importId`, `status`,
+  `competitions`, `selectedCompetitionId` e `errorMessage` conforme a etapa.
+
+Veja `DEV_BACKEND_GUIDE.md` para a ordem de criação, contratos completos e smoke tests.
 
 Todos os outros widgets das telas (medalhas, pontos técnicos, KPIs de resumo, gráficos por
 estado/competência) usam dado 100% real da API existente — não precisam de mock.

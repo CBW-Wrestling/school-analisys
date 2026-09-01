@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Activity, ArrowRight, BarChart3, Dumbbell, Medal, Share2, UserRound } from 'lucide-react'
 import { FilterDropdown } from '../components/FilterDropdown'
 import { PageHeader } from '../components/PageHeader'
@@ -34,14 +34,15 @@ function FilterBar({ competitions, events, styles, year, event, style, onYearCha
   onStyleChange: (value: string[]) => void
 }) {
   const years = [...new Set(competitions.map((item) => item.year).filter((item): item is number => item !== null))].sort((a, b) => b - a)
-  const hasActiveFilter = year !== 'all' || event !== 'all' || style.length > 0
+  const stylesAtDefault = style.length === styles.length && styles.every((value) => style.includes(value))
+  const hasActiveFilter = year !== 'all' || event !== 'all' || !stylesAtDefault
 
   return (
     <div className="flex flex-wrap items-end justify-start gap-2 @3xl/main:justify-end">
         <SearchableSelect className="w-36" triggerId="dashboard-year" placeholder="Todos os anos" value={year} onChange={onYearChange} options={[{ value: 'all', label: 'Todos os anos' }, ...years.map((value) => ({ value: String(value), label: String(value) }))]} />
         <SearchableSelect className="w-52" triggerId="dashboard-event" placeholder="Todos os eventos" value={event} onChange={onEventChange} options={[{ value: 'all', label: 'Todos os eventos' }, ...events.map((item) => ({ value: item.code, label: item.name }))]} />
         <FilterDropdown label="Estilos" options={styles.map((value) => ({ value, label: value }))} value={style} onChange={onStyleChange} />
-        <Button size="sm" variant="outline" disabled={!hasActiveFilter} onClick={() => { onYearChange('all'); onEventChange('all'); onStyleChange([]) }}>Limpar</Button>
+        <Button size="sm" variant="outline" disabled={!hasActiveFilter} onClick={() => { onYearChange('all'); onEventChange('all'); onStyleChange(styles) }}>Limpar</Button>
     </div>
   )
 }
@@ -82,6 +83,7 @@ export function DashboardPage() {
   const [event, setEvent] = useState('all')
   const [style, setStyle] = useState<string[]>([])
   const [selectedState, setSelectedState] = useState<string | null>(null)
+  const stylesInitialized = useRef(false)
   const selectedEvent = event === 'all' ? 'all' : event
   const events = useMemo(() => year === 'all' ? competitions : competitions.filter((item) => String(item.year) === year), [competitions, year])
   const baseProfiles = profiles.filter((row) => matchesFilters(row, selectedEvent, style, null))
@@ -90,6 +92,14 @@ export function DashboardPage() {
   const filteredResultsPath = event !== 'all' ? `/api/results?competitionId=${encodeURIComponent(competitions.find((item) => item.code === event)?.id ?? event)}` : ''
   const { rows: results } = useApiRows<ResultRow>(filteredResultsPath, event !== 'all')
   const styles = useMemo(() => [...new Set([...profiles, ...physical, ...motor].map((row) => row.estilo).filter((value): value is string => Boolean(value)))].sort(), [profiles, physical, motor])
+
+  useEffect(() => {
+    if (!stylesInitialized.current && styles.length > 0) {
+      stylesInitialized.current = true
+      setStyle(styles)
+    }
+  }, [styles])
+
   const stateValues = useMemo(() => {
     const stateCodes = [...new Set(baseProfiles.map((row) => row.estado).filter((value): value is string => Boolean(value)))]
     return stateCodes.map((code) => {

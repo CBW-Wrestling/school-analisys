@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
 import {
+  ChevronRight,
   ChevronsUpDown,
+  ClipboardList,
   LogOut,
   User,
   UserCircle,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import logo from '../assets/logo.svg'
+import { details } from '../constants'
 import { fetchCurrentUser, logout, type UserInfo } from '../lib/auth'
 import { allNavItems, assessmentsNav, examplesNav, operations, overviewNav, resultsNav, type NavigationItem } from '../navigation/sidebar-items'
 import { AppHeader } from './AppHeader'
@@ -19,7 +22,36 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, useSidebar } from '@/components/ui/sidebar'
+
+function CollectionNavItem({ active }: { active: string }) {
+  const isActive = active === 'collection'
+  return (
+    <Collapsible asChild defaultOpen className="group/collapsible">
+      <SidebarMenuItem>
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton isActive={isActive} tooltip="Coleta">
+            <ClipboardList size={18} aria-hidden />
+            <span>Coleta</span>
+            <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" aria-hidden />
+          </SidebarMenuButton>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {(Object.keys(details) as (keyof typeof details)[]).map((kind) => (
+              <SidebarMenuSubItem key={kind}>
+                <SidebarMenuSubButton asChild>
+                  <a href={`?form=${kind}`}>{details[kind].label}</a>
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            ))}
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      </SidebarMenuItem>
+    </Collapsible>
+  )
+}
 
 function NavigationItems({ active, items }: { active: string; items: NavigationItem[] }) {
   return (
@@ -144,6 +176,9 @@ export function PageHeader({
           <SidebarGroup>
             <SidebarGroupLabel>Operações</SidebarGroupLabel>
             <SidebarGroupContent>
+              <SidebarMenu>
+                <CollectionNavItem active={active} />
+              </SidebarMenu>
               <NavigationItems active={active} items={operations} />
             </SidebarGroupContent>
           </SidebarGroup>
