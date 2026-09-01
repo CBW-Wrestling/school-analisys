@@ -60,6 +60,27 @@ Padrão de topo:
 - `Clear/Reset` começa desabilitado e só habilita quando há filtro diferente do padrão.
 - Menus precisam de `Group` quando o componente exigir agrupamento, labels acessíveis e foco por teclado.
 
+### Filtro de escolha única vs. multi-seleção
+
+- **Escolha única, lista curta** (poucas opções fixas, ex.: colocação, sim/não): use
+  `Select`/`SelectTrigger size="sm"`.
+- **Escolha única, lista longa ou variável** (ex.: competição — pode haver 20+): use
+  `SearchableSelect` (`src/components/SearchableSelect.tsx`) — botão que abre busca (`cmdk`)
+  com o item selecionado marcado por check à direita. Digitar é mais rápido que rolar uma
+  lista grande. Referências de uso: `DashboardPage` (ano, evento), `InferencesPage` e
+  `ResultsPage` (competição).
+- **Multi-seleção** (o usuário compara várias categorias ao mesmo tempo, ex.: estilos,
+  dimensões técnicas, eventos, categoria de peso, UF): use `FilterDropdown`
+  (`src/components/FilterDropdown.tsx`) — botão compacto com contagem
+  (`selecionados/total`) que abre a mesma busca (`cmdk`) com checkbox à direita de cada item
+  (`data-checked`). Não usar `ToggleGroup` em card vertical para esse caso: ocupa espaço
+  demais e foge do padrão de toolbar do template (`analytics-toolbar.tsx`), que mantém os
+  filtros na mesma linha da navegação por abas/título.
+- Toolbar de filtros (única ou multi-seleção) fica alinhada à direita da `TabsList` (ou do
+  título, quando não há abas), nunca em um card lateral ocupando metade da tela.
+- Referências de uso: `TechnicalAssessmentsPage` (dimensões, estilos, eventos),
+  `DashboardPage` (estilos), `InferencesPage` (estilos) e `ResultsPage` (categoria, UF).
+
 ## Formulários e pesquisa
 
 - Usar `FieldGroup` + `Field` + `FieldLabel` + controle + `FieldDescription`/`FieldError`.

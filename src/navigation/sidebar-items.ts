@@ -1,13 +1,12 @@
 import {
   Activity,
-  BarChart3,
-  ClipboardList,
   FileUp,
   LayoutDashboard,
   LayoutPanelTop,
   Medal,
   Plus,
   ShieldPlus,
+  Sparkles,
   UsersRound,
 } from 'lucide-react'
 import type { ComponentType } from 'react'
@@ -19,14 +18,23 @@ export type NavigationItem = {
   icon: ComponentType<{ size?: number; 'aria-hidden'?: boolean }>
 }
 
-export const navigation: NavigationItem[] = [
+export const overviewNav: NavigationItem[] = [
   { id: 'dashboard', label: 'Painel', href: '/', icon: LayoutDashboard },
-  { id: 'default', label: 'Default', href: '?view=default', icon: LayoutPanelTop },
-  { id: 'explorer', label: 'Análise', href: '?view=explorer', icon: BarChart3 },
-  { id: 'results', label: 'Resultados', href: '?view=results', icon: Medal },
-  { id: 'profiles', label: 'Atletas', href: '?view=profiles', icon: UsersRound },
-  { id: 'physical', label: 'Físico', href: '?view=physical', icon: Activity },
+]
+
+export const assessmentsNav: NavigationItem[] = [
   { id: 'motor', label: 'Técnico', href: '?view=motor', icon: ShieldPlus },
+  { id: 'physical', label: 'Físico', href: '?view=physical', icon: Activity },
+  { id: 'profiles', label: 'Atletas', href: '?view=profiles', icon: UsersRound },
+]
+
+export const resultsNav: NavigationItem[] = [
+  { id: 'results', label: 'Resultados', href: '?view=results', icon: Medal },
+  { id: 'inferences', label: 'Inferências', href: '?view=inferences', icon: Sparkles },
+]
+
+export const examplesNav: NavigationItem[] = [
+  { id: 'default', label: 'Default', href: '?view=default', icon: LayoutPanelTop },
 ]
 
 export const operations: NavigationItem[] = [
@@ -35,7 +43,9 @@ export const operations: NavigationItem[] = [
 ]
 
 export const allNavItems: NavigationItem[] = [
-  ...navigation,
-  { id: 'collection', label: 'Coleta', href: '?view=collection', icon: ClipboardList },
+  ...overviewNav,
+  ...assessmentsNav,
+  ...resultsNav,
   ...operations,
+  ...examplesNav,
 ]

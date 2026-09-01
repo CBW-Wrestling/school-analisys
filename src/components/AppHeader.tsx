@@ -1,5 +1,7 @@
 import { Fragment, useEffect, useState } from 'react'
 import { ChevronsUpDown, ClipboardList, LogOut, Moon, Sun, User, UserCircle } from 'lucide-react'
+import { details } from '@/constants'
+import type { FormKind } from '@/types'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -114,9 +116,25 @@ export function AppHeader({ crumbs }: { crumbs: BreadcrumbItemData[] }) {
         </BreadcrumbList>
       </Breadcrumb>
       <div className="ml-auto flex items-center gap-1">
-        <Button asChild size="sm" variant="outline" className="hidden sm:inline-flex">
-          <a href="?view=collection"><ClipboardList data-icon="inline-start" aria-hidden />Nova avaliação</a>
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="sm" variant="outline" className="hidden sm:inline-flex">
+              <ClipboardList data-icon="inline-start" aria-hidden />Nova avaliação
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>Tipo de avaliação</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {(Object.keys(details) as FormKind[]).map((kind) => {
+              const Icon = details[kind].icon
+              return (
+                <DropdownMenuItem key={kind} asChild>
+                  <a href={`?form=${kind}`}><Icon aria-hidden />{details[kind].label}</a>
+                </DropdownMenuItem>
+              )
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <ThemeSwitcher />
         <AccountSwitcher />
       </div>

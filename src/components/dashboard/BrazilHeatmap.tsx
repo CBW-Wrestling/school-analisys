@@ -2,6 +2,7 @@ import brazil from '@svg-maps/brazil'
 import { MapPin } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { zScoreFor } from '../../lib/zscore'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -37,6 +38,14 @@ function colorForValue(value: StateValue, maximum: number) {
 export function BrazilHeatmap({ values, selectedState, nationalAverage, nationalStdDev, loading = false, onSelect }: Props) {
   const lookup = new Map(values.map((value) => [value.code.toLowerCase(), value]))
   const maximum = Math.max(...values.map((value) => value.count), 1)
+  const statesWithData = values.filter((value) => value.count > 0)
+  const totalCount = values.reduce((sum, value) => sum + value.count, 0)
+  const nationalEngagement = statesWithData.length ? Math.round(statesWithData.reduce((sum, value) => sum + value.engagement, 0) / statesWithData.length) : 0
+  const dimensionLabels = [...new Set(values.flatMap((value) => value.dimensions.map((dimension) => dimension.label)))]
+  const nationalDimensions = dimensionLabels.map((label) => {
+    const scores = values.flatMap((value) => value.dimensions).filter((dimension) => dimension.label === label && dimension.score !== null).map((dimension) => dimension.score as number)
+    return { label, score: scores.length ? scores.reduce((sum, value) => sum + value, 0) / scores.length : null }
+  })
 
   return (
     <Card className="@container/card min-w-0">
@@ -57,8 +66,7 @@ export function BrazilHeatmap({ values, selectedState, nationalAverage, national
               const value = lookup.get(location.id) ?? { code: location.id.toUpperCase(), name: location.name, count: 0, score: null, engagement: 0, dimensions: [] }
               const stateName = stateNames[value.code] ?? value.name
               const isSelected = selectedState === value.code
-              const difference = value.score === null || nationalAverage === null ? null : value.score - nationalAverage
-              const zScore = difference === null || !nationalStdDev ? null : difference / nationalStdDev
+              const zScore = zScoreFor(value.score, nationalAverage, nationalStdDev)
 
               return (
                 <Tooltip key={location.id}>
@@ -94,10 +102,10 @@ export function BrazilHeatmap({ values, selectedState, nationalAverage, national
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Estado selecionado</p>
             <p className="mt-1 text-lg font-semibold">{selectedState ? stateNames[selectedState] : 'Brasil inteiro'}</p>
           </div>
-          {loading ? <div className="grid gap-3"><Skeleton className="h-16 w-full" /><Skeleton className="h-8 w-full" /><Skeleton className="h-24 w-full" /></div> : selectedState && lookup.get(selectedState.toLowerCase()) && (() => {
+          {loading ? <div className="grid gap-3"><Skeleton className="h-16 w-full" /><Skeleton className="h-8 w-full" /><Skeleton className="h-24 w-full" /></div> : selectedState && lookup.get(selectedState.toLowerCase()) ? (() => {
             const selected = lookup.get(selectedState.toLowerCase())!
             const difference = selected.score === null || nationalAverage === null ? null : selected.score - nationalAverage
-            const zScore = difference === null || !nationalStdDev ? null : difference / nationalStdDev
+            const zScore = zScoreFor(selected.score, nationalAverage, nationalStdDev)
             return (
               <>
                 <div className="grid grid-cols-2 gap-2">
@@ -112,7 +120,18 @@ export function BrazilHeatmap({ values, selectedState, nationalAverage, national
                 <div className="rounded-md bg-muted/50 p-3 text-sm">{selected.dimensions.length && selected.dimensions.some((dimension) => dimension.score !== null) ? `Diferente do cenário nacional, a principal oportunidade de desenvolvimento em ${stateNames[selected.code]} está em ${selected.dimensions.reduce((lowest, current) => (current.score !== null && (lowest.score === null || current.score < lowest.score) ? current : lowest)).label}.` : 'Ainda não há dados técnicos suficientes para uma inferência regional.'}</div>
               </>
             )
-          })()}
+          })() : (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-md border p-2"><p className="text-xs text-muted-foreground">Estados com dados</p><p className="font-semibold tabular-nums">{statesWithData.length}</p></div>
+                <div className="rounded-md border p-2"><p className="text-xs text-muted-foreground">Média nacional</p><p className="font-semibold tabular-nums">{nationalAverage === null ? '—' : nationalAverage.toFixed(2)}</p></div>
+              </div>
+              <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Atletas avaliados</p><p className="mt-1 text-sm">{totalCount.toLocaleString('pt-BR')} no total, em todo o país</p></div>
+              <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Engajamento médio</p><p className="mt-1 text-sm">{nationalEngagement}% de compleção da amostra</p></div>
+              {nationalDimensions.length > 0 && <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Raio-X das dimensões (nacional)</p><div className="mt-2 grid grid-cols-3 gap-2">{nationalDimensions.map((dimension) => <div key={dimension.label} className="grid min-w-0 gap-1.5"><div className="grid gap-1 text-xs"><span className="truncate" title={dimension.label}>{dimension.label}</span><span className="font-medium tabular-nums">{dimension.score === null ? '—' : dimension.score.toFixed(2)}</span></div><Progress value={dimension.score === null ? 0 : dimension.score / 2 * 100} aria-label={`${dimension.label}: ${dimension.score === null ? 'sem dados' : dimension.score.toFixed(2)}`} /></div>)}</div></div>}
+              <p className="text-sm text-muted-foreground">Selecione um estado no mapa para ver o comparativo local.</p>
+            </>
+          )}
         </div>
       </CardContent>
     </Card>

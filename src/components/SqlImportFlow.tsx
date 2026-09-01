@@ -107,7 +107,7 @@ export function SqlImportFlow({ importType }: Props) {
   }
 
   return (
-    <section className="mx-auto flex w-full max-w-[880px] flex-col gap-1 bg-background text-foreground">
+    <section className="flex w-full max-w-[640px] flex-col gap-1 bg-background text-foreground">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Importação</p>
       <h1 className="mt-1 text-3xl font-medium leading-none tracking-tight text-foreground">
         {isResults ? 'Importar resultados' : 'Criar competição'}

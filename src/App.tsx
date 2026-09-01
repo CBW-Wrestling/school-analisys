@@ -2,7 +2,6 @@ import "./App.css"
 import { useEffect } from "react"
 import { details } from "./constants"
 import { saveTokens } from "./lib/auth"
-import { CollectionHome } from "./pages/CollectionHome"
 import { CollectionPage } from "./pages/CollectionPage"
 import { DashboardPage } from "./pages/DashboardPage"
 import { DefaultPage } from "./pages/DefaultPage"
@@ -10,8 +9,8 @@ import { TechnicalAssessmentsPage } from "./pages/TechnicalAssessmentsPage"
 import { CompetitionImportPage } from "./pages/CompetitionImportPage"
 import { ResultsImportPage } from "./pages/ResultsImportPage"
 import { ProfilePage } from "./pages/ProfilePage"
-import { MotorPage } from "./pages/MotorPage"
 import { PhysicalPage } from "./pages/PhysicalPage"
+import { InferencesPage } from "./pages/InferencesPage"
 import { ProfilesPage } from "./pages/ProfilesPage"
 import { ResultsPage } from "./pages/ResultsPage"
 import { SidebarProvider } from "./components/ui/sidebar"
@@ -38,12 +37,11 @@ function App() {
 
   const page = requestedForm && requestedForm in details ? <CollectionPage initialKind={requestedForm as FormKind} />
     : requestedView === "default" ? <DefaultPage />
-    : requestedView === "explorer" ? <TechnicalAssessmentsPage />
     : requestedView === "results" ? <ResultsPage />
     : requestedView === "profiles" ? <ProfilesPage />
     : requestedView === "physical" ? <PhysicalPage />
-    : requestedView === "motor" ? <MotorPage />
-    : requestedView === "collection" ? <CollectionHome />
+    : requestedView === "motor" ? <TechnicalAssessmentsPage />
+    : requestedView === "inferences" ? <InferencesPage />
     : requestedView === "competition-import" ? <CompetitionImportPage />
     : requestedView === "results-import" ? <ResultsImportPage />
     : requestedView === "profile" ? <ProfilePage />

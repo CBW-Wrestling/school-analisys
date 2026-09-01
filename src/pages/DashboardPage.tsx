@@ -1,20 +1,16 @@
 import { useMemo, useState } from 'react'
 import { Activity, ArrowRight, BarChart3, Dumbbell, Medal, Share2, UserRound } from 'lucide-react'
+import { FilterDropdown } from '../components/FilterDropdown'
 import { PageHeader } from '../components/PageHeader'
+import { SearchableSelect } from '../components/SearchableSelect'
 import { BrazilHeatmap } from '../components/dashboard/BrazilHeatmap'
 import { useApiRows } from '../lib/api'
+import { scoreFor } from '../lib/motorScore'
+import { meanAndStdDev } from '../lib/zscore'
 import type { CompetitionRow, MotorRow, PhysicalRow, ProfileRow, ResultRow } from '../types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-
-const resultScores: Record<string, number> = {
-  COMPLETE: 2,
-  INCOMPLETE: 1,
-  DID_NOT_DO: 0,
-  DOES_NOT_KNOW: 0,
-}
 
 const dimensions = [
   { label: 'Acrobacias', matches: (value: string) => /acrob/i.test(value) },
@@ -22,8 +18,8 @@ const dimensions = [
   { label: 'Técnicas em pé', matches: (value: string) => /(^|\s)p[eé](\s|$)|em p[eé]/i.test(value) },
 ]
 
-function matchesFilters(row: { eventIdentifier: string | null; estilo?: string | null; estado?: string | null }, event: string, style: string, state: string | null) {
-  return (event === 'all' || row.eventIdentifier === event) && (style === 'all' || row.estilo === style) && (!state || row.estado === state)
+function matchesFilters(row: { eventIdentifier: string | null; estilo?: string | null; estado?: string | null }, event: string, styles: string[], state: string | null) {
+  return (event === 'all' || row.eventIdentifier === event) && (styles.length === 0 || styles.includes(row.estilo ?? '')) && (!state || row.estado === state)
 }
 
 function FilterBar({ competitions, events, styles, year, event, style, onYearChange, onEventChange, onStyleChange }: {
@@ -32,44 +28,20 @@ function FilterBar({ competitions, events, styles, year, event, style, onYearCha
   styles: string[]
   year: string
   event: string
-  style: string
+  style: string[]
   onYearChange: (value: string) => void
   onEventChange: (value: string) => void
-  onStyleChange: (value: string) => void
+  onStyleChange: (value: string[]) => void
 }) {
   const years = [...new Set(competitions.map((item) => item.year).filter((item): item is number => item !== null))].sort((a, b) => b - a)
-  const hasActiveFilter = year !== 'all' || event !== 'all' || style !== 'all'
+  const hasActiveFilter = year !== 'all' || event !== 'all' || style.length > 0
 
   return (
     <div className="flex flex-wrap items-end justify-start gap-2 @3xl/main:justify-end">
-        <div className="w-36 shrink-0">
-          <Select value={year} onValueChange={onYearChange}>
-            <SelectTrigger id="dashboard-year" size="sm" className="w-36"><SelectValue placeholder="Todos os anos" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os anos</SelectItem>
-              {years.map((value) => <SelectItem key={value} value={String(value)}>{value}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="w-52 shrink-0">
-          <Select value={event} onValueChange={onEventChange}>
-            <SelectTrigger id="dashboard-event" size="sm" className="w-52"><SelectValue placeholder="Todos os eventos" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os eventos</SelectItem>
-              {events.map((item) => <SelectItem key={item.id} value={item.code}>{item.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="w-36 shrink-0">
-          <Select value={style} onValueChange={onStyleChange}>
-            <SelectTrigger id="dashboard-style" size="sm" className="w-36"><SelectValue placeholder="Todos os estilos" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os estilos</SelectItem>
-              {styles.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <Button size="sm" variant="outline" disabled={!hasActiveFilter} onClick={() => { onYearChange('all'); onEventChange('all'); onStyleChange('all') }}>Limpar</Button>
+        <SearchableSelect className="w-36" triggerId="dashboard-year" placeholder="Todos os anos" value={year} onChange={onYearChange} options={[{ value: 'all', label: 'Todos os anos' }, ...years.map((value) => ({ value: String(value), label: String(value) }))]} />
+        <SearchableSelect className="w-52" triggerId="dashboard-event" placeholder="Todos os eventos" value={event} onChange={onEventChange} options={[{ value: 'all', label: 'Todos os eventos' }, ...events.map((item) => ({ value: item.code, label: item.name }))]} />
+        <FilterDropdown label="Estilos" options={styles.map((value) => ({ value, label: value }))} value={style} onChange={onStyleChange} />
+        <Button size="sm" variant="outline" disabled={!hasActiveFilter} onClick={() => { onYearChange('all'); onEventChange('all'); onStyleChange([]) }}>Limpar</Button>
     </div>
   )
 }
@@ -108,7 +80,7 @@ export function DashboardPage() {
   const { rows: motor, loading: motorLoading } = useApiRows<MotorRow>('/api/dashboard/motor')
   const [year, setYear] = useState('all')
   const [event, setEvent] = useState('all')
-  const [style, setStyle] = useState('all')
+  const [style, setStyle] = useState<string[]>([])
   const [selectedState, setSelectedState] = useState<string | null>(null)
   const selectedEvent = event === 'all' ? 'all' : event
   const events = useMemo(() => year === 'all' ? competitions : competitions.filter((item) => String(item.year) === year), [competitions, year])
@@ -122,7 +94,7 @@ export function DashboardPage() {
     const stateCodes = [...new Set(baseProfiles.map((row) => row.estado).filter((value): value is string => Boolean(value)))]
     return stateCodes.map((code) => {
       const stateMotor = baseMotor.filter((row) => row.estado === code)
-      const scored = stateMotor.map((row) => resultScores[row.resultado ?? ''] ?? 0)
+      const scored = stateMotor.map((row) => scoreFor(row.resultado))
       const stateProfiles = baseProfiles.filter((row) => row.estado === code)
       const statePhysical = basePhysical.filter((row) => row.estado === code)
       return {
@@ -132,15 +104,14 @@ export function DashboardPage() {
         score: scored.length ? scored.reduce((sum, value) => sum + value, 0) / scored.length : null,
         engagement: stateProfiles.length ? Math.round((statePhysical.length / stateProfiles.length) * 100) : 0,
         dimensions: dimensions.map((dimension) => {
-          const dimensionScores = stateMotor.filter((row) => dimension.matches(row.competencia ?? '')).map((row) => resultScores[row.resultado ?? '']).filter((value): value is number => value !== undefined)
+          const dimensionScores = stateMotor.filter((row) => dimension.matches(row.competencia ?? '')).map((row) => scoreFor(row.resultado))
           return { label: dimension.label, score: dimensionScores.length ? dimensionScores.reduce((sum, value) => sum + value, 0) / dimensionScores.length : null }
         }),
       }
     })
   }, [baseMotor, basePhysical, baseProfiles])
-  const nationalScores = baseMotor.map((row) => resultScores[row.resultado ?? '']).filter((value): value is number => value !== undefined)
-  const nationalAverage = nationalScores.length ? nationalScores.reduce((sum, value) => sum + value, 0) / nationalScores.length : null
-  const nationalStdDev = nationalScores.length > 1 && nationalAverage !== null ? Math.sqrt(nationalScores.reduce((sum, value) => sum + (value - nationalAverage) ** 2, 0) / nationalScores.length) : null
+  const nationalScores = baseMotor.map((row) => scoreFor(row.resultado))
+  const { mean: nationalAverage, stdDev: nationalStdDev } = meanAndStdDev(nationalScores)
   const averageScore = nationalAverage
   const completion = baseProfiles.length ? Math.round((basePhysical.length / baseProfiles.length) * 100) : 0
   const medals = event === 'all' ? null : results.filter((row) => row.rank !== null && row.rank <= 3).length
@@ -162,7 +133,7 @@ export function DashboardPage() {
           </section>
           <BrazilHeatmap loading={profilesLoading || physicalLoading || motorLoading} values={stateValues} selectedState={selectedState} nationalAverage={nationalAverage} nationalStdDev={nationalStdDev} onSelect={setSelectedState} />
           <section className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
-            <NavigationHub href="?view=explorer" icon={<BarChart3 className="size-4" />} title="Raio-X técnico" description="Acrobacias, pé e solo." />
+            <NavigationHub href="?view=motor" icon={<BarChart3 className="size-4" />} title="Raio-X técnico" description="Acrobacias, pé e solo." />
             <NavigationHub href="?view=physical" icon={<Dumbbell className="size-4" />} title="Perfil físico" description="Biometria, força e envergadura." />
             <NavigationHub href="?view=profiles" icon={<UserRound className="size-4" />} title="Contexto de prática" description="Clubes, projetos e frequência." />
             <NavigationHub href="?view=results" icon={<Share2 className="size-4" />} title="Inteligência e correlações" description="Vitórias e execução técnica." />

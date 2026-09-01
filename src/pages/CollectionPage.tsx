@@ -30,7 +30,7 @@ function FormPicker({ onChoose }: { onChoose: (kind: FormKind) => void }) {
           )
         })}
       </div>
-      <a className="text-sm font-medium text-primary underline-offset-4 hover:underline" href="?view=collection">Voltar à coleta</a>
+      <a className="text-sm font-medium text-primary underline-offset-4 hover:underline" href="/">Voltar ao painel</a>
     </section>
   )
 }

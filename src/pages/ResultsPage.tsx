@@ -1,21 +1,15 @@
 import { Medal } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { FilterDropdown } from '../components/FilterDropdown'
 import { Metric } from '../components/Metric'
 import { PageHeader } from '../components/PageHeader'
+import { SearchableSelect } from '../components/SearchableSelect'
 import { useApiRows } from '../lib/api'
 import { AthleteDetailPage } from './AthleteDetailPage'
 import type { CompetitionRow, ResultRow } from '../types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -51,6 +45,19 @@ export function ResultsPage() {
     Boolean(competitionId)
   )
 
+  const weightOptions = useMemo(() => [...new Set(rows.map((row) => row.weightCategoryShortName).filter((value): value is string => Boolean(value)))].sort(), [rows])
+  const stateOptions = useMemo(() => [...new Set(rows.map((row) => row.teamAlternateName).filter((value): value is string => Boolean(value)))].sort(), [rows])
+  const [selectedWeights, setSelectedWeights] = useState<string[]>([])
+  const [selectedStates, setSelectedStates] = useState<string[]>([])
+
+  useEffect(() => { setSelectedWeights([]); setSelectedStates([]) }, [competitionId])
+  useEffect(() => { if (weightOptions.length && selectedWeights.length === 0) setSelectedWeights(weightOptions) }, [weightOptions, selectedWeights])
+  useEffect(() => { if (stateOptions.length && selectedStates.length === 0) setSelectedStates(stateOptions) }, [stateOptions, selectedStates])
+
+  const filteredRows = useMemo(() => rows.filter((row) =>
+    selectedWeights.includes(row.weightCategoryShortName ?? '') && selectedStates.includes(row.teamAlternateName ?? ''),
+  ), [rows, selectedWeights, selectedStates])
+
   const selectedCompetition = useMemo(
     () => competitions.find((c) => c.id === competitionId),
     [competitions, competitionId]
@@ -62,14 +69,15 @@ export function ResultsPage() {
         <AthleteDetailPage
           entryId={selectedEntry}
           onBack={() => setSelectedEntry(null)}
+          backLabel="Resultados"
         />
       </PageHeader>
     )
   }
 
-  const fights = rows.reduce((total, row) => total + Number(row.countFights || 0), 0)
-  const statesCount = new Set(rows.map((row) => row.teamAlternateName)).size
-  const categories = new Set(rows.map((row) => row.weightCategoryShortName)).size
+  const fights = filteredRows.reduce((total, row) => total + Number(row.countFights || 0), 0)
+  const statesCount = new Set(filteredRows.map((row) => row.teamAlternateName)).size
+  const categories = new Set(filteredRows.map((row) => row.weightCategoryShortName)).size
   const loading = competitionsLoading || resultsLoading
 
   return (
@@ -88,24 +96,11 @@ export function ResultsPage() {
               <h2 className="font-heading text-2xl font-semibold text-foreground">Atletas classificados</h2>
             </div>
 
-            <Select
-              value={competitionId}
-              onValueChange={setCompetitionId}
-              disabled={competitionsLoading}
-            >
-              <SelectTrigger className="w-56" aria-label="Selecionar competição">
-                <SelectValue placeholder="Competição" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {competitions.map((competition) => (
-                    <SelectItem key={competition.id} value={competition.id}>
-                      {competition.name} · {competition.year}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-wrap items-end gap-2">
+              <FilterDropdown label="Categoria" options={weightOptions.map((value) => ({ value, label: value }))} value={selectedWeights} onChange={setSelectedWeights} disabled={resultsLoading} />
+              <FilterDropdown label="UF" options={stateOptions.map((value) => ({ value, label: value }))} value={selectedStates} onChange={setSelectedStates} disabled={resultsLoading} />
+              <SearchableSelect className="w-56" placeholder="Competição" ariaLabel="Selecionar competição" disabled={competitionsLoading} value={competitionId} onChange={setCompetitionId} options={competitions.map((competition) => ({ value: competition.id, label: `${competition.name} · ${competition.year}` }))} />
+            </div>
           </div>
 
           {competitionsError && (
@@ -120,7 +115,7 @@ export function ResultsPage() {
           )}
 
           <div className="mb-4 grid grid-cols-2 gap-4 @xl/main:grid-cols-4">
-            <Metric label="Atletas classificados" value={loading ? '—' : String(rows.length)} />
+            <Metric label="Atletas classificados" value={loading ? '—' : String(filteredRows.length)} />
             <Metric label="Lutas registradas" value={loading ? '—' : String(fights)} />
             <Metric label="Categorias de peso" value={loading ? '—' : String(categories)} />
             <Metric label="Estados representados" value={loading ? '—' : String(statesCount)} />
@@ -161,10 +156,10 @@ export function ResultsPage() {
                   <TableBody className="**:data-[slot='table-row']:border-border/50 **:data-[slot='table-row']:hover:bg-muted/30">
                     {resultsLoading ? (
                       <TableRow><TableCell colSpan={7}>Carregando resultados...</TableCell></TableRow>
-                    ) : rows.length === 0 ? (
+                    ) : filteredRows.length === 0 ? (
                       <TableRow><TableCell colSpan={7}>Nenhum resultado encontrado.</TableCell></TableRow>
                     ) : (
-                      rows.slice(0, 18).map((row) => (
+                      filteredRows.slice(0, 18).map((row) => (
                         <TableRow
                           key={row.entryId}
                           className="cursor-pointer"
@@ -188,7 +183,7 @@ export function ResultsPage() {
                   </TableBody>
                 </Table>
                 </div>
-                <p className="px-4 pb-1 text-sm text-muted-foreground">Visualizando {Math.min(rows.length, 18)} de {rows.length.toLocaleString('pt-BR')} atletas</p>
+                <p className="px-4 pb-1 text-sm text-muted-foreground">Visualizando {Math.min(filteredRows.length, 18)} de {filteredRows.length.toLocaleString('pt-BR')} atletas</p>
               </CardContent>
             </Card>
 
@@ -200,10 +195,10 @@ export function ResultsPage() {
               <CardContent className="flex flex-col gap-3">
                 {resultsLoading ? (
                   <p className="text-sm text-muted-foreground">Carregando...</p>
-                ) : rows.filter((row) => row.rank === 1).length === 0 ? (
+                ) : filteredRows.filter((row) => row.rank === 1).length === 0 ? (
                   <p className="text-sm text-muted-foreground">Nenhum campeão encontrado.</p>
                 ) : (
-                  rows
+                  filteredRows
                     .filter((row) => row.rank === 1)
                     .slice(0, 4)
                     .map((row, index) => (
