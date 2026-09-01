@@ -3,10 +3,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts'
 import { Metric } from '../components/Metric'
 import { PageHeader } from '../components/PageHeader'
-import { SearchableSelect } from '../components/SearchableSelect'
-import { useApiData, useApiRows } from '../lib/api'
+import { useApiRows } from '../lib/api'
+import { competitionCodesForScope, useReportingScope, useScopedCompetitionAthletes } from '../lib/reportingScope'
 import { AthleteDetailPage } from './AthleteDetailPage'
-import type { CompetitionAthlete, CompetitionRow, CountByCode, ProfileSummary } from '../types'
+import type { CompetitionRow, CountByCode, ProfileRow } from '../types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -58,11 +58,7 @@ function AthleteTableSkeleton() {
 }
 
 export function ProfilesPage() {
-  const { data: summary, loading } = useApiData<ProfileSummary>('/api/dashboard/profiles/summary')
-  const otherSportBreakdown = summary?.byOtherSport ?? []
-
   const [selectedEntry, setSelectedEntry] = useState<string | null>(() => new URLSearchParams(window.location.search).get('athlete'))
-  const [competitionCode, setCompetitionCode] = useState<string>('')
   const [search, setSearch] = useState('')
   const listHeadingRef = useRef<HTMLHeadingElement>(null)
 
@@ -88,21 +84,15 @@ export function ProfilesPage() {
   }
 
   const { rows: competitions, loading: competitionsLoading } = useApiRows<CompetitionRow>('/api/competitions')
-
-  useEffect(() => {
-    if (!competitionCode && competitions.length > 0) {
-      setCompetitionCode(competitions[0].code)
-    }
-  }, [competitions, competitionCode])
-
-  const {
-    rows: athletes,
-    loading: athletesLoading,
-    error: athletesError,
-  } = useApiRows<CompetitionAthlete>(
-    competitionCode ? `/api/competitions/${competitionCode}/athletes` : '/api/competitions/__none__/athletes',
-    Boolean(competitionCode)
-  )
+  const { rows: profileRows, loading: profilesLoading } = useApiRows<ProfileRow>('/api/dashboard/profiles')
+  const { scope } = useReportingScope()
+  const { athletes, loading: athletesLoading } = useScopedCompetitionAthletes(scope, competitions)
+  const scopedCompetitionCodes = useMemo(() => competitionCodesForScope(scope, competitions), [scope, competitions])
+  const scopedProfiles = useMemo(() => profileRows.filter((row) => scopedCompetitionCodes.includes(row.eventIdentifier ?? '') && scope.styles.includes(row.estilo ?? '')), [profileRows, scopedCompetitionCodes, scope.styles])
+  const countBy = (field: keyof ProfileRow): CountByCode[] => [...new Set(scopedProfiles.map((row) => row[field]).filter((value): value is string => Boolean(value)))].map((value) => ({ code: value, label: value, count: scopedProfiles.filter((row) => row[field] === value).length })).sort((first, second) => second.count - first.count)
+  const profilesLoadingForScope = profilesLoading || competitionsLoading
+  const profileAthleteIds = new Set(scopedProfiles.map((row) => row.athleteEntryId).filter((value): value is string => Boolean(value)))
+  const otherSportCount = scopedProfiles.filter((row) => row.flagOutraModalidade === 'sim').length
 
   const filteredAthletes = useMemo(
     () => athletes.filter((a) => a.athleteName.toLowerCase().includes(search.trim().toLowerCase())),
@@ -131,10 +121,10 @@ export function ProfilesPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4 @xl/main:grid-cols-4">
-            <Metric label="Perfis coletados" value={loading ? '—' : String(summary?.totalProfiles ?? 0)} />
-            <Metric label="Locais de prática" value={loading ? '—' : String(summary?.practiceLocationsCount ?? 0)} />
-            <Metric label="Praticam outra modalidade" value={loading ? '—' : String(summary?.practicesOtherSport ?? 0)} />
-            <Metric label="Estados na base" value={loading ? '—' : String(summary?.statesCount ?? 0)} />
+            <Metric label="Perfis coletados" value={profilesLoadingForScope ? '—' : String(profileAthleteIds.size)} />
+            <Metric label="Locais de prática" value={profilesLoadingForScope ? '—' : String(countBy('localPratica').length)} />
+            <Metric label="Praticam outra modalidade" value={profilesLoadingForScope ? '—' : String(otherSportCount)} />
+            <Metric label="Estados na base" value={profilesLoadingForScope ? '—' : String(countBy('estado').length)} />
           </div>
 
           <div className="grid grid-cols-1 gap-4 @lg/main:grid-cols-2">
@@ -143,7 +133,7 @@ export function ProfilesPage() {
               <CardTitle>Tempo de prática</CardTitle>
             </CardHeader>
             <CardContent>
-              <DistributionChart title="Distribuição de atletas por tempo de prática" data={summary?.byPracticeTime ?? []} loading={loading} />
+              <DistributionChart title="Distribuição de atletas por tempo de prática" data={countBy('tempoPratica')} loading={profilesLoadingForScope} />
             </CardContent>
           </Card>
           <Card>
@@ -151,7 +141,7 @@ export function ProfilesPage() {
               <CardTitle>Onde treinam</CardTitle>
             </CardHeader>
             <CardContent>
-              <DistributionChart title="Distribuição de atletas por local de treino" data={summary?.byPracticeLocation ?? []} loading={loading} />
+              <DistributionChart title="Distribuição de atletas por local de treino" data={countBy('localPratica')} loading={profilesLoadingForScope} />
             </CardContent>
           </Card>
           <Card>
@@ -159,16 +149,16 @@ export function ProfilesPage() {
               <CardTitle>Frequência semanal de treino</CardTitle>
             </CardHeader>
             <CardContent>
-              <DistributionChart title="Distribuição de atletas por frequência semanal de treino" data={summary?.byWeeklyFrequency ?? []} loading={loading} />
+              <DistributionChart title="Distribuição de atletas por frequência semanal de treino" data={countBy('frequenciaSemanal')} loading={profilesLoadingForScope} />
             </CardContent>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Modalidade além da luta</CardTitle>
-              <p className="text-xs text-muted-foreground">Distribuição simulada a partir do total real (backend ainda não agrega por modalidade — BACKEND_GAPS.md, GAP 4).</p>
+              <CardTitle>Prática de outra modalidade</CardTitle>
+              <p className="text-xs text-muted-foreground">Indica se os atletas registraram a prática de outro esporte.</p>
             </CardHeader>
             <CardContent>
-              <DistributionChart title="Distribuição de atletas por modalidade adicional" data={otherSportBreakdown} loading={loading} />
+              <DistributionChart title="Distribuição de atletas que praticam outra modalidade" data={countBy('flagOutraModalidade')} loading={profilesLoadingForScope} />
             </CardContent>
           </Card>
           </div>
@@ -177,19 +167,10 @@ export function ProfilesPage() {
             <CardHeader className="border-b py-4 [.border-b]:pb-4">
               <div className="flex flex-col gap-3 @xl/main:flex-row @xl/main:items-center @xl/main:justify-between">
                 <div>
-                  <CardTitle>Atletas por competição</CardTitle>
+                  <CardTitle>Atletas no recorte global</CardTitle>
                   <CardDescription>Busque e veja o perfil detalhado de cada atleta</CardDescription>
                 </div>
                 <div className="flex flex-col gap-2 @xl/main:flex-row">
-                  <SearchableSelect
-                    value={competitionCode}
-                    onChange={setCompetitionCode}
-                    options={competitions.map((competition) => ({ value: competition.code, label: `${competition.name} · ${competition.year}` }))}
-                    placeholder="Competição"
-                    ariaLabel="Selecionar competição"
-                    disabled={competitionsLoading}
-                    className="w-56"
-                  />
                   <div className="relative">
                     <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
                     <Input
@@ -216,9 +197,7 @@ export function ProfilesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody className="**:data-[slot='table-row']:border-border/50 **:data-[slot='table-row']:hover:bg-muted/30">
-                  {athletesError ? (
-                    <TableRow><TableCell colSpan={5} className="text-destructive">Não foi possível carregar os atletas.</TableCell></TableRow>
-                  ) : athletesLoading ? (
+                  {athletesLoading || competitionsLoading ? (
                     <AthleteTableSkeleton />
                   ) : filteredAthletes.length === 0 ? (
                     <TableRow><TableCell colSpan={5}>Nenhum atleta encontrado.</TableCell></TableRow>

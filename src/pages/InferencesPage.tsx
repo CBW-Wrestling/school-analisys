@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from 'recharts'
 import { Medal } from 'lucide-react'
-import { FilterDropdown } from '../components/FilterDropdown'
 import { Metric } from '../components/Metric'
 import { PageHeader } from '../components/PageHeader'
-import { SearchableSelect } from '../components/SearchableSelect'
-import { useApiRows } from '../lib/api'
+import { apiGet, useApiRows } from '../lib/api'
 import { buildInferenceSummary } from '../lib/inferenceSummary'
-import { average, labelForStyle, scoreAndCompletionByCompetencia, scoreFor, visibleMotorRows } from '../lib/motorScore'
+import { average, scoreAndCompletionByCompetencia, scoreFor, visibleMotorRows } from '../lib/motorScore'
+import { competitionCodesForScope, useReportingScope } from '../lib/reportingScope'
 import { Z_SCORE_EXPLANATION, meanAndStdDev, zScoreFor } from '../lib/zscore'
 import type { CompetitionRow, MotorRow, ResultRow } from '../types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -20,19 +19,24 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 export function InferencesPage() {
   const { rows: competitions, loading: competitionsLoading, error: competitionsError } = useApiRows<CompetitionRow>('/api/competitions')
   const { rows: motorRows, loading: motorLoading, error: motorError } = useApiRows<MotorRow>('/api/dashboard/motor')
-  const [competitionCode, setCompetitionCode] = useState('')
-  const [selectedStyles, setSelectedStyles] = useState<string[]>([])
+  const { scope } = useReportingScope()
+  const scopedCompetitionCodes = useMemo(() => competitionCodesForScope(scope, competitions), [scope, competitions])
+  const nationalCompetitionCodes = useMemo(() => competitionCodesForScope({ ...scope, competitionCode: 'all' }, competitions), [scope, competitions])
+  const [results, setResults] = useState<ResultRow[]>([])
+  const [resultsLoading, setResultsLoading] = useState(false)
+  const [resultsError, setResultsError] = useState<string | null>(null)
 
-  useEffect(() => { if (!competitionCode && competitions.length) setCompetitionCode(competitions[0].code) }, [competitions, competitionCode])
-
-  const styles = useMemo(() => Array.from(new Set(motorRows.map((row) => row.estilo).filter((style): style is string => Boolean(style)))).sort(), [motorRows])
-  useEffect(() => { if (styles.length && selectedStyles.length === 0) setSelectedStyles(styles) }, [styles, selectedStyles])
-
-  const selectedCompetition = competitions.find((competition) => competition.code === competitionCode)
-  const { rows: results, loading: resultsLoading, error: resultsError } = useApiRows<ResultRow>(
-    selectedCompetition ? `/api/results?competitionId=${encodeURIComponent(selectedCompetition.id)}` : '',
-    Boolean(selectedCompetition),
-  )
+  useEffect(() => {
+    const selectedCompetitions = competitions.filter((competition) => scopedCompetitionCodes.includes(competition.code))
+    if (!selectedCompetitions.length) { setResults([]); setResultsLoading(false); return }
+    let alive = true
+    setResultsLoading(true)
+    Promise.all(selectedCompetitions.map((competition) => apiGet<ResultRow[]>(`/api/results?competitionId=${encodeURIComponent(competition.id)}`)))
+      .then((lists) => { if (alive) { setResults(lists.flat()); setResultsError(null) } })
+      .catch(() => { if (alive) setResultsError('Não foi possível carregar os resultados da competição.') })
+      .finally(() => { if (alive) setResultsLoading(false) })
+    return () => { alive = false }
+  }, [competitions, scopedCompetitionCodes])
 
   const gold = results.filter((row) => row.rank === 1).length
   const silver = results.filter((row) => row.rank === 2).length
@@ -41,12 +45,13 @@ export function InferencesPage() {
   const pointsDiff = results.reduce((sum, row) => sum + (row.technicalPointsDiff ?? 0), 0)
   const pointsAgainst = pointsFor - pointsDiff
 
-  const eventRows = useMemo(() => visibleMotorRows(motorRows.filter((row) => row.eventIdentifier === competitionCode && selectedStyles.includes(row.estilo ?? ''))), [motorRows, competitionCode, selectedStyles])
+  const eventRows = useMemo(() => visibleMotorRows(motorRows.filter((row) => scopedCompetitionCodes.includes(row.eventIdentifier ?? '') && scope.styles.includes(row.estilo ?? ''))), [motorRows, scopedCompetitionCodes, scope.styles])
+  const nationalRows = useMemo(() => visibleMotorRows(motorRows.filter((row) => nationalCompetitionCodes.includes(row.eventIdentifier ?? '') && scope.styles.includes(row.estilo ?? ''))), [motorRows, nationalCompetitionCodes, scope.styles])
   const competencyStats = useMemo(() => scoreAndCompletionByCompetencia(eventRows), [eventRows])
   const overallAverage = average(eventRows.map((row) => scoreFor(row.resultado)))
   const summaryText = buildInferenceSummary(overallAverage, competencyStats)
 
-  const nationalStats = useMemo(() => meanAndStdDev(visibleMotorRows(motorRows).map((row) => scoreFor(row.resultado))), [motorRows])
+  const nationalStats = useMemo(() => meanAndStdDev(nationalRows.map((row) => scoreFor(row.resultado))), [nationalRows])
   const eventZScore = zScoreFor(overallAverage, nationalStats.mean, nationalStats.stdDev)
 
   const loading = competitionsLoading || motorLoading
@@ -61,10 +66,7 @@ export function InferencesPage() {
         <main className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 p-4 md:gap-6 md:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="flex flex-col gap-1"><p className="text-sm text-muted-foreground">Selecione a competição para consolidar o relatório.</p></div>
-            <div className="flex flex-wrap items-end gap-2">
-              <FilterDropdown label="Estilos" options={styles.map((value) => ({ value, label: labelForStyle(value) }))} value={selectedStyles} onChange={setSelectedStyles} disabled={motorLoading} />
-              <SearchableSelect className="w-64" placeholder="Competição" ariaLabel="Selecionar competição" disabled={competitionsLoading} value={competitionCode} onChange={setCompetitionCode} options={competitions.map((competition) => ({ value: competition.code, label: `${competition.name}${competition.year ? ` · ${competition.year}` : ''}` }))} />
-            </div>
+            <p className="text-sm text-muted-foreground">Resultados e indicadores respeitam o recorte global acima.</p>
           </div>
 
           {competitionsError && <Alert variant="destructive"><AlertDescription>Não foi possível carregar as competições.</AlertDescription></Alert>}
@@ -80,7 +82,7 @@ export function InferencesPage() {
             <Metric loading={resultsLoading} label="Pontos técnicos marcados" value={String(pointsFor)} />
             <Metric loading={resultsLoading} label="Pontos técnicos sofridos" value={String(pointsAgainst)} />
           </div>
-          {!resultsLoading && selectedCompetition && !results.length && <p className="text-sm text-muted-foreground">Nenhum resultado encontrado para esta competição.</p>}
+          {!resultsLoading && scopedCompetitionCodes.length > 0 && !results.length && <p className="text-sm text-muted-foreground">Nenhum resultado encontrado no recorte global.</p>}
 
           <div className="grid gap-4 @2xl/main:grid-cols-[minmax(0,1fr)_minmax(280px,0.5fr)]">
             {loading ? <Skeleton className="h-80 w-full rounded-lg" /> : !competencyStats.length ? <p className="text-sm text-muted-foreground">Nenhum dado técnico para esta competição.</p> : <Card><CardHeader><CardDescription>DESEMPENHO POR COMPETÊNCIA</CardDescription><CardTitle>Pontuação média e % de completação</CardTitle></CardHeader><CardContent><ChartContainer config={{ score: { label: 'Pontuação média', color: 'var(--chart-1)' }, completionPct: { label: '% Completação', color: 'var(--chart-2)' } }} className="h-72 w-full" role="img" aria-label="Barras de pontuação média e linha de percentual de completação por competência."><ComposedChart data={competencyStats} margin={{ top: 12, right: 12, bottom: 8, left: 0 }}><CartesianGrid vertical={false} /><XAxis dataKey="competencia" axisLine={false} tickLine={false} tickMargin={8} /><YAxis yAxisId="score" domain={[0, 2]} axisLine={false} tickLine={false} width={28} /><YAxis yAxisId="pct" orientation="right" domain={[0, 100]} tickFormatter={(value) => `${value}%`} axisLine={false} tickLine={false} width={42} /><ChartTooltip content={<ChartTooltipContent />} /><ChartLegend content={<ChartLegendContent />} /><Bar yAxisId="score" dataKey="score" fill="var(--color-score)" radius={4} /><Line yAxisId="pct" type="monotone" dataKey="completionPct" stroke="var(--color-completionPct)" strokeWidth={2.5} dot={{ r: 4 }} /></ComposedChart></ChartContainer></CardContent></Card>}

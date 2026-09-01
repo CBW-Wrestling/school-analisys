@@ -11,8 +11,10 @@ import type { ReactNode } from 'react'
 import logo from '../assets/logo.svg'
 import { details } from '../constants'
 import { fetchCurrentUser, logout, type UserInfo } from '../lib/auth'
+import { withReportingScope } from '../lib/reportingScope'
 import { allNavItems, assessmentsNav, examplesNav, operations, overviewNav, resultsNav, type NavigationItem } from '../navigation/sidebar-items'
 import { AppHeader } from './AppHeader'
+import { ReportingScopeFilters } from './ReportingScopeFilters'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -42,7 +44,7 @@ function CollectionNavItem({ active }: { active: string }) {
             {(Object.keys(details) as (keyof typeof details)[]).map((kind) => (
               <SidebarMenuSubItem key={kind}>
                 <SidebarMenuSubButton asChild>
-                  <a href={`?form=${kind}`}>{details[kind].label}</a>
+                  <a href={withReportingScope(`?form=${kind}`)}>{details[kind].label}</a>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
             ))}
@@ -61,7 +63,7 @@ function NavigationItems({ active, items }: { active: string; items: NavigationI
         return (
           <SidebarMenuItem key={item.id}>
             <SidebarMenuButton asChild isActive={active === item.id} tooltip={item.label}>
-              <a href={item.href}>
+              <a href={withReportingScope(item.href)}>
                 <Icon size={18} aria-hidden />
                 <span>{item.label}</span>
               </a>
@@ -125,7 +127,7 @@ function NavUser({ active }: { active: string }) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <a href="?view=profile"><UserCircle aria-hidden />Meu perfil</a>
+              <a href={withReportingScope('?view=profile')}><UserCircle aria-hidden />Meu perfil</a>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onClick={() => { void handleLogout() }}>
@@ -156,7 +158,7 @@ export function PageHeader({
     <>
       <Sidebar collapsible="icon" variant="inset">
         <SidebarHeader className="h-12 justify-center border-b border-sidebar-border">
-          <a className="flex items-center gap-2 rounded-md px-2 py-1 text-sidebar-foreground" href="/" aria-label="CBW Gestão de Atletas, ir para o painel">
+          <a className="flex items-center gap-2 rounded-md px-2 py-1 text-sidebar-foreground" href={withReportingScope('/')} aria-label="CBW Gestão de Atletas, ir para o painel">
             <img className="size-8 shrink-0 object-contain" src={logo} alt="" />
             <span className="font-semibold group-data-[collapsible=icon]:hidden">CBW</span>
           </a>
@@ -193,6 +195,7 @@ export function PageHeader({
       </Sidebar>
       <SidebarInset className="peer-data-[variant=inset]:border">
         <AppHeader crumbs={crumbs} />
+        <ReportingScopeFilters />
         {children}
       </SidebarInset>
     </>

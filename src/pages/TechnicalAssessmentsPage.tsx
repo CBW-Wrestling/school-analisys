@@ -8,7 +8,8 @@ import { PageHeader } from '../components/PageHeader'
 import { BrazilHeatmap } from '../components/dashboard/BrazilHeatmap'
 import { apiGet, useApiRows } from '../lib/api'
 import { pearsonCorrelation } from '../lib/correlation'
-import { REGION_BY_STATE, REGION_ORDER, average, completionPctByEstado, labelForStyle, scoreByEstado, scoreFor, visibleMotorRows } from '../lib/motorScore'
+import { REGION_BY_STATE, REGION_ORDER, average, completionPctByEstado, scoreByEstado, scoreFor, visibleMotorRows } from '../lib/motorScore'
+import { competitionCodesForScope, useReportingScope } from '../lib/reportingScope'
 import { Z_SCORE_EXPLANATION, meanAndStdDev, zScoreFor } from '../lib/zscore'
 import type { CompetitionRow, MotorRow, ResultRow } from '../types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -55,21 +56,17 @@ export function TechnicalAssessmentsPage() {
   const { rows: competitions, loading: competitionsLoading, error: competitionsError } = useApiRows<CompetitionRow>('/api/competitions')
   const { rows: motorRows, loading: motorLoading, error: motorError } = useApiRows<MotorRow>('/api/dashboard/motor')
   const loading = competitionsLoading || motorLoading
-  const styles = useMemo(() => Array.from(new Set(motorRows.map((row) => row.estilo).filter((style): style is string => Boolean(style)))).sort(), [motorRows])
-  const events = useMemo(() => competitions.map((competition) => ({ value: competition.code, label: `${competition.name}${competition.year ? ` - ${competition.year}` : ''}` })), [competitions])
+  const { scope } = useReportingScope()
+  const scopedCompetitionCodes = useMemo(() => competitionCodesForScope(scope, competitions), [scope, competitions])
   const [dimensions, setDimensions] = useState<string[]>([])
-  const [selectedStyles, setSelectedStyles] = useState<string[]>([])
-  const [selectedEvents, setSelectedEvents] = useState<string[]>([])
 
   useEffect(() => { if (motorRows.length && dimensions.length === 0) setDimensions([...DIMENSIONS]) }, [motorRows, dimensions])
-  useEffect(() => { if (styles.length && selectedStyles.length === 0) setSelectedStyles(styles) }, [styles, selectedStyles])
-  useEffect(() => { if (events.length && selectedEvents.length === 0) setSelectedEvents(events.map((event) => event.value)) }, [events, selectedEvents])
 
   const rows = useMemo(() => visibleMotorRows(
     motorRows.filter((row) =>
-      dimensions.includes(dimensionFor(row)) && selectedStyles.includes(row.estilo ?? '') && selectedEvents.includes(row.eventIdentifier ?? ''),
+      dimensions.includes(dimensionFor(row)) && scope.styles.includes(row.estilo ?? '') && scopedCompetitionCodes.includes(row.eventIdentifier ?? ''),
     ),
-  ), [motorRows, dimensions, selectedStyles, selectedEvents])
+  ), [motorRows, dimensions, scope.styles, scopedCompetitionCodes])
   const averageScore = average(rows.map((row) => scoreFor(row.resultado)))
   const completionRate = rows.length ? rows.filter((row) => row.resultado === 'COMPLETE').length / rows.length : null
   const overviewByResult = useMemo(() => {
@@ -102,7 +99,7 @@ export function TechnicalAssessmentsPage() {
   const [resultsLoading, setResultsLoading] = useState(false)
   const [athleteScores, setAthleteScores] = useState<{ entryId: string; averageScore: number }[]>([])
   useEffect(() => {
-    const ids = competitions.filter((competition) => selectedEvents.includes(competition.code)).map((competition) => competition.id)
+    const ids = competitions.filter((competition) => scopedCompetitionCodes.includes(competition.code)).map((competition) => competition.id)
     if (!ids.length) { setResultRows([]); return }
     let alive = true
     setResultsLoading(true)
@@ -111,17 +108,17 @@ export function TechnicalAssessmentsPage() {
       .catch(() => { if (alive) setResultRows([]) })
       .finally(() => { if (alive) setResultsLoading(false) })
     return () => { alive = false }
-  }, [selectedEvents, competitions])
+  }, [scopedCompetitionCodes, competitions])
 
   useEffect(() => {
-    const ids = competitions.filter((competition) => selectedEvents.includes(competition.code)).map((competition) => competition.id)
+    const ids = competitions.filter((competition) => scopedCompetitionCodes.includes(competition.code)).map((competition) => competition.id)
     if (!ids.length) { setAthleteScores([]); return }
     let alive = true
     Promise.all(ids.map((id) => apiGet<{ entryId: string; averageScore: number }[]>(`/api/dashboard/motor/athlete-scores?competitionId=${encodeURIComponent(id)}`)))
       .then((lists) => { if (alive) setAthleteScores(lists.flat()) })
       .catch(() => { if (alive) setAthleteScores([]) })
     return () => { alive = false }
-  }, [selectedEvents, competitions])
+  }, [scopedCompetitionCodes, competitions])
   const scoreByEntryId = useMemo(() => new Map(athleteScores.map((item) => [item.entryId, item.averageScore])), [athleteScores])
   const correlationRows = useMemo(() => resultRows
     .filter((row) => row.rank !== null)
@@ -133,15 +130,13 @@ export function TechnicalAssessmentsPage() {
   const coefWins = pearsonCorrelation(winsScatter)
   const coefPoints = pearsonCorrelation(pointsScatter)
 
-  const hasCustomFilters = dimensions.length !== DIMENSIONS.length || selectedStyles.length !== styles.length || selectedEvents.length !== events.length
-  const resetFilters = () => { setDimensions([...DIMENSIONS]); setSelectedStyles(styles); setSelectedEvents(events.map((event) => event.value)) }
+  const hasCustomFilters = dimensions.length !== DIMENSIONS.length
+  const resetFilters = () => setDimensions([...DIMENSIONS])
   const [activeTab, setActiveTab] = useState('overview')
 
   const filterToolbar = (
     <div className="flex flex-wrap items-center gap-2">
       <FilterDropdown label="Dimensões" options={DIMENSIONS.map((value) => ({ value, label: value }))} value={dimensions} onChange={setDimensions} disabled={loading} />
-      <FilterDropdown label="Estilos" options={styles.map((value) => ({ value, label: labelForStyle(value) }))} value={selectedStyles} onChange={setSelectedStyles} disabled={loading} />
-      <FilterDropdown label="Eventos" options={events} value={selectedEvents} onChange={setSelectedEvents} disabled={loading} />
       <Button variant="ghost" size="sm" onClick={resetFilters} disabled={!hasCustomFilters}><RotateCcw aria-hidden="true" />Restaurar</Button>
     </div>
   )

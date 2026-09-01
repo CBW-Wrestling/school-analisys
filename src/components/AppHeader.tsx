@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { fetchCurrentUser, logout, type UserInfo } from '@/lib/auth'
+import { withReportingScope } from '@/lib/reportingScope'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -88,7 +89,7 @@ function AccountSwitcher() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild><a href="?view=profile"><UserCircle aria-hidden />Meu perfil</a></DropdownMenuItem>
+        <DropdownMenuItem asChild><a href={withReportingScope('?view=profile')}><UserCircle aria-hidden />Meu perfil</a></DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={() => { void handleLogout() }}>
           <LogOut aria-hidden />Sair
@@ -129,7 +130,7 @@ export function AppHeader({ crumbs }: { crumbs: BreadcrumbItemData[] }) {
               const Icon = details[kind].icon
               return (
                 <DropdownMenuItem key={kind} asChild>
-                  <a href={`?form=${kind}`}><Icon aria-hidden />{details[kind].label}</a>
+                  <a href={withReportingScope(`?form=${kind}`)}><Icon aria-hidden />{details[kind].label}</a>
                 </DropdownMenuItem>
               )
             })}
