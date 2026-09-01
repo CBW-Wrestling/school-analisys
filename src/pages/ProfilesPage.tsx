@@ -6,7 +6,7 @@ import { PageHeader } from '../components/PageHeader'
 import { useApiRows } from '../lib/api'
 import { competitionCodesForScope, useReportingScope, useScopedCompetitionAthletes } from '../lib/reportingScope'
 import { AthleteDetailPage } from './AthleteDetailPage'
-import type { CompetitionRow, CountByCode, ProfileRow } from '../types'
+import type { CompetitionRow, CountByCode, EnumOption, ProfileRow } from '../types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -24,6 +24,7 @@ import {
 
 function DistributionChart({ data, loading, title }: { data: CountByCode[]; loading: boolean; title: string }) {
   if (loading) return <Skeleton className="h-56 w-full rounded-lg" />
+  if (!data.length) return <p className="py-10 text-center text-sm text-muted-foreground">Nenhuma informação registrada no recorte global.</p>
 
   return (
     <>
@@ -85,11 +86,17 @@ export function ProfilesPage() {
 
   const { rows: competitions, loading: competitionsLoading } = useApiRows<CompetitionRow>('/api/competitions')
   const { rows: profileRows, loading: profilesLoading } = useApiRows<ProfileRow>('/api/dashboard/profiles')
+  const { rows: practiceTimes } = useApiRows<EnumOption>('/api/enums/practice-times')
+  const { rows: practiceLocations } = useApiRows<EnumOption>('/api/enums/practice-locations')
+  const { rows: weeklyFrequencies } = useApiRows<EnumOption>('/api/enums/weekly-frequencies')
   const { scope } = useReportingScope()
   const { athletes, loading: athletesLoading } = useScopedCompetitionAthletes(scope, competitions)
   const scopedCompetitionCodes = useMemo(() => competitionCodesForScope(scope, competitions), [scope, competitions])
   const scopedProfiles = useMemo(() => profileRows.filter((row) => scopedCompetitionCodes.includes(row.eventIdentifier ?? '') && scope.styles.includes(row.estilo ?? '')), [profileRows, scopedCompetitionCodes, scope.styles])
-  const countBy = (field: keyof ProfileRow): CountByCode[] => [...new Set(scopedProfiles.map((row) => row[field]).filter((value): value is string => Boolean(value)))].map((value) => ({ code: value, label: value, count: scopedProfiles.filter((row) => row[field] === value).length })).sort((first, second) => second.count - first.count)
+  const practiceTimeLabels = useMemo(() => new Map(practiceTimes.map(({ code, label }) => [code, label])), [practiceTimes])
+  const practiceLocationLabels = useMemo(() => new Map(practiceLocations.map(({ code, label }) => [code, label])), [practiceLocations])
+  const weeklyFrequencyLabels = useMemo(() => new Map(weeklyFrequencies.map(({ code, label }) => [code, label])), [weeklyFrequencies])
+  const countBy = (field: keyof ProfileRow, labels?: Map<string, string>): CountByCode[] => [...new Set(scopedProfiles.map((row) => row[field]).filter((value): value is string => Boolean(value)))].map((value) => ({ code: value, label: labels?.get(value) ?? value, count: scopedProfiles.filter((row) => row[field] === value).length })).sort((first, second) => second.count - first.count)
   const profilesLoadingForScope = profilesLoading || competitionsLoading
   const profileAthleteIds = new Set(scopedProfiles.map((row) => row.athleteEntryId).filter((value): value is string => Boolean(value)))
   const otherSportCount = scopedProfiles.filter((row) => row.flagOutraModalidade === 'sim').length
@@ -133,7 +140,7 @@ export function ProfilesPage() {
               <CardTitle>Tempo de prática</CardTitle>
             </CardHeader>
             <CardContent>
-              <DistributionChart title="Distribuição de atletas por tempo de prática" data={countBy('tempoPratica')} loading={profilesLoadingForScope} />
+              <DistributionChart title="Distribuição de atletas por tempo de prática" data={countBy('tempoPratica', practiceTimeLabels)} loading={profilesLoadingForScope} />
             </CardContent>
           </Card>
           <Card>
@@ -141,7 +148,7 @@ export function ProfilesPage() {
               <CardTitle>Onde treinam</CardTitle>
             </CardHeader>
             <CardContent>
-              <DistributionChart title="Distribuição de atletas por local de treino" data={countBy('localPratica')} loading={profilesLoadingForScope} />
+              <DistributionChart title="Distribuição de atletas por local de treino" data={countBy('localPratica', practiceLocationLabels)} loading={profilesLoadingForScope} />
             </CardContent>
           </Card>
           <Card>
@@ -149,7 +156,7 @@ export function ProfilesPage() {
               <CardTitle>Frequência semanal de treino</CardTitle>
             </CardHeader>
             <CardContent>
-              <DistributionChart title="Distribuição de atletas por frequência semanal de treino" data={countBy('frequenciaSemanal')} loading={profilesLoadingForScope} />
+              <DistributionChart title="Distribuição de atletas por frequência semanal de treino" data={countBy('frequenciaSemanal', weeklyFrequencyLabels)} loading={profilesLoadingForScope} />
             </CardContent>
           </Card>
           <Card>
@@ -158,7 +165,7 @@ export function ProfilesPage() {
               <p className="text-xs text-muted-foreground">Indica se os atletas registraram a prática de outro esporte.</p>
             </CardHeader>
             <CardContent>
-              <DistributionChart title="Distribuição de atletas que praticam outra modalidade" data={countBy('flagOutraModalidade')} loading={profilesLoadingForScope} />
+              <DistributionChart title="Distribuição de atletas que praticam outra modalidade" data={countBy('flagOutraModalidade', new Map([['sim', 'Sim'], ['nao', 'Não']]))} loading={profilesLoadingForScope} />
             </CardContent>
           </Card>
           </div>
