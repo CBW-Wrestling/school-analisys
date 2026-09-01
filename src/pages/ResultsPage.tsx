@@ -1,210 +1,231 @@
-import { ChevronDown, Medal } from 'lucide-react'
+import { Medal } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { FilterDropdown } from '../components/FilterDropdown'
 import { Metric } from '../components/Metric'
 import { PageHeader } from '../components/PageHeader'
-import { useApiRows } from '../lib/api'
+import { apiGet, useApiRows } from '../lib/api'
+import { competitionCodesForScope, useReportingScope, useScopedCompetitionAthletes } from '../lib/reportingScope'
 import { AthleteDetailPage } from './AthleteDetailPage'
 import type { CompetitionRow, ResultRow } from '../types'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 export function ResultsPage() {
-  const [competitionId, setCompetitionId] = useState<string>('')
   const [selectedEntry, setSelectedEntry] = useState<string | null>(null)
+  const [rows, setRows] = useState<ResultRow[]>([])
+  const [resultsLoading, setResultsLoading] = useState(false)
+  const [resultsError, setResultsError] = useState<string | null>(null)
 
   const {
     rows: competitions,
     loading: competitionsLoading,
     error: competitionsError,
   } = useApiRows<CompetitionRow>('/api/competitions')
+  const { scope } = useReportingScope()
+  const scopedCompetitionCodes = useMemo(() => competitionCodesForScope(scope, competitions), [scope, competitions])
+  const { athletes: scopedAthletes, loading: athletesLoading } = useScopedCompetitionAthletes(scope, competitions)
 
   useEffect(() => {
-    if (!competitionId && competitions.length > 0) {
-      setCompetitionId(competitions[0].id)
-    }
-  }, [competitions, competitionId])
+    const selectedCompetitions = competitions.filter((competition) => scopedCompetitionCodes.includes(competition.code))
+    if (!selectedCompetitions.length) { setRows([]); setResultsLoading(false); return }
+    let alive = true
+    setResultsLoading(true)
+    Promise.all(selectedCompetitions.map((competition) => apiGet<ResultRow[]>(`/api/results?competitionId=${encodeURIComponent(competition.id)}`)))
+      .then((lists) => { if (alive) { setRows(lists.flat()); setResultsError(null) } })
+      .catch(() => { if (alive) setResultsError('Não foi possível carregar os resultados.') })
+      .finally(() => { if (alive) setResultsLoading(false) })
+    return () => { alive = false }
+  }, [competitions, scopedCompetitionCodes])
 
-  const {
-    rows,
-    loading: resultsLoading,
-    error: resultsError,
-  } = useApiRows<ResultRow>(
-    competitionId ? `/api/results?competitionId=${competitionId}` : '/api/results',
-    Boolean(competitionId)
-  )
+  const weightOptions = useMemo(() => [...new Set(rows.map((row) => row.weightCategoryShortName).filter((value): value is string => Boolean(value)))].sort(), [rows])
+  const stateOptions = useMemo(() => [...new Set(rows.map((row) => row.teamAlternateName).filter((value): value is string => Boolean(value)))].sort(), [rows])
+  const [selectedWeights, setSelectedWeights] = useState<string[]>([])
+  const [selectedStates, setSelectedStates] = useState<string[]>([])
+
+  useEffect(() => { setSelectedWeights([]); setSelectedStates([]) }, [scope.competitionCode, scope.year, scope.styles])
+  useEffect(() => { if (weightOptions.length && selectedWeights.length === 0) setSelectedWeights(weightOptions) }, [weightOptions, selectedWeights])
+  useEffect(() => { if (stateOptions.length && selectedStates.length === 0) setSelectedStates(stateOptions) }, [stateOptions, selectedStates])
+
+  const scopedAthleteIds = useMemo(() => new Set(scopedAthletes.map((athlete) => athlete.entryId)), [scopedAthletes])
+  const filteredRows = useMemo(() => rows.filter((row) =>
+    scopedAthleteIds.has(row.entryId) && selectedWeights.includes(row.weightCategoryShortName ?? '') && selectedStates.includes(row.teamAlternateName ?? ''),
+  ), [rows, scopedAthleteIds, selectedWeights, selectedStates])
 
   const selectedCompetition = useMemo(
-    () => competitions.find((c) => c.id === competitionId),
-    [competitions, competitionId]
+    () => scope.competitionCode === 'all' ? null : competitions.find((competition) => competition.code === scope.competitionCode),
+    [competitions, scope.competitionCode]
   )
 
   if (selectedEntry) {
     return (
-      <main className="results-page">
-        <PageHeader active="results" />
+      <PageHeader active="results">
         <AthleteDetailPage
           entryId={selectedEntry}
           onBack={() => setSelectedEntry(null)}
+          backLabel="Resultados"
         />
-      </main>
+      </PageHeader>
     )
   }
 
-  const fights = rows.reduce((total, row) => total + Number(row.countFights || 0), 0)
-  const statesCount = new Set(rows.map((row) => row.teamAlternateName)).size
-  const categories = new Set(rows.map((row) => row.weightCategoryShortName)).size
-  const loading = competitionsLoading || resultsLoading
+  const fights = filteredRows.reduce((total, row) => total + Number(row.countFights || 0), 0)
+  const statesCount = new Set(filteredRows.map((row) => row.teamAlternateName)).size
+  const categories = new Set(filteredRows.map((row) => row.weightCategoryShortName)).size
+  const loading = competitionsLoading || resultsLoading || athletesLoading
 
   return (
-    <main className="results-page">
-      <PageHeader active="results" />
+    <PageHeader active="results">
+      <div className="@container/main">
+        <section className="mx-auto flex w-full max-w-[1400px] flex-col gap-1 p-4 md:p-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Resultados oficiais</p>
+          <h1 className="text-3xl leading-none tracking-tight text-foreground">Classificações oficiais</h1>
+          <p className="text-sm leading-relaxed text-muted-foreground">Desempenho e pódio consolidados a partir dos resultados dos Jogos Escolares.</p>
+        </section>
 
-      <section className="results-hero">
-        <p className="eyebrow">RESULTADOS OFICIAIS</p>
-        <h1>
-          Classificações que contam
-          <br />
-          <em>a história no tapete.</em>
-        </h1>
-        <p>
-          Dados de desempenho e pódio consolidados a partir
-          dos resultados dos Jogos Escolares.
-        </p>
-      </section>
+        <section className="mx-auto w-full max-w-[1400px] px-4 pb-6 md:px-6 md:pb-8">
+          <div className="mb-4 flex flex-col items-start justify-between gap-3 @xl/main:flex-row @xl/main:items-end">
+            <div>
+              <p className="mb-1 text-xs font-medium tracking-wide text-muted-foreground">RANKING POR EVENTO</p>
+              <h2 className="font-heading text-2xl font-semibold text-foreground">Atletas classificados</h2>
+            </div>
 
-      <section className="results-content">
-        <div className="results-toolbar">
-          <div>
-            <p className="eyebrow">RANKING POR EVENTO</p>
-            <h2>Atletas classificados</h2>
+            <div className="flex flex-wrap items-end gap-2">
+              <FilterDropdown label="Categoria" options={weightOptions.map((value) => ({ value, label: value }))} value={selectedWeights} onChange={setSelectedWeights} disabled={resultsLoading} />
+              <FilterDropdown label="UF" options={stateOptions.map((value) => ({ value, label: value }))} value={selectedStates} onChange={setSelectedStates} disabled={resultsLoading} />
+            </div>
           </div>
 
-          <label className="event-select">
-            <span>Competição</span>
+          {competitionsError && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>Não foi possível carregar as competições.</AlertDescription>
+            </Alert>
+          )}
+          {resultsError && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>Não foi possível carregar os resultados.</AlertDescription>
+            </Alert>
+          )}
 
-            <select
-              value={competitionId}
-              onChange={(e) => setCompetitionId(e.target.value)}
-              disabled={competitionsLoading}
-            >
-              {competitions.map((competition) => (
-                <option key={competition.id} value={competition.id}>
-                  {competition.name} · {competition.year}
-                </option>
-              ))}
-            </select>
+          <div className="mb-4 grid grid-cols-2 gap-4 @xl/main:grid-cols-4">
+            <Metric label="Atletas classificados" value={loading ? '—' : String(filteredRows.length)} />
+            <Metric label="Lutas registradas" value={loading ? '—' : String(fights)} />
+            <Metric label="Categorias de peso" value={loading ? '—' : String(categories)} />
+            <Metric label="Estados representados" value={loading ? '—' : String(statesCount)} />
+          </div>
 
-            <ChevronDown size={15} aria-hidden="true" />
-          </label>
-        </div>
-
-        {competitionsError && (
-          <div className="results-error">Não foi possível carregar as competições.</div>
-        )}
-        {resultsError && (
-          <div className="results-error">Não foi possível carregar os resultados.</div>
-        )}
-
-        <div className="result-kpis">
-          <Metric label="Atletas classificados" value={loading ? '—' : String(rows.length)} />
-          <Metric label="Lutas registradas" value={loading ? '—' : String(fights)} />
-          <Metric label="Categorias de peso" value={loading ? '—' : String(categories)} />
-          <Metric label="Estados representados" value={loading ? '—' : String(statesCount)} />
-        </div>
-
-        <div className="results-layout">
-          <section className="results-table">
-            <div className="table-title">
-              <div>
-                <h3>Classificação geral</h3>
-                <p>
-                  {selectedCompetition
-                    ? 'Ordenada por posição na categoria'
-                    : 'Selecione uma competição'}
-                </p>
-              </div>
-              {selectedCompetition && <span>{selectedCompetition.code}</span>}
-            </div>
-
-            <div className="table-scroll">
-              <table>
-                <caption className="sr-only">
-                  Classificação dos atletas do evento selecionado
-                </caption>
-                <thead>
-                  <tr>
-                    <th>Pos.</th>
-                    <th>Atleta</th>
-                    <th>UF</th>
-                    <th>Categoria</th>
-                    <th>V-D</th>
-                    <th>Pontos técnicos</th>
-                    <th>Saldo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {resultsLoading ? (
-                    <tr><td colSpan={7}>Carregando resultados...</td></tr>
-                  ) : rows.length === 0 ? (
-                    <tr><td colSpan={7}>Nenhum resultado encontrado.</td></tr>
-                  ) : (
-                    rows.slice(0, 18).map((row) => (
-                      <tr
-                        key={row.entry_id}
-                        className="result-row--clickable"
-                        onClick={() => setSelectedEntry(row.entryId)}
-                        title="Ver detalhe do atleta"
-                      >
-                        <td className="rank">{row.rank}</td>
-                        <td><strong>{row.fullName}</strong></td>
-                        <td><span className="uf">{row.teamAlternateName}</span></td>
-                        <td>{row.weightCategoryShortName}</td>
-                        <td>{row.wins}-{row.losses}</td>
-                        <td className="technical">{row.technicalPointsFor}</td>
-                        <td className="positive">
-                          {row.technicalPointsDiff >= 0
-                            ? `+${row.technicalPointsDiff}`
-                            : row.technicalPointsDiff}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <aside className="podium">
-            <p className="eyebrow">DESTAQUES</p>
-            <h3>Ouro por categoria</h3>
-
-            {resultsLoading ? (
-              <p>Carregando...</p>
-            ) : rows.filter((row) => row.rank === 1).length === 0 ? (
-              <p>Nenhum campeão encontrado.</p>
-            ) : (
-              rows
-                .filter((row) => row.rank === 1)
-                .slice(0, 4)
-                .map((row, index) => (
-                  <div
-                    className="podium-row"
-                    key={`${row.fullName}-${row.weightCategoryShortName}`}
-                  >
-                    <span>{String(index + 1).padStart(2, '0')}</span>
-                    <div>
-                      <strong>{row.fullName}</strong>
-                      <small>
-                        {row.teamAlternateName}
-                        {' · '}
-                        {row.weightCategoryShortName}
-                      </small>
-                    </div>
-                    <Medal size={17} aria-hidden="true" />
+          <div className="grid grid-cols-1 gap-4 @4xl/main:grid-cols-[7fr_3fr]">
+            <Card className="gap-0 py-0">
+              <CardHeader className="border-b py-4 [.border-b]:pb-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <CardTitle>Classificação geral</CardTitle>
+                    <CardDescription>
+                      {selectedCompetition
+                        ? 'Ordenada por posição na categoria'
+                        : 'Consolidada a partir do recorte global'}
+                    </CardDescription>
                   </div>
-                ))
-            )}
-          </aside>
-        </div>
-      </section>
-    </main>
+                  {selectedCompetition && <Badge variant="outline" className="shrink-0">{selectedCompetition.code}</Badge>}
+                </div>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-4 px-0">
+                <div className="overflow-x-auto">
+                <Table className="**:data-[slot='table-cell']:px-4 **:data-[slot='table-head']:px-4 **:data-[slot='table-cell']:py-4">
+                  <TableCaption className="sr-only">
+                    Classificação dos atletas do evento selecionado
+                  </TableCaption>
+                  <TableHeader className="border-t **:data-[slot='table-head']:h-11 **:data-[slot='table-head']:font-medium **:data-[slot='table-head']:text-foreground **:data-[slot='table-head']:text-sm">
+                    <TableRow>
+                      <TableHead>Pos.</TableHead>
+                      <TableHead>Atleta</TableHead>
+                      <TableHead>UF</TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead>V-D</TableHead>
+                      <TableHead>Pontos técnicos</TableHead>
+                      <TableHead>Saldo</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="**:data-[slot='table-row']:border-border/50 **:data-[slot='table-row']:hover:bg-muted/30">
+                    {resultsLoading ? (
+                      <TableRow><TableCell colSpan={7}>Carregando resultados...</TableCell></TableRow>
+                    ) : filteredRows.length === 0 ? (
+                      <TableRow><TableCell colSpan={7}>Nenhum resultado encontrado.</TableCell></TableRow>
+                    ) : (
+                      filteredRows.slice(0, 18).map((row) => (
+                        <TableRow
+                          key={row.entryId}
+                          className="cursor-pointer"
+                          onClick={() => setSelectedEntry(row.entryId)}
+                          title="Ver detalhe do atleta"
+                        >
+                          <TableCell className="text-muted-foreground">{row.rank}</TableCell>
+                          <TableCell className="font-medium">{row.fullName}</TableCell>
+                          <TableCell className="text-muted-foreground">{row.teamAlternateName}</TableCell>
+                          <TableCell>{row.weightCategoryShortName}</TableCell>
+                          <TableCell>{row.wins}-{row.losses}</TableCell>
+                          <TableCell className="font-mono">{row.technicalPointsFor}</TableCell>
+                          <TableCell className="font-mono">
+                            {row.technicalPointsDiff != null && row.technicalPointsDiff >= 0
+                              ? `+${row.technicalPointsDiff}`
+                              : row.technicalPointsDiff}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+                </div>
+                <p className="px-4 pb-1 text-sm text-muted-foreground">Visualizando {Math.min(filteredRows.length, 18)} de {filteredRows.length.toLocaleString('pt-BR')} atletas</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardDescription className="text-xs font-medium tracking-wide">DESTAQUES</CardDescription>
+                <CardTitle>Ouro por categoria</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                {resultsLoading ? (
+                  <p className="text-sm text-muted-foreground">Carregando...</p>
+                ) : filteredRows.filter((row) => row.rank === 1).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum campeão encontrado.</p>
+                ) : (
+                  filteredRows
+                    .filter((row) => row.rank === 1)
+                    .slice(0, 4)
+                    .map((row, index) => (
+                      <div
+                        className="flex items-center gap-3"
+                        key={`${row.fullName}-${row.weightCategoryShortName}`}
+                      >
+                        <span className="font-mono text-sm text-muted-foreground">{String(index + 1).padStart(2, '0')}</span>
+                        <div className="flex-1">
+                          <strong className="block text-sm font-medium">{row.fullName}</strong>
+                          <small className="text-xs text-muted-foreground">
+                            {row.teamAlternateName}
+                            {' · '}
+                            {row.weightCategoryShortName}
+                          </small>
+                        </div>
+                        <Medal className="size-4 text-muted-foreground" aria-hidden="true" />
+                      </div>
+                    ))
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      </div>
+    </PageHeader>
   )
 }

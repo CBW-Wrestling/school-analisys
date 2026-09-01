@@ -2,16 +2,18 @@ import "./App.css"
 import { useEffect } from "react"
 import { details } from "./constants"
 import { saveTokens } from "./lib/auth"
-import { CollectionHome } from "./pages/CollectionHome"
 import { CollectionPage } from "./pages/CollectionPage"
 import { DashboardPage } from "./pages/DashboardPage"
-import { ExplorerPage } from "./pages/ExplorerPage"
-import { ImportPage } from "./pages/ImportPage"
+import { DefaultPage } from "./pages/DefaultPage"
+import { TechnicalAssessmentsPage } from "./pages/TechnicalAssessmentsPage"
+import { CompetitionImportPage } from "./pages/CompetitionImportPage"
+import { ResultsImportPage } from "./pages/ResultsImportPage"
 import { ProfilePage } from "./pages/ProfilePage"
-import { MotorPage } from "./pages/MotorPage"
 import { PhysicalPage } from "./pages/PhysicalPage"
+import { InferencesPage } from "./pages/InferencesPage"
 import { ProfilesPage } from "./pages/ProfilesPage"
 import { ResultsPage } from "./pages/ResultsPage"
+import { SidebarProvider } from "./components/ui/sidebar"
 import type { FormKind } from "./types"
 
 function App() {
@@ -33,16 +35,19 @@ function App() {
 
   if (accessToken && refreshToken) return null // aguarda reload
 
-  if (requestedForm && requestedForm in details) return <CollectionPage initialKind={requestedForm as FormKind} />
-  if (requestedView === "explorer")   return <ExplorerPage />
-  if (requestedView === "results")    return <ResultsPage />
-  if (requestedView === "profiles")   return <ProfilesPage />
-  if (requestedView === "physical")   return <PhysicalPage />
-  if (requestedView === "motor")      return <MotorPage />
-  if (requestedView === "collection") return <CollectionHome />
-  if (requestedView === "import")     return <ImportPage />
-  if (requestedView === "profile")    return <ProfilePage />
-  return <DashboardPage />
+  const page = requestedForm && requestedForm in details ? <CollectionPage initialKind={requestedForm as FormKind} />
+    : requestedView === "default" ? <DefaultPage />
+    : requestedView === "results" ? <ResultsPage />
+    : requestedView === "profiles" ? <ProfilesPage />
+    : requestedView === "physical" ? <PhysicalPage />
+    : requestedView === "motor" ? <TechnicalAssessmentsPage />
+    : requestedView === "inferences" ? <InferencesPage />
+    : requestedView === "competition-import" ? <CompetitionImportPage />
+    : requestedView === "results-import" ? <ResultsImportPage />
+    : requestedView === "profile" ? <ProfilePage />
+    : <DashboardPage />
+
+  return <SidebarProvider defaultOpen>{page}</SidebarProvider>
 }
 
 export default App
