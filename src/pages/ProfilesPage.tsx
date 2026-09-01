@@ -4,7 +4,7 @@ import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts'
 import { Metric } from '../components/Metric'
 import { PageHeader } from '../components/PageHeader'
 import { useApiRows } from '../lib/api'
-import { competitionCodesForScope, useReportingScope, useScopedCompetitionAthletes } from '../lib/reportingScope'
+import { competitionCodesForScope, useReportingScope, useScopedCompetitionAthletes, withReportingScope } from '../lib/reportingScope'
 import { AthleteDetailPage } from './AthleteDetailPage'
 import type { CompetitionRow, CountByCode, EnumOption, ProfileRow } from '../types'
 import { Badge } from '@/components/ui/badge'
@@ -68,13 +68,6 @@ export function ProfilesPage() {
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
-
-  function selectAthlete(entryId: string) {
-    const params = new URLSearchParams(window.location.search)
-    params.set('athlete', entryId)
-    window.history.pushState({}, '', `?${params.toString()}`)
-    setSelectedEntry(entryId)
-  }
 
   function backToList() {
     const params = new URLSearchParams(window.location.search)
@@ -214,7 +207,7 @@ export function ProfilesPage() {
                         key={athlete.entryId}
                         className="hover:bg-muted/30"
                       >
-                        <TableCell className="font-medium"><Button variant="link" className="h-auto p-0 font-medium" onClick={() => selectAthlete(athlete.entryId)}>{athlete.athleteName}</Button></TableCell>
+                        <TableCell className="font-medium"><Button variant="link" className="h-auto p-0 font-medium" asChild><a href={withReportingScope(`?view=profiles&athlete=${encodeURIComponent(athlete.entryId)}`)}>{athlete.athleteName}</a></Button></TableCell>
                         <TableCell className="text-muted-foreground">{athlete.style}</TableCell>
                         <TableCell>
                           <Badge variant="outline">{athlete.ageCategoryCode} · {athlete.weight}kg</Badge>
