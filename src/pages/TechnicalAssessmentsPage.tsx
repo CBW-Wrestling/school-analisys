@@ -10,7 +10,6 @@ import { apiGet, useApiData, useApiRows } from '../lib/api'
 import { pearsonCorrelation } from '../lib/correlation'
 import { REGION_BY_STATE, REGION_ORDER, average, completionPctByEstado, labelForStyle, scoreByEstado, scoreFor } from '../lib/motorScore'
 import { Z_SCORE_EXPLANATION, meanAndStdDev, zScoreFor } from '../lib/zscore'
-import { mockAthleteMotorScores } from '../mocks/dashboard-gaps'
 import type { CompetitionRow, MotorRow, MotorSummary, ResultRow } from '../types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -23,6 +22,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 const DIMENSIONS = ['Acrobacias', 'Pé', 'Solo'] as const
 
 function dimensionFor(row: MotorRow): (typeof DIMENSIONS)[number] {
+  if (row.dimension === 'Acrobacias' || row.dimension === 'Solo' || row.dimension === 'Pé') return row.dimension
+  // fallback para movimentos não mapeados no enum do backend
   const movement = (row.avaliacao ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
   if (/ponte|acrob|rolamento/.test(movement)) return 'Acrobacias'
   if (/guarda|role|arranco|nelson|cruzeta|solo/.test(movement)) return 'Solo'
@@ -83,6 +84,7 @@ export function TechnicalAssessmentsPage() {
   // Correlações: cruza resultados reais (/api/results) com pontuação técnica por atleta (mock, ver GAP 1 no BACKEND_GAPS.md)
   const [resultRows, setResultRows] = useState<ResultRow[]>([])
   const [resultsLoading, setResultsLoading] = useState(false)
+  const [athleteScores, setAthleteScores] = useState<{ entryId: string; averageScore: number }[]>([])
   useEffect(() => {
     const ids = competitions.filter((competition) => selectedEvents.includes(competition.code)).map((competition) => competition.id)
     if (!ids.length) { setResultRows([]); return }
@@ -95,7 +97,15 @@ export function TechnicalAssessmentsPage() {
     return () => { alive = false }
   }, [selectedEvents, competitions])
 
-  const athleteScores = useMemo(() => mockAthleteMotorScores(resultRows), [resultRows])
+  useEffect(() => {
+    const ids = competitions.filter((competition) => selectedEvents.includes(competition.code)).map((competition) => competition.id)
+    if (!ids.length) { setAthleteScores([]); return }
+    let alive = true
+    Promise.all(ids.map((id) => apiGet<{ entryId: string; averageScore: number }[]>(`/api/dashboard/motor/athlete-scores?competitionId=${encodeURIComponent(id)}`)))
+      .then((lists) => { if (alive) setAthleteScores(lists.flat()) })
+      .catch(() => { if (alive) setAthleteScores([]) })
+    return () => { alive = false }
+  }, [selectedEvents, competitions])
   const scoreByEntryId = useMemo(() => new Map(athleteScores.map((item) => [item.entryId, item.averageScore])), [athleteScores])
   const correlationRows = useMemo(() => resultRows
     .filter((row) => row.rank !== null)

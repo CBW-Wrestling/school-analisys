@@ -59,6 +59,7 @@ export type ProfileSummary = {
   byPracticeTime: CountByCode[]
   byPracticeLocation: CountByCode[]
   byWeeklyFrequency: CountByCode[]
+  byOtherSport: CountByCode[]
 }
 
 export type PhysicalSummary = {
@@ -88,6 +89,7 @@ export type MotorRow = {
   resultado: string | null
   competencia: string | null
   eventIdentifier: string | null
+  dimension?: string | null
 }
 
 export type ProfileRow = {
@@ -111,6 +113,8 @@ export type PhysicalRow = {
   prensaoManualD: string | null
   prensaoManualE: string | null
   eventIdentifier: string | null
+  forearmRightCm: string | null
+  forearmLeftCm: string | null
 }
 
 // ── Coleta — vocabulário do formulário (backend) ───────────────────

@@ -6,8 +6,7 @@ import { Metric } from '../components/Metric'
 import { PageHeader } from '../components/PageHeader'
 import { useApiData, useApiRows } from '../lib/api'
 import { pearsonCorrelation } from '../lib/correlation'
-import { aggregateByStyleAndTier, parseMetric, WEIGHT_TIER_LABEL } from '../lib/physicalMetrics'
-import { mockWeightTier } from '../mocks/dashboard-gaps'
+import { aggregateByStyleAndWeight, parseMetric } from '../lib/physicalMetrics'
 import { cn } from '@/lib/utils'
 import type { PhysicalRow, PhysicalSummary } from '../types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -44,8 +43,7 @@ export function PhysicalPage() {
   const fmt = (v: number | null | undefined) => v != null ? `${v} cm` : '—'
   const fmtKgf = (v: number | null | undefined) => v != null ? `${v} kgf` : '—'
 
-  const tieredRows = mockWeightTier(physicalRows)
-  const styleTierTable = aggregateByStyleAndTier(tieredRows)
+  const styleWeightTable = aggregateByStyleAndWeight(physicalRows)
 
   const scatterData = physicalRows
     .map((row) => ({ x: parseMetric(row.enverguturaCm), y: parseMetric(row.prensaoManualD) }))
@@ -101,35 +99,34 @@ export function PhysicalPage() {
           <Card className="gap-0 py-0">
             <CardHeader className="border-b py-4 [.border-b]:pb-4">
               <CardDescription className="text-xs font-medium tracking-wide">DETALHAMENTO</CardDescription>
-              <CardTitle>Médias por estilo e tier de peso</CardTitle>
-              <p className="text-sm text-muted-foreground">Tier (Leve/Médio/Pesado) é uma aproximação por percentil — o backend ainda não expõe a classificação real (ver BACKEND_GAPS.md, GAP 2).</p>
+              <CardTitle>Médias por estilo e categoria de peso</CardTitle>
             </CardHeader>
             <CardContent className="px-0">
-              {rowsLoading ? <Skeleton className="mx-4 my-4 h-64 rounded-lg" /> : !styleTierTable.length ? <p className="px-4 py-4 text-sm text-muted-foreground">Nenhuma avaliação física no recorte atual.</p> : (
+              {rowsLoading ? <Skeleton className="mx-4 my-4 h-64 rounded-lg" /> : !styleWeightTable.length ? <p className="px-4 py-4 text-sm text-muted-foreground">Nenhuma avaliação física no recorte atual.</p> : (
                 <div className="overflow-x-auto">
                 <Table className="**:data-[slot='table-cell']:px-4 **:data-[slot='table-head']:px-4 **:data-[slot='table-cell']:py-3">
                   <TableHeader className="border-t **:data-[slot='table-head']:h-11 **:data-[slot='table-head']:font-medium **:data-[slot='table-head']:text-foreground **:data-[slot='table-head']:text-sm">
-                    <TableRow><TableHead>Estilo</TableHead><TableHead>Envergadura</TableHead><TableHead>Estatura</TableHead><TableHead>Prensão (D)</TableHead><TableHead>Prensão (E)</TableHead></TableRow>
+                    <TableRow><TableHead>Estilo</TableHead><TableHead>Envergadura</TableHead><TableHead>Estatura</TableHead><TableHead>Prensão (D)</TableHead><TableHead>Prensão (E)</TableHead><TableHead>Antebraço (D)</TableHead><TableHead>Antebraço (E)</TableHead></TableRow>
                   </TableHeader>
                   <TableBody className="**:data-[slot='table-row']:border-border/50">
-                    {styleTierTable.map(({ estilo, overall, tiers }) => {
+                    {styleWeightTable.map(({ estilo, overall, weights }) => {
                       const isExpanded = expandedStyles.has(estilo)
-                      const visibleTiers = tiers.filter((tier) => tier.count > 0)
+                      const visibleWeights = weights.filter((w) => w.count > 0)
                       return (
                         <Fragment key={estilo}>
                           <TableRow
-                            className={cn('cursor-pointer hover:bg-muted/30', visibleTiers.length === 0 && 'cursor-default hover:bg-transparent')}
-                            role={visibleTiers.length ? 'button' : undefined}
-                            tabIndex={visibleTiers.length ? 0 : undefined}
-                            aria-expanded={visibleTiers.length ? isExpanded : undefined}
-                            onClick={() => visibleTiers.length && toggleStyle(estilo)}
+                            className={cn('cursor-pointer hover:bg-muted/30', visibleWeights.length === 0 && 'cursor-default hover:bg-transparent')}
+                            role={visibleWeights.length ? 'button' : undefined}
+                            tabIndex={visibleWeights.length ? 0 : undefined}
+                            aria-expanded={visibleWeights.length ? isExpanded : undefined}
+                            onClick={() => visibleWeights.length && toggleStyle(estilo)}
                             onKeyDown={(event) => {
-                              if (visibleTiers.length && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); toggleStyle(estilo) }
+                              if (visibleWeights.length && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); toggleStyle(estilo) }
                             }}
                           >
                             <TableCell className="font-medium">
                               <span className="flex items-center gap-1.5">
-                                {visibleTiers.length > 0 && <ChevronRight className={cn('size-4 text-muted-foreground transition-transform', isExpanded && 'rotate-90')} aria-hidden />}
+                                {visibleWeights.length > 0 && <ChevronRight className={cn('size-4 text-muted-foreground transition-transform', isExpanded && 'rotate-90')} aria-hidden />}
                                 {estilo}
                               </span>
                             </TableCell>
@@ -137,14 +134,18 @@ export function PhysicalPage() {
                             <TableCell>{fmtCm(overall.estaturaCm)}</TableCell>
                             <TableCell>{fmtCm(overall.prensaoManualD)}</TableCell>
                             <TableCell>{fmtCm(overall.prensaoManualE)}</TableCell>
+                            <TableCell>{fmtCm(overall.forearmRightCm)}</TableCell>
+                            <TableCell>{fmtCm(overall.forearmLeftCm)}</TableCell>
                           </TableRow>
-                          {isExpanded && visibleTiers.map((tier) => (
-                            <TableRow key={`${estilo}-${tier.tier}`} className="text-muted-foreground">
-                              <TableCell className="pl-9">{tier.tier ? WEIGHT_TIER_LABEL[tier.tier] : '—'}</TableCell>
-                              <TableCell>{fmtCm(tier.enverguturaCm)}</TableCell>
-                              <TableCell>{fmtCm(tier.estaturaCm)}</TableCell>
-                              <TableCell>{fmtCm(tier.prensaoManualD)}</TableCell>
-                              <TableCell>{fmtCm(tier.prensaoManualE)}</TableCell>
+                          {isExpanded && visibleWeights.map((w) => (
+                            <TableRow key={`${estilo}-${w.peso}`} className="text-muted-foreground">
+                              <TableCell className="pl-9">{w.peso ? `${w.peso} kg` : '—'}</TableCell>
+                              <TableCell>{fmtCm(w.enverguturaCm)}</TableCell>
+                              <TableCell>{fmtCm(w.estaturaCm)}</TableCell>
+                              <TableCell>{fmtCm(w.prensaoManualD)}</TableCell>
+                              <TableCell>{fmtCm(w.prensaoManualE)}</TableCell>
+                              <TableCell>{fmtCm(w.forearmRightCm)}</TableCell>
+                              <TableCell>{fmtCm(w.forearmLeftCm)}</TableCell>
                             </TableRow>
                           ))}
                         </Fragment>

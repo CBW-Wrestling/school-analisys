@@ -5,7 +5,6 @@ import { Metric } from '../components/Metric'
 import { PageHeader } from '../components/PageHeader'
 import { SearchableSelect } from '../components/SearchableSelect'
 import { useApiData, useApiRows } from '../lib/api'
-import { mockOtherSportBreakdown } from '../mocks/dashboard-gaps'
 import { AthleteDetailPage } from './AthleteDetailPage'
 import type { CompetitionAthlete, CompetitionRow, CountByCode, ProfileSummary } from '../types'
 import { Badge } from '@/components/ui/badge'
@@ -60,7 +59,7 @@ function AthleteTableSkeleton() {
 
 export function ProfilesPage() {
   const { data: summary, loading } = useApiData<ProfileSummary>('/api/dashboard/profiles/summary')
-  const otherSportBreakdown = mockOtherSportBreakdown(summary?.practicesOtherSport ?? 0)
+  const otherSportBreakdown = summary?.byOtherSport ?? []
 
   const [selectedEntry, setSelectedEntry] = useState<string | null>(() => new URLSearchParams(window.location.search).get('athlete'))
   const [competitionCode, setCompetitionCode] = useState<string>('')
