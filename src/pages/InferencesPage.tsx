@@ -7,7 +7,7 @@ import { PageHeader } from '../components/PageHeader'
 import { SearchableSelect } from '../components/SearchableSelect'
 import { useApiRows } from '../lib/api'
 import { buildInferenceSummary } from '../lib/inferenceSummary'
-import { average, labelForStyle, scoreAndCompletionByCompetencia, scoreFor } from '../lib/motorScore'
+import { average, labelForStyle, scoreAndCompletionByCompetencia, scoreFor, visibleMotorRows } from '../lib/motorScore'
 import { Z_SCORE_EXPLANATION, meanAndStdDev, zScoreFor } from '../lib/zscore'
 import type { CompetitionRow, MotorRow, ResultRow } from '../types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -41,12 +41,12 @@ export function InferencesPage() {
   const pointsDiff = results.reduce((sum, row) => sum + (row.technicalPointsDiff ?? 0), 0)
   const pointsAgainst = pointsFor - pointsDiff
 
-  const eventRows = useMemo(() => motorRows.filter((row) => row.eventIdentifier === competitionCode && selectedStyles.includes(row.estilo ?? '')), [motorRows, competitionCode, selectedStyles])
+  const eventRows = useMemo(() => visibleMotorRows(motorRows.filter((row) => row.eventIdentifier === competitionCode && selectedStyles.includes(row.estilo ?? ''))), [motorRows, competitionCode, selectedStyles])
   const competencyStats = useMemo(() => scoreAndCompletionByCompetencia(eventRows), [eventRows])
   const overallAverage = average(eventRows.map((row) => scoreFor(row.resultado)))
   const summaryText = buildInferenceSummary(overallAverage, competencyStats)
 
-  const nationalStats = useMemo(() => meanAndStdDev(motorRows.map((row) => scoreFor(row.resultado))), [motorRows])
+  const nationalStats = useMemo(() => meanAndStdDev(visibleMotorRows(motorRows).map((row) => scoreFor(row.resultado))), [motorRows])
   const eventZScore = zScoreFor(overallAverage, nationalStats.mean, nationalStats.stdDev)
 
   const loading = competitionsLoading || motorLoading

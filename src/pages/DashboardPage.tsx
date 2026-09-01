@@ -4,10 +4,10 @@ import { FilterDropdown } from '../components/FilterDropdown'
 import { PageHeader } from '../components/PageHeader'
 import { SearchableSelect } from '../components/SearchableSelect'
 import { BrazilHeatmap } from '../components/dashboard/BrazilHeatmap'
-import { useApiRows } from '../lib/api'
-import { scoreFor } from '../lib/motorScore'
+import { useApiData, useApiRows } from '../lib/api'
+import { scoreFor, visibleMotorRows } from '../lib/motorScore'
 import { meanAndStdDev } from '../lib/zscore'
-import type { CompetitionRow, MotorRow, PhysicalRow, ProfileRow, ResultRow } from '../types'
+import type { CompetitionAthlete, CompetitionRow, HomeSummary, MotorRow, PhysicalRow, ProfileRow } from '../types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -75,7 +75,8 @@ function NavigationHub({ href, icon, title, description }: { href: string; icon:
 }
 
 export function DashboardPage() {
-  const { rows: competitions, loading: competitionsLoading } = useApiRows<CompetitionRow>('/api/competitions')
+  const { rows: competitions } = useApiRows<CompetitionRow>('/api/competitions')
+  const { data: homeSummary, loading: homeSummaryLoading } = useApiData<HomeSummary>('/api/dashboard/home/summary')
   const { rows: profiles, loading: profilesLoading } = useApiRows<ProfileRow>('/api/dashboard/profiles')
   const { rows: physical, loading: physicalLoading } = useApiRows<PhysicalRow>('/api/dashboard/physical')
   const { rows: motor, loading: motorLoading } = useApiRows<MotorRow>('/api/dashboard/motor')
@@ -85,13 +86,17 @@ export function DashboardPage() {
   const [selectedState, setSelectedState] = useState<string | null>(null)
   const stylesInitialized = useRef(false)
   const selectedEvent = event === 'all' ? 'all' : event
+  const selectedCompetition = event === 'all' ? null : competitions.find((competition) => competition.code === event)
+  const { rows: competitionAthletes, loading: competitionAthletesLoading } = useApiRows<CompetitionAthlete>(
+    selectedCompetition ? `/api/competitions/${encodeURIComponent(selectedCompetition.code)}/athletes` : '',
+    Boolean(selectedCompetition),
+  )
   const events = useMemo(() => year === 'all' ? competitions : competitions.filter((item) => String(item.year) === year), [competitions, year])
   const baseProfiles = profiles.filter((row) => matchesFilters(row, selectedEvent, style, null))
   const basePhysical = physical.filter((row) => matchesFilters(row, selectedEvent, style, null))
-  const baseMotor = motor.filter((row) => matchesFilters(row, selectedEvent, style, null))
-  const filteredResultsPath = event !== 'all' ? `/api/results?competitionId=${encodeURIComponent(competitions.find((item) => item.code === event)?.id ?? event)}` : ''
-  const { rows: results } = useApiRows<ResultRow>(filteredResultsPath, event !== 'all')
-  const styles = useMemo(() => [...new Set([...profiles, ...physical, ...motor].map((row) => row.estilo).filter((value): value is string => Boolean(value)))].sort(), [profiles, physical, motor])
+  const baseMotor = visibleMotorRows(motor.filter((row) => matchesFilters(row, selectedEvent, style, null)))
+  const styles = useMemo(() => [...new Set([...profiles, ...physical, ...motor].map((row) => row.estilo).concat(competitionAthletes.map((athlete) => athlete.style)).filter((value): value is string => Boolean(value)))].sort(), [profiles, physical, motor, competitionAthletes])
+  const filteredCompetitionAthletes = useMemo(() => competitionAthletes.filter((athlete) => style.length === 0 || style.includes(athlete.style)), [competitionAthletes, style])
 
   useEffect(() => {
     if (!stylesInitialized.current && styles.length > 0) {
@@ -101,31 +106,48 @@ export function DashboardPage() {
   }, [styles])
 
   const stateValues = useMemo(() => {
-    const stateCodes = [...new Set(baseProfiles.map((row) => row.estado).filter((value): value is string => Boolean(value)))]
+    const stateCodes = [...new Set((selectedCompetition ? filteredCompetitionAthletes.map((athlete) => athlete.state) : baseProfiles.map((row) => row.estado)).filter((value): value is string => Boolean(value)))]
     return stateCodes.map((code) => {
       const stateMotor = baseMotor.filter((row) => row.estado === code)
       const scored = stateMotor.map((row) => scoreFor(row.resultado))
       const stateProfiles = baseProfiles.filter((row) => row.estado === code)
       const statePhysical = basePhysical.filter((row) => row.estado === code)
+      const stateProfileIds = new Set(stateProfiles.map((row) => row.athleteEntryId).filter((value): value is string => Boolean(value)))
+      const statePhysicalIds = new Set(statePhysical.map((row) => row.athleteEntryId).filter((value): value is string => Boolean(value)))
+      const stateAthleteIds = selectedCompetition
+        ? new Set(filteredCompetitionAthletes.filter((athlete) => athlete.state === code).map((athlete) => athlete.entryId))
+        : stateProfileIds
       return {
         code,
         name: code,
-        count: stateProfiles.length,
+        count: stateAthleteIds.size,
         score: scored.length ? scored.reduce((sum, value) => sum + value, 0) / scored.length : null,
-        engagement: stateProfiles.length ? Math.round((statePhysical.length / stateProfiles.length) * 100) : 0,
+        engagement: stateAthleteIds.size ? Math.round(([...statePhysicalIds].filter((id) => stateAthleteIds.has(id)).length / stateAthleteIds.size) * 100) : 0,
         dimensions: dimensions.map((dimension) => {
           const dimensionScores = stateMotor.filter((row) => dimension.matches(row.competencia ?? '')).map((row) => scoreFor(row.resultado))
           return { label: dimension.label, score: dimensionScores.length ? dimensionScores.reduce((sum, value) => sum + value, 0) / dimensionScores.length : null }
         }),
       }
     })
-  }, [baseMotor, basePhysical, baseProfiles])
-  const nationalScores = baseMotor.map((row) => scoreFor(row.resultado))
+  }, [baseMotor, basePhysical, baseProfiles, filteredCompetitionAthletes, selectedCompetition])
+  const validMotorRows = visibleMotorRows(baseMotor)
+  const nationalScores = validMotorRows.map((row) => scoreFor(row.resultado))
   const { mean: nationalAverage, stdDev: nationalStdDev } = meanAndStdDev(nationalScores)
-  const averageScore = nationalAverage
-  const completion = baseProfiles.length ? Math.round((basePhysical.length / baseProfiles.length) * 100) : 0
-  const medals = event === 'all' ? null : results.filter((row) => row.rank !== null && row.rank <= 3).length
+  const filteredProfileAthleteIds = new Set(baseProfiles.map((row) => row.athleteEntryId).filter((value): value is string => Boolean(value)))
+  const filteredPhysicalAthleteIds = new Set(basePhysical.map((row) => row.athleteEntryId).filter((value): value is string => Boolean(value)))
+  const filteredMotorAthleteIds = new Set(baseMotor.map((row) => row.athleteEntryId).filter((value): value is string => Boolean(value)))
+  const filteredAthleteIds = selectedCompetition
+    ? new Set(filteredCompetitionAthletes.map((athlete) => athlete.entryId))
+    : new Set([...filteredProfileAthleteIds, ...filteredPhysicalAthleteIds, ...filteredMotorAthleteIds])
+  const filteredCompletedAthletes = new Set([...filteredAthleteIds].filter((id) => filteredProfileAthleteIds.has(id) && filteredPhysicalAthleteIds.has(id) && filteredMotorAthleteIds.has(id)))
+  const totalAthletesFromFilter = new Set([...filteredProfileAthleteIds, ...filteredPhysicalAthleteIds, ...filteredMotorAthleteIds]).size
+
+  const totalAthletes = selectedCompetition ? filteredAthleteIds.size : year === 'all' && event === 'all' && style.length === 0 ? (homeSummary?.totalAthletes ?? totalAthletesFromFilter) : totalAthletesFromFilter
+  const completedAthletes = selectedCompetition ? filteredCompletedAthletes.size : year === 'all' && event === 'all' && style.length === 0 ? (homeSummary?.completedAthletes ?? filteredCompletedAthletes.size) : filteredCompletedAthletes.size
+  const pendingAthletes = selectedCompetition ? Math.max(totalAthletes - completedAthletes, 0) : year === 'all' && event === 'all' && style.length === 0 ? (homeSummary?.pendingAthletes ?? Math.max(totalAthletes - completedAthletes, 0)) : Math.max(totalAthletes - completedAthletes, 0)
+  const coverage = selectedCompetition ? (totalAthletes ? Math.round((completedAthletes / totalAthletes) * 100) : 0) : year === 'all' && event === 'all' && style.length === 0 ? (homeSummary?.completionRate ?? (totalAthletes ? Math.round((completedAthletes / totalAthletes) * 100) : 0)) : (totalAthletes ? Math.round((completedAthletes / totalAthletes) * 100) : 0)
   const formattedDate = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date())
+  const hasAthletes = totalAthletes > 0
 
   return (
     <PageHeader active="dashboard">
@@ -135,13 +157,18 @@ export function DashboardPage() {
             <div className="flex min-w-0 flex-col gap-1"><h1 className="text-3xl leading-none tracking-tight">Visão geral</h1><p className="text-sm capitalize text-muted-foreground">{formattedDate}</p></div>
             <FilterBar competitions={competitions} events={events} styles={styles} year={year} event={event} style={style} onYearChange={(value) => { setYear(value); setEvent('all') }} onEventChange={setEvent} onStyleChange={setStyle} />
           </div>
+          <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
+            {hasAthletes
+              ? 'Baseado em atletas cadastrados com perfil, avaliação física e motora no filtro atual.'
+              : 'Nenhum atleta foi encontrado no filtro atual. Ainda não há dados de perfil, física ou motora para esse conjunto.'}
+          </div>
           <section className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
-            <KpiCard loading={profilesLoading} icon={<UserRound className="size-4" />} label="Atletas avaliados" value={baseProfiles.length.toLocaleString('pt-BR')} description="Perfis socioesportivos na seleção" />
-            <KpiCard loading={profilesLoading || physicalLoading} icon={<Activity className="size-4" />} label="Compleção da amostra" value={`${completion}%`} description="Avaliações físicas sobre perfis" />
-            <KpiCard loading={motorLoading} icon={<BarChart3 className="size-4" />} label="Média técnica" value={averageScore === null ? '—' : averageScore.toFixed(2).replace('.', ',')} description="Escala técnica média" />
-            <KpiCard loading={event !== 'all' && competitionsLoading} icon={<Medal className="size-4" />} label="Medalhas" value={medals === null ? '—' : medals.toLocaleString('pt-BR')} description={medals === null ? 'Selecione um evento' : 'Pódios no evento selecionado'} />
+            <KpiCard loading={homeSummaryLoading || profilesLoading || physicalLoading || motorLoading || competitionAthletesLoading} icon={<UserRound className="size-4" />} label="Atletas cadastrados" value={totalAthletes.toLocaleString('pt-BR')} description="Total de atletas no filtro ativo" />
+            <KpiCard loading={homeSummaryLoading || profilesLoading || physicalLoading || motorLoading || competitionAthletesLoading} icon={<Activity className="size-4" />} label="Cobertura geral" value={`${coverage}%`} description={`${completedAthletes.toLocaleString('pt-BR')} com perfil + física + motora`} />
+            <KpiCard loading={homeSummaryLoading || profilesLoading || physicalLoading || motorLoading || competitionAthletesLoading} icon={<BarChart3 className="size-4" />} label="Etapas concluídas" value={completedAthletes.toLocaleString('pt-BR')} description="Atletas com todos os blocos mínimos" />
+            <KpiCard loading={homeSummaryLoading || profilesLoading || physicalLoading || motorLoading || competitionAthletesLoading} icon={<Medal className="size-4" />} label="Pendências" value={pendingAthletes.toLocaleString('pt-BR')} description={pendingAthletes === 0 ? 'Nenhuma pendência' : 'Aguardando perfil, física ou motora'} />
           </section>
-          <BrazilHeatmap loading={profilesLoading || physicalLoading || motorLoading} values={stateValues} selectedState={selectedState} nationalAverage={nationalAverage} nationalStdDev={nationalStdDev} onSelect={setSelectedState} />
+          <BrazilHeatmap loading={profilesLoading || physicalLoading || motorLoading || competitionAthletesLoading} values={stateValues} selectedState={selectedState} nationalAverage={nationalAverage} nationalStdDev={nationalStdDev} onSelect={setSelectedState} />
           <section className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
             <NavigationHub href="?view=motor" icon={<BarChart3 className="size-4" />} title="Raio-X técnico" description="Acrobacias, pé e solo." />
             <NavigationHub href="?view=physical" icon={<Dumbbell className="size-4" />} title="Perfil físico" description="Biometria, força e envergadura." />

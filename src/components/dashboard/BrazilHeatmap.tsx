@@ -24,6 +24,7 @@ type Props = {
   loading?: boolean
   showEngagement?: boolean
   countLabel?: string
+  description?: string
   onSelect: (state: string | null) => void
 }
 
@@ -37,7 +38,7 @@ function colorForValue(value: StateValue, maximum: number) {
   return `color-mix(in oklab, var(--chart-2) ${Math.round(18 + intensity * 62)}%, var(--background))`
 }
 
-export function BrazilHeatmap({ values, selectedState, nationalAverage, nationalStdDev, loading = false, showEngagement = true, countLabel = 'Atletas avaliados', onSelect }: Props) {
+export function BrazilHeatmap({ values, selectedState, nationalAverage, nationalStdDev, loading = false, showEngagement = true, countLabel = 'Atletas com perfil', description = 'Distribuição por estado dos atletas com perfil cadastrado.', onSelect }: Props) {
   const lookup = new Map(values.map((value) => [value.code.toLowerCase(), value]))
   const maximum = Math.max(...values.map((value) => value.count), 1)
   const statesWithData = values.filter((value) => value.count > 0)
@@ -56,7 +57,7 @@ export function BrazilHeatmap({ values, selectedState, nationalAverage, national
           <MapPin className="size-4 text-muted-foreground" aria-hidden />
           Termômetro nacional
         </CardTitle>
-        <CardDescription>Distribuição dos atletas avaliados por estado.</CardDescription>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4 @4xl/card:grid-cols-[minmax(0,1fr)_minmax(360px,0.8fr)]">
         <div className="flex min-h-72 items-center justify-center rounded-lg border bg-muted/20 p-3">
@@ -77,7 +78,7 @@ export function BrazilHeatmap({ values, selectedState, nationalAverage, national
                       d={location.path}
                       tabIndex={0}
                       role="button"
-                      aria-label={`${stateName} (${value.code}): ${value.count} atletas${value.score === null ? '' : `, média ${value.score.toFixed(2)}`}`}
+                      aria-label={`${stateName} (${value.code}): ${value.count} ${countLabel.toLowerCase()}${value.score === null ? '' : `, média ${value.score.toFixed(2)}`}`}
                       className={cn('cursor-pointer stroke-background stroke-[1.5] outline-none transition-opacity hover:opacity-80 focus-visible:stroke-foreground', isSelected && 'stroke-foreground stroke-[3]')}
                       style={{ fill: colorForValue(value, maximum) }}
                       onClick={() => onSelect(isSelected ? null : value.code)}
@@ -90,7 +91,7 @@ export function BrazilHeatmap({ values, selectedState, nationalAverage, national
                     />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <div className="grid gap-0.5"><strong>{stateName} ({value.code})</strong><span>{value.count} atletas</span><span>{value.score === null ? 'Média técnica: sem dados' : `Média técnica: ${value.score.toFixed(2)}`}</span><span>{zScore === null ? 'Z-Score: sem dados' : `Z-Score: ${zScore >= 0 ? '+' : ''}${zScore.toFixed(2)}`}</span></div>
+                    <div className="grid gap-0.5"><strong>{stateName} ({value.code})</strong><span>{value.count} {countLabel.toLowerCase()}</span><span>{value.score === null ? 'Média técnica: sem dados' : `Média técnica: ${value.score.toFixed(2)}`}</span><span>{zScore === null ? 'Z-Score: sem dados' : `Z-Score: ${zScore >= 0 ? '+' : ''}${zScore.toFixed(2)}`}</span></div>
                   </TooltipContent>
                 </Tooltip>
               )
@@ -117,7 +118,7 @@ export function BrazilHeatmap({ values, selectedState, nationalAverage, national
                 <div className={cn('rounded-md border px-3 py-2 text-sm', zScore === null ? 'text-muted-foreground' : zScore >= 0 ? 'border-emerald-500/30 text-emerald-700 dark:text-emerald-400' : 'border-red-500/30 text-red-700 dark:text-red-400')}>
                   {difference === null ? 'Comparativo indisponível' : `Variação: ${difference >= 0 ? '+' : ''}${difference.toFixed(2)}${zScore === null ? '' : ` | Z-Score: ${zScore >= 0 ? '+' : ''}${zScore.toFixed(2)}`}`}
                 </div>
-                {showEngagement && <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Engajamento estadual</p><p className="mt-1 text-sm">{selected.engagement}% de compleção da amostra</p></div>}
+                {showEngagement && <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cobertura física</p><p className="mt-1 text-sm">{selected.engagement}% dos atletas do estado com avaliação física registrada</p></div>}
                 <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Raio-X das dimensões</p><div className="mt-2 grid grid-cols-3 gap-2">{selected.dimensions.map((dimension) => <div key={dimension.label} className="grid min-w-0 gap-1.5"><div className="grid gap-1 text-xs"><span className="truncate" title={dimension.label}>{dimension.label}</span><span className="font-medium tabular-nums">{dimension.score === null ? '—' : dimension.score.toFixed(2)}</span></div><Progress value={dimension.score === null ? 0 : dimension.score / 2 * 100} aria-label={`${dimension.label}: ${dimension.score === null ? 'sem dados' : dimension.score.toFixed(2)}`} /></div>)}</div></div>
                 <div className="rounded-md bg-muted/50 p-3 text-sm">{selected.dimensions.length && selected.dimensions.some((dimension) => dimension.score !== null) ? `Diferente do cenário nacional, a principal oportunidade de desenvolvimento em ${stateNames[selected.code]} está em ${selected.dimensions.reduce((lowest, current) => (current.score !== null && (lowest.score === null || current.score < lowest.score) ? current : lowest)).label}.` : 'Ainda não há dados técnicos suficientes para uma inferência regional.'}</div>
               </>
@@ -128,10 +129,10 @@ export function BrazilHeatmap({ values, selectedState, nationalAverage, national
                 <div className="rounded-md border p-2"><p className="text-xs text-muted-foreground">Estados com dados</p><p className="font-semibold tabular-nums">{statesWithData.length}</p></div>
                 <div className="rounded-md border p-2"><p className="text-xs text-muted-foreground">Média nacional</p><p className="font-semibold tabular-nums">{nationalAverage === null ? '—' : nationalAverage.toFixed(2)}</p></div>
               </div>
-              <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{countLabel}</p><p className="mt-1 text-sm">{totalCount.toLocaleString('pt-BR')} no total, em todo o país</p></div>
-              {showEngagement && <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Engajamento médio</p><p className="mt-1 text-sm">{nationalEngagement}% de compleção da amostra</p></div>}
+              <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{countLabel}</p><p className="mt-1 text-sm">{totalCount.toLocaleString('pt-BR')} {countLabel.toLowerCase()} em todo o país</p></div>
+              {showEngagement && <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cobertura física média</p><p className="mt-1 text-sm">{nationalEngagement}% dos atletas com avaliação física registrada</p></div>}
               {nationalDimensions.length > 0 && <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Raio-X das dimensões (nacional)</p><div className="mt-2 grid grid-cols-3 gap-2">{nationalDimensions.map((dimension) => <div key={dimension.label} className="grid min-w-0 gap-1.5"><div className="grid gap-1 text-xs"><span className="truncate" title={dimension.label}>{dimension.label}</span><span className="font-medium tabular-nums">{dimension.score === null ? '—' : dimension.score.toFixed(2)}</span></div><Progress value={dimension.score === null ? 0 : dimension.score / 2 * 100} aria-label={`${dimension.label}: ${dimension.score === null ? 'sem dados' : dimension.score.toFixed(2)}`} /></div>)}</div></div>}
-              <p className="text-sm text-muted-foreground">Selecione um estado no mapa para ver o comparativo local.</p>
+              <p className="text-sm text-muted-foreground">Selecione um estado no mapa para ver o comparativo local. Quando não há dados, o estado aparece com tom neutro e sem inferência.</p>
             </>
           )}
         </div>

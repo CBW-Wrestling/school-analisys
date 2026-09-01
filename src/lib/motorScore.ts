@@ -7,6 +7,22 @@ export const RESULT_SCORE: Record<string, number> = {
   DOES_NOT_KNOW: 0,
 }
 
+export function excludedMovements(style: string | null): Set<string> {
+  const normalized = (style ?? '').toUpperCase()
+  if (normalized === 'GR') return new Set(['CRUZETA', 'DOUBLE_LEG'])
+  if (normalized === 'FS' || normalized === 'WW') return new Set(['ARRANCO'])
+  return new Set()
+}
+
+export function visibleMotorRows(rows: MotorRow[], style?: string | null): MotorRow[] {
+  return rows.filter((row) => {
+    const styleKey = (style ?? row.estilo ?? '').toUpperCase()
+    const movement = (row.avaliacao ?? '').toUpperCase()
+    const rowExcluded = excludedMovements(styleKey)
+    return !rowExcluded.has(movement)
+  })
+}
+
 export function scoreFor(result: string | null): number {
   return RESULT_SCORE[result ?? ''] ?? 0
 }

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Metric } from '../components/Metric'
 import { PageHeader } from '../components/PageHeader'
 import { useApiRows } from '../lib/api'
+import { visibleMotorRows } from '../lib/motorScore'
 import type { CompetitionRow, MotorRow, ProfileRow } from '../types'
 import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -51,26 +52,27 @@ export function ExplorerPage() {
   const { rows: competitions, error: competitionsError } = useApiRows<CompetitionRow>('/api/competitions')
   const { rows: motorRows, loading, error: motorError } = useApiRows<MotorRow>('/api/dashboard/motor')
   const { rows: profileRows, loading: profileLoading, error: profileError } = useApiRows<ProfileRow>('/api/dashboard/profiles')
+  const validMotorRows = useMemo(() => visibleMotorRows(motorRows), [motorRows])
 
   const allStyles = useMemo(
-    () => Array.from(new Set(motorRows.map((r) => r.estilo))).filter((s): s is string => Boolean(s)).sort(),
-    [motorRows]
+    () => Array.from(new Set(validMotorRows.map((r) => r.estilo))).filter((s): s is string => Boolean(s)).sort(),
+    [validMotorRows]
   )
   const allCompetencias = useMemo(
-    () => Array.from(new Set(motorRows.map((r) => r.competencia))).filter((c): c is string => Boolean(c)).sort(),
-    [motorRows]
+    () => Array.from(new Set(validMotorRows.map((r) => r.competencia))).filter((c): c is string => Boolean(c)).sort(),
+    [validMotorRows]
   )
 
   // all movements grouped by competência
   const avaliacoesByComp = useMemo(() => {
     const map: Record<string, string[]> = {}
-    for (const row of motorRows) {
+    for (const row of validMotorRows) {
       if (!row.competencia || !row.avaliacao) continue
       if (!map[row.competencia]) map[row.competencia] = []
       if (!map[row.competencia].includes(row.avaliacao)) map[row.competencia].push(row.avaliacao)
     }
     return map
-  }, [motorRows])
+  }, [validMotorRows])
 
   const [selectedEvents, setSelectedEvents] = useState<string[]>([])
   const [selectedStyles, setSelectedStyles] = useState<string[]>([])
@@ -126,13 +128,13 @@ export function ExplorerPage() {
 
   const filtered = useMemo(
     () =>
-      motorRows.filter(
+      validMotorRows.filter(
         (r) =>
           selectedEvents.includes(r.eventIdentifier ?? '') &&
           (selectedStyles.length === 0 || selectedStyles.includes(r.estilo ?? '')) &&
           (selectedCompetencias.length === 0 || selectedCompetencias.includes(r.competencia ?? ''))
       ),
-    [motorRows, selectedEvents, selectedStyles, selectedCompetencias]
+    [validMotorRows, selectedEvents, selectedStyles, selectedCompetencias]
   )
 
   const profileFiltered = useMemo(
@@ -161,8 +163,8 @@ export function ExplorerPage() {
   const complete = filtered.filter((r) => r.resultado === 'COMPLETE').length
 
   const allResultados = useMemo(
-    () => Array.from(new Set(motorRows.map((r) => r.resultado || 'Sem registro'))),
-    [motorRows]
+    () => Array.from(new Set(validMotorRows.map((r) => r.resultado || 'Sem registro'))),
+    [validMotorRows]
   )
 
   const resultadoData = useMemo(

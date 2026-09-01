@@ -6,11 +6,11 @@ import { FilterDropdown } from '../components/FilterDropdown'
 import { Metric } from '../components/Metric'
 import { PageHeader } from '../components/PageHeader'
 import { BrazilHeatmap } from '../components/dashboard/BrazilHeatmap'
-import { apiGet, useApiData, useApiRows } from '../lib/api'
+import { apiGet, useApiRows } from '../lib/api'
 import { pearsonCorrelation } from '../lib/correlation'
-import { REGION_BY_STATE, REGION_ORDER, average, completionPctByEstado, labelForStyle, scoreByEstado, scoreFor } from '../lib/motorScore'
+import { REGION_BY_STATE, REGION_ORDER, average, completionPctByEstado, labelForStyle, scoreByEstado, scoreFor, visibleMotorRows } from '../lib/motorScore'
 import { Z_SCORE_EXPLANATION, meanAndStdDev, zScoreFor } from '../lib/zscore'
-import type { CompetitionRow, MotorRow, MotorSummary, ResultRow } from '../types'
+import type { CompetitionRow, MotorRow, ResultRow } from '../types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -20,6 +20,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 const DIMENSIONS = ['Acrobacias', 'Pé', 'Solo'] as const
+const RESULT_LABELS: Record<string, string> = {
+  COMPLETE: 'Completa',
+  INCOMPLETE: 'Incompleta',
+  DID_NOT_DO: 'Não realizou',
+  DOES_NOT_KNOW: 'Não sabe',
+}
 
 function dimensionFor(row: MotorRow): (typeof DIMENSIONS)[number] {
   if (row.dimension === 'Acrobacias' || row.dimension === 'Solo' || row.dimension === 'Pé') return row.dimension
@@ -46,7 +52,6 @@ function ZScoreInfo() {
 }
 
 export function TechnicalAssessmentsPage() {
-  const { data: summary, loading: summaryLoading } = useApiData<MotorSummary>('/api/dashboard/motor/summary')
   const { rows: competitions, loading: competitionsLoading, error: competitionsError } = useApiRows<CompetitionRow>('/api/competitions')
   const { rows: motorRows, loading: motorLoading, error: motorError } = useApiRows<MotorRow>('/api/dashboard/motor')
   const loading = competitionsLoading || motorLoading
@@ -60,11 +65,22 @@ export function TechnicalAssessmentsPage() {
   useEffect(() => { if (styles.length && selectedStyles.length === 0) setSelectedStyles(styles) }, [styles, selectedStyles])
   useEffect(() => { if (events.length && selectedEvents.length === 0) setSelectedEvents(events.map((event) => event.value)) }, [events, selectedEvents])
 
-  const rows = useMemo(() => motorRows.filter((row) =>
-    dimensions.includes(dimensionFor(row)) && selectedStyles.includes(row.estilo ?? '') && selectedEvents.includes(row.eventIdentifier ?? ''),
+  const rows = useMemo(() => visibleMotorRows(
+    motorRows.filter((row) =>
+      dimensions.includes(dimensionFor(row)) && selectedStyles.includes(row.estilo ?? '') && selectedEvents.includes(row.eventIdentifier ?? ''),
+    ),
   ), [motorRows, dimensions, selectedStyles, selectedEvents])
   const averageScore = average(rows.map((row) => scoreFor(row.resultado)))
   const completionRate = rows.length ? rows.filter((row) => row.resultado === 'COMPLETE').length / rows.length : null
+  const overviewByResult = useMemo(() => {
+    const resultCodes = [...new Set(rows.map((row) => row.resultado ?? 'SEM_REGISTRO'))]
+    return resultCodes.map((code) => ({ code, label: RESULT_LABELS[code] ?? 'Sem registro', count: rows.filter((row) => (row.resultado ?? 'SEM_REGISTRO') === code).length }))
+  }, [rows])
+  const overviewByCompetency = useMemo(() => {
+    const competencies = [...new Set(rows.map((row) => row.competencia).filter((value): value is string => Boolean(value)))].sort()
+    return competencies.map((competency) => ({ code: competency, label: competency, count: rows.filter((row) => row.competencia === competency).length }))
+  }, [rows])
+  const completedRows = rows.filter((row) => row.resultado === 'COMPLETE').length
 
   const regionalData = useMemo(() => REGION_ORDER.map((region) => {
     const regionalRows = rows.filter((row) => REGION_BY_STATE[row.estado ?? ''] === region)
@@ -153,14 +169,15 @@ export function TechnicalAssessmentsPage() {
 
             <TabsContent value="overview" className="flex flex-col gap-4">
               <div className="grid grid-cols-2 gap-4 @xl/main:grid-cols-4">
-                <Metric label="Movimentos avaliados" value={summaryLoading ? '—' : String(summary?.totalMovements ?? 0)} />
-                <Metric label="Execuções completas" value={summaryLoading ? '—' : String(summary?.completeCount ?? 0)} />
-                <Metric label="Taxa de domínio" value={summaryLoading ? '—' : `${summary?.dominanceRate ?? 0}%`} />
-                <Metric label="Competências" value={summaryLoading ? '—' : String(summary?.competenciesCount ?? 0)} />
+                <Metric loading={loading} label="Movimentos válidos" value={String(rows.length)} />
+                <Metric loading={loading} label="Execuções completas" value={String(completedRows)} />
+                <Metric loading={loading} label="Taxa de domínio" value={rows.length ? `${Math.round((completedRows / rows.length) * 100)}%` : '—'} />
+                <Metric loading={loading} label="Competências avaliadas" value={String(overviewByCompetency.length)} />
               </div>
+              <p className="text-sm text-muted-foreground">Considera apenas movimentos aplicáveis ao estilo de cada atleta e os filtros selecionados.</p>
               <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2">
-                <Card><CardHeader><CardDescription className="text-xs font-medium tracking-wide">RESULTADO</CardDescription><CardTitle>Qualidade da execução</CardTitle></CardHeader><CardContent>{(summary?.byResult ?? []).map(({ code, label, count }) => <BarRow key={code} label={label} value={count} total={summary!.totalMovements} />)}</CardContent></Card>
-                <Card><CardHeader><CardDescription className="text-xs font-medium tracking-wide">COBERTURA</CardDescription><CardTitle>Movimentos por competência</CardTitle></CardHeader><CardContent>{(summary?.byCompetency ?? []).map(({ code, label, count }) => <BarRow key={code} label={label} value={count} total={summary!.totalMovements} />)}</CardContent></Card>
+                <Card><CardHeader><CardDescription className="text-xs font-medium tracking-wide">RESULTADO</CardDescription><CardTitle>Qualidade da execução</CardTitle></CardHeader><CardContent>{loading ? <Skeleton className="h-40 w-full" /> : overviewByResult.length ? overviewByResult.map(({ code, label, count }) => <BarRow key={code} label={label} value={count} total={rows.length} />) : <p className="text-sm text-muted-foreground">Nenhum movimento válido no recorte atual.</p>}</CardContent></Card>
+                <Card><CardHeader><CardDescription className="text-xs font-medium tracking-wide">COBERTURA</CardDescription><CardTitle>Movimentos por competência</CardTitle></CardHeader><CardContent>{loading ? <Skeleton className="h-40 w-full" /> : overviewByCompetency.length ? overviewByCompetency.map(({ code, label, count }) => <BarRow key={code} label={label} value={count} total={rows.length} />) : <p className="text-sm text-muted-foreground">Nenhum movimento válido no recorte atual.</p>}</CardContent></Card>
               </div>
             </TabsContent>
 
@@ -174,7 +191,7 @@ export function TechnicalAssessmentsPage() {
 
             <TabsContent value="zscore" className="flex flex-col gap-4">
               <div className="flex items-center gap-2"><h2 className="text-lg font-semibold">Comparação por Z-Score</h2><ZScoreInfo /></div>
-              <BrazilHeatmap loading={loading} values={zScoreMapValues} selectedState={selectedZScoreState} nationalAverage={nationalStats.mean} nationalStdDev={nationalStats.stdDev} showEngagement={false} countLabel="Movimentos avaliados" onSelect={setSelectedZScoreState} />
+              <BrazilHeatmap loading={loading} values={zScoreMapValues} selectedState={selectedZScoreState} nationalAverage={nationalStats.mean} nationalStdDev={nationalStats.stdDev} showEngagement={false} countLabel="Movimentos válidos" description="Distribuição por estado dos movimentos técnicos aplicáveis ao estilo no recorte atual." onSelect={setSelectedZScoreState} />
               {loading ? <Skeleton className="h-72 w-full rounded-lg" /> : !zScoreBarData.length ? <p className="text-sm text-muted-foreground">Nenhum estado com dados suficientes para calcular Z-Score no recorte atual.</p> : <Card><CardHeader><CardDescription>RANKING ESTADUAL</CardDescription><CardTitle>Z-Score por estado</CardTitle><p className="text-sm text-muted-foreground">Estados ordenados do maior para o menor Z-Score técnico.</p></CardHeader><CardContent><p id="zscore-chart-description" className="sr-only">Barras ordenadas do maior para o menor Z-Score por estado.</p><ChartContainer config={{ zScore: { label: 'Z-Score', color: 'var(--chart-2)' } }} className="h-72 w-full" role="img" aria-label="Barras do Z-Score técnico por estado." aria-describedby="zscore-chart-description"><BarChart data={zScoreBarData} margin={{ top: 12, right: 12, bottom: 8, left: 0 }}><CartesianGrid vertical={false} /><XAxis dataKey="estado" axisLine={false} tickLine={false} tickMargin={8} /><YAxis axisLine={false} tickLine={false} width={36} /><ChartTooltip content={<ChartTooltipContent formatter={(value) => Number(value).toFixed(2)} />} /><Bar dataKey="zScore" fill="var(--color-zScore)" radius={[3, 3, 3, 3]} /></BarChart></ChartContainer></CardContent></Card>}
             </TabsContent>
 

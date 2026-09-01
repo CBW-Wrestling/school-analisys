@@ -51,6 +51,16 @@ export type AthleteDetail = {
 // ── Dashboard — resumos ────────────────────────────────────────────
 export type CountByCode = { code: string; label: string; count: number }
 
+export type HomeSummary = {
+  totalAthletes: number
+  profilesCovered: number
+  physicalCovered: number
+  motorCovered: number
+  completedAthletes: number
+  pendingAthletes: number
+  completionRate: number
+}
+
 export type ProfileSummary = {
   totalProfiles: number
   practiceLocationsCount: number
@@ -82,6 +92,7 @@ export type MotorSummary = {
 
 // ── Dashboard — linhas brutas (Explorer) ──────────────────────────
 export type MotorRow = {
+  athleteEntryId?: string | null
   estado: string | null
   estilo: string | null
   peso: string | null
@@ -93,6 +104,7 @@ export type MotorRow = {
 }
 
 export type ProfileRow = {
+  athleteEntryId?: string | null
   estado: string | null
   estilo: string | null
   peso: string | null
@@ -105,6 +117,7 @@ export type ProfileRow = {
 }
 
 export type PhysicalRow = {
+  athleteEntryId?: string | null
   estado: string | null
   estilo: string | null
   peso: string | null
