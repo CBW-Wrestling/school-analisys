@@ -14,6 +14,7 @@ import {
   ShoppingBag,
   Sparkles,
   Truck,
+  UserCheck,
   Users,
   UsersRound,
   Wallet,
@@ -58,6 +59,7 @@ export const examplesNav: NavigationItem[] = [
 export const operations: NavigationItem[] = [
   { id: 'competition-import', label: 'Criar competição', href: '?view=competition-import', icon: Plus },
   { id: 'results-import', label: 'Importar resultados', href: '?view=results-import', icon: FileUp },
+  { id: 'referee-import', label: 'Cadastrar árbitros', href: '?view=referee-import', icon: UserCheck },
 ]
 
 export const allNavItems: NavigationItem[] = [

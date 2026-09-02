@@ -13,8 +13,8 @@ import { cn } from '@/lib/utils'
 
 type SubmitPayload = Record<string, unknown>
 
-async function submitAssessment(payload: SubmitPayload) {
-  return apiPost('/api/assessments', payload)
+async function submitAssessment(path: string, payload: SubmitPayload) {
+  return apiPost(path, payload)
 }
 
 function toSnakeCase(key: string) {
@@ -78,6 +78,7 @@ function IdentityFields({
   athletesError,
   competitions,
   competitionsLoading,
+  lockedCompetition,
 }: {
   kind: FormKind
   answers: Answers
@@ -87,6 +88,7 @@ function IdentityFields({
   athletesError: string | null
   competitions: CompetitionRow[]
   competitionsLoading: boolean
+  lockedCompetition?: CompetitionRow
 }) {
   function handleCompetitionChange(code: string) {
     update('event', code)
@@ -121,14 +123,23 @@ function IdentityFields({
     <div className="flex flex-col gap-6">
       <FieldsIntro title="Identifique o atleta" text="Escolha a competição e selecione o atleta na lista." />
       <div className="grid grid-cols-1 gap-4">
-        <SelectPairs
-          label="Competição"
-          value={answers.event || ''}
-          placeholder={competitionsLoading ? 'Carregando competições…' : 'Selecione a competição'}
-          options={competitionOptions}
-          onChange={handleCompetitionChange}
-          disabled={competitionsLoading}
-        />
+        {lockedCompetition ? (
+          <dl className="rounded-lg border bg-muted/30 p-4">
+            <div className="flex flex-col gap-0.5">
+              <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Competição</dt>
+              <dd className="text-[14px] font-semibold text-foreground">{lockedCompetition.name}</dd>
+            </div>
+          </dl>
+        ) : (
+          <SelectPairs
+            label="Competição"
+            value={answers.event || ''}
+            placeholder={competitionsLoading ? 'Carregando competições…' : 'Selecione a competição'}
+            options={competitionOptions}
+            onChange={handleCompetitionChange}
+            disabled={competitionsLoading}
+          />
+        )}
         <SelectPairs
           label="Atleta"
           value={answers.entry_id || ''}
@@ -391,9 +402,32 @@ function Stepper({ step, totalSteps, kind }: { step: number; totalSteps: number;
 }
 
 /** Three-step assessment flow used by profile, physical, and motor data collection. */
-export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnother: () => void }) {
+export function AssessmentWizard({
+  kind,
+  onAnother,
+  lockedCompetition,
+  submitPath = '/api/assessments',
+  buildSubmitBody,
+  athletesPathForEvent = (event) => `/api/competitions/${event}/athletes`,
+  allowDuplicate = true,
+  finishHref = '/',
+  headerLabel = 'Coleta',
+}: {
+  kind: FormKind
+  onAnother: () => void
+  lockedCompetition?: CompetitionRow
+  submitPath?: string
+  buildSubmitBody?: (payload: SubmitPayload) => SubmitPayload
+  athletesPathForEvent?: (event: string) => string
+  allowDuplicate?: boolean
+  finishHref?: string
+  headerLabel?: string
+}) {
   const [step, setStep] = useState(1)
-  const [answers, setAnswers] = useState<Answers>({})
+  const [answers, setAnswers] = useState<Answers>((): Answers => {
+    if (!lockedCompetition) return {}
+    return { event: lockedCompetition.code }
+  })
   const [sent, setSent] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -404,10 +438,12 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
   const [duplicateDone, setDuplicateDone] = useState(false)
   const [reviewConfirmed, setReviewConfirmed] = useState(false)
 
-  const { rows: competitions, loading: competitionsLoading } = useApiRows<CompetitionRow>('/api/competitions')
+  const { rows: loadedCompetitions, loading: competitionsLoading } = useApiRows<CompetitionRow>('/api/competitions', !lockedCompetition)
+  const competitions = lockedCompetition ? [lockedCompetition] : loadedCompetitions
+  const selectedEvent = lockedCompetition?.code ?? answers.event
   const { rows: athletes, loading: athletesLoading, error: athletesError } = useApiRows<CompetitionAthlete>(
-    answers.event ? `/api/competitions/${answers.event}/athletes` : '/api/competitions/__none__/athletes',
-    Boolean(answers.event)
+    selectedEvent ? athletesPathForEvent(selectedEvent) : '/api/competitions/__none__/athletes',
+    Boolean(selectedEvent)
   )
 
   const { rows: motorMovementGroups } = useApiRows<MotorMovementGroup>(
@@ -431,7 +467,7 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
   const info = details[kind]
   const Icon = info.icon
   const totalSteps = 3
-  const identityComplete = Boolean(answers.event && answers.entry_id)
+  const identityComplete = Boolean(selectedEvent && answers.entry_id)
   const requiredFields = kind === 'profile'
     ? ['practiceTime', 'place', 'frequency']
     : kind === 'physical'
@@ -450,7 +486,8 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
     setSubmitting(true)
     setSubmitError(null)
     try {
-      await submitAssessment(buildPayload(kind, answers, physicalFields, motorMovementCodes))
+      const payload = buildPayload(kind, answers, physicalFields, motorMovementCodes)
+      await submitAssessment(submitPath, buildSubmitBody ? buildSubmitBody(payload) : payload)
       setSent(true)
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Erro ao enviar. Tente novamente.')
@@ -475,7 +512,8 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
         age_category_code: target.ageCategoryCode,
         entry_id: target.entryId,
       }
-      await submitAssessment(buildPayload(kind, dupAnswers, physicalFields, motorMovementCodes))
+      const payload = buildPayload(kind, dupAnswers, physicalFields, motorMovementCodes)
+      await submitAssessment(submitPath, buildSubmitBody ? buildSubmitBody(payload) : payload)
       setDuplicateDone(true)
       setDuplicating(false)
     } catch (err) {
@@ -486,7 +524,7 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
   }
 
   if (sent) {
-    const duplicateCandidates = athletes.filter(a => a.entryId !== answers.entry_id)
+    const duplicateCandidates = allowDuplicate ? athletes.filter(a => a.entryId !== answers.entry_id) : []
 
     if (duplicating) {
       return (
@@ -532,7 +570,7 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
         <p className="max-w-[440px] text-sm text-muted-foreground">Deseja enviar outro formulário ou finalizar a coleta?</p>
         <div className="mt-2 flex gap-3">
           <Button onClick={onAnother}>Enviar outro formulário<ArrowRight data-icon="inline-end" aria-hidden="true" /></Button>
-          <Button asChild variant="outline"><a href="/">Finalizar coleta</a></Button>
+          <Button asChild variant="outline"><a href={finishHref}>Finalizar coleta</a></Button>
         </div>
         {duplicateCandidates.length > 0 && !duplicateDone && (
           <Button
@@ -554,7 +592,7 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
       <header className="flex h-12 w-full items-center justify-between border-b border-border bg-background px-4 md:px-6">
         <a className="flex items-center gap-2 text-sm font-semibold text-foreground" href="/">
           <img className="size-7 object-contain" src={logo} alt="" />
-          <span>Coleta</span>
+          <span>{headerLabel}</span>
         </a>
         <a href="/" className="text-xs font-semibold text-muted-foreground hover:text-foreground">Finalizar depois</a>
       </header>
@@ -578,6 +616,7 @@ export function AssessmentWizard({ kind, onAnother }: { kind: FormKind; onAnothe
               athletesError={athletesError}
               competitions={competitions}
               competitionsLoading={competitionsLoading}
+              lockedCompetition={lockedCompetition}
             />
           )}
           {step === 2 && (

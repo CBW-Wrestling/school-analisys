@@ -19,19 +19,23 @@ import { Input } from '@/components/ui/input'
 type AuthScreen = 'login' | 'register'
 
 export function AuthGate({ children }: { children: ReactNode }) {
+  const params = new URLSearchParams(window.location.search)
+  const isPublicRoute = params.get('view') === 'referee-assessment'
   const [authed, setAuthed] = useState(false)
   const [ready, setReady] = useState(false)
   const [screen, setScreen] = useState<AuthScreen>('login')
 
   useEffect(() => {
+    if (isPublicRoute) { setReady(true); return }
     const check = async () => {
       setAuthed(isDemoMode() || isAuthenticated() || await refreshTokens())
       setReady(true)
     }
     void check()
-  }, [])
+  }, [isPublicRoute])
 
   if (!ready) return null
+  if (isPublicRoute) return <>{children}</>
   if (authed) return <>{children}</>
 
   return screen === 'login'

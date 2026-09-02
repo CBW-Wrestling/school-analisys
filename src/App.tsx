@@ -18,6 +18,8 @@ import { TechnicalAssessmentsPage } from "./pages/TechnicalAssessmentsPage"
 import { StateExecutionPage } from "./pages/StateExecutionPage"
 import { CompetitionImportPage } from "./pages/CompetitionImportPage"
 import { ResultsImportPage } from "./pages/ResultsImportPage"
+import { RefereeImportPage } from "./pages/RefereeImportPage"
+import { PublicRefereeAssessmentPage } from "./pages/PublicRefereeAssessmentPage"
 import { ProfilePage } from "./pages/ProfilePage"
 import { PhysicalPage } from "./pages/PhysicalPage"
 import { InferencesPage } from "./pages/InferencesPage"
@@ -36,12 +38,15 @@ function App() {
   const refreshToken = params.get("refreshToken")
 
   useEffect(() => {
+    if (requestedView === "referee-assessment") return
     if (accessToken && refreshToken) {
       saveTokens(accessToken, refreshToken)
       window.history.replaceState({}, '', window.location.pathname)
       window.location.reload()
     }
-  }, [accessToken, refreshToken])
+  }, [accessToken, refreshToken, requestedView])
+
+  if (requestedView === "referee-assessment") return <PublicRefereeAssessmentPage />
 
   if (accessToken && refreshToken) return null // aguarda reload
 
@@ -64,6 +69,7 @@ function App() {
     : requestedView === "inferences" ? <InferencesPage />
     : requestedView === "competition-import" ? <CompetitionImportPage />
     : requestedView === "results-import" ? <ResultsImportPage />
+    : requestedView === "referee-import" ? <RefereeImportPage />
     : requestedView === "profile" ? <ProfilePage />
     : <DashboardPage />
 
