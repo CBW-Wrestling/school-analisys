@@ -18,7 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 function fmtCm(value: number | null) {
-  return value === null ? '—' : `${value.toFixed(1)} cm`
+  return value === null ? '—' : `${value.toFixed(2)} cm`
 }
 
 function DistributionBarChart({ data, loading, color = 'var(--chart-1)' }: { data: { label: string; count: number }[]; loading: boolean; color?: string }) {
@@ -46,8 +46,8 @@ export function PhysicalPage() {
   const [expandedStyles, setExpandedStyles] = useState<Set<string>>(new Set())
   const loading = rowsLoading || competitionsLoading
 
-  const fmt = (v: number | null | undefined) => v != null ? `${v} cm` : '—'
-  const fmtKgf = (v: number | null | undefined) => v != null ? `${v} kgf` : '—'
+  const fmt = (v: number | null | undefined) => v != null ? `${v.toFixed(2)} cm` : '—'
+  const fmtKgf = (v: number | null | undefined) => v != null ? `${v.toFixed(2)} kgf` : '—'
   const averageMetric = (field: keyof PhysicalRow) => {
     const values = scopedPhysicalRows.map((row) => parseMetric(row[field] as string | null)).filter((value): value is number => value !== null)
     return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null

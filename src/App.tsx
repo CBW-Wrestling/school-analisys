@@ -15,6 +15,7 @@ import { ProductivityDashboardPage } from "./pages/ProductivityDashboardPage"
 import { PatientMonitoringDashboardPage } from "./pages/PatientMonitoringDashboardPage"
 import { UsersDashboardPage } from "./pages/UsersDashboardPage"
 import { TechnicalAssessmentsPage } from "./pages/TechnicalAssessmentsPage"
+import { StateExecutionPage } from "./pages/StateExecutionPage"
 import { CompetitionImportPage } from "./pages/CompetitionImportPage"
 import { ResultsImportPage } from "./pages/ResultsImportPage"
 import { ProfilePage } from "./pages/ProfilePage"
@@ -59,6 +60,7 @@ function App() {
     : requestedView === "profiles" ? <ProfilesPage />
     : requestedView === "physical" ? <PhysicalPage />
     : requestedView === "motor" ? <TechnicalAssessmentsPage />
+    : requestedView === "motor-states" ? <StateExecutionPage />
     : requestedView === "inferences" ? <InferencesPage />
     : requestedView === "competition-import" ? <CompetitionImportPage />
     : requestedView === "results-import" ? <ResultsImportPage />

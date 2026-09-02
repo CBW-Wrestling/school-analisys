@@ -79,8 +79,8 @@ export function scoreAndCompletionByCompetencia(rows: MotorRow[]): { competencia
   })
 }
 
-export function completionPctByEstado(rows: MotorRow[]) {
-  const estados = [...new Set(rows.map((row) => row.estado).filter((value): value is string => Boolean(value)))]
+export function completionPctByEstado(rows: MotorRow[], allStates?: string[]) {
+  const estados = allStates ?? [...new Set(rows.map((row) => row.estado).filter((value): value is string => Boolean(value)))]
   return estados.map((estado) => {
     const stateRows = rows.filter((row) => row.estado === estado)
     const total = stateRows.length
