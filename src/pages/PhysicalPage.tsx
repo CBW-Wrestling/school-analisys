@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Fragment } from 'react'
 import { Bar, BarChart, CartesianGrid, Scatter, ScatterChart, Tooltip, XAxis, YAxis } from 'recharts'
 import { ChevronRight } from 'lucide-react'
@@ -8,8 +8,9 @@ import { PageHeader } from '../components/PageHeader'
 import { useApiData, useApiRows } from '../lib/api'
 import { pearsonCorrelation, PEARSON_EXPLANATION } from '../lib/correlation'
 import { aggregateByStyleAndWeight, parseMetric } from '../lib/physicalMetrics'
+import { competitionCodesForScope, useReportingScope } from '../lib/reportingScope'
 import { cn } from '@/lib/utils'
-import type { PhysicalRow, PhysicalSummary } from '../types'
+import type { CompetitionRow, PhysicalRow } from '../types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
@@ -37,16 +38,25 @@ function DistributionBarChart({ data, loading, color = 'var(--chart-1)' }: { dat
 }
 
 export function PhysicalPage() {
-  const { data: summary, loading } = useApiData<PhysicalSummary>('/api/dashboard/physical/summary')
   const { rows: physicalRows, loading: rowsLoading, error: rowsError } = useApiRows<PhysicalRow>('/api/dashboard/physical')
+  const { rows: competitions, loading: competitionsLoading } = useApiRows<CompetitionRow>('/api/competitions')
+  const { scope } = useReportingScope()
+  const scopedCompetitionCodes = useMemo(() => competitionCodesForScope(scope, competitions), [scope, competitions])
+  const scopedPhysicalRows = useMemo(() => physicalRows.filter((row) => scopedCompetitionCodes.includes(row.eventIdentifier ?? '') && scope.styles.includes(row.estilo ?? '')), [physicalRows, scopedCompetitionCodes, scope.styles])
   const [expandedStyles, setExpandedStyles] = useState<Set<string>>(new Set())
+  const loading = rowsLoading || competitionsLoading
 
   const fmt = (v: number | null | undefined) => v != null ? `${v} cm` : '—'
   const fmtKgf = (v: number | null | undefined) => v != null ? `${v} kgf` : '—'
+  const averageMetric = (field: keyof PhysicalRow) => {
+    const values = scopedPhysicalRows.map((row) => parseMetric(row[field] as string | null)).filter((value): value is number => value !== null)
+    return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null
+  }
+  const countBy = (field: 'estado' | 'estilo') => [...new Set(scopedPhysicalRows.map((row) => row[field]).filter((value): value is string => Boolean(value)))].map((value) => ({ label: value, count: scopedPhysicalRows.filter((row) => row[field] === value).length })).sort((first, second) => second.count - first.count)
 
-  const styleWeightTable = aggregateByStyleAndWeight(physicalRows)
+  const styleWeightTable = aggregateByStyleAndWeight(scopedPhysicalRows)
 
-  const scatterData = physicalRows
+  const scatterData = scopedPhysicalRows
     .map((row) => ({ x: parseMetric(row.enverguturaCm), y: parseMetric(row.prensaoManualD) }))
     .filter((point): point is { x: number; y: number } => point.x !== null && point.y !== null)
   const coefEnvergaduraPrensao = pearsonCorrelation(scatterData)
@@ -68,10 +78,10 @@ export function PhysicalPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4 @xl/main:grid-cols-4">
-            <Metric label="Avaliações válidas" value={loading ? '—' : String(summary?.totalAssessments ?? 0)} />
-            <Metric label="Estatura média" value={loading ? '—' : fmt(summary?.averageHeight)} />
-            <Metric label="Envergadura média" value={loading ? '—' : fmt(summary?.averageArmSpan)} />
-            <Metric label="Prensão direita média" value={loading ? '—' : fmtKgf(summary?.averageHandGripRight)} />
+            <Metric label="Avaliações válidas" value={loading ? '—' : String(scopedPhysicalRows.length)} />
+            <Metric label="Estatura média" value={loading ? '—' : fmt(averageMetric('estaturaCm'))} />
+            <Metric label="Envergadura média" value={loading ? '—' : fmt(averageMetric('enverguturaCm'))} />
+            <Metric label="Prensão direita média" value={loading ? '—' : fmtKgf(averageMetric('prensaoManualD'))} />
           </div>
 
           <div className="grid grid-cols-1 gap-4 @lg/main:grid-cols-2">
@@ -81,7 +91,7 @@ export function PhysicalPage() {
                 <CardTitle>Avaliações por estado</CardTitle>
               </CardHeader>
               <CardContent>
-                <DistributionBarChart loading={loading} data={(summary?.byState ?? []).slice(0, 7).map(({ label, count }) => ({ label, count }))} />
+                <DistributionBarChart loading={loading} data={countBy('estado').slice(0, 7)} />
               </CardContent>
             </Card>
             <Card>
@@ -90,7 +100,7 @@ export function PhysicalPage() {
                 <CardTitle>Registros por modalidade</CardTitle>
               </CardHeader>
               <CardContent>
-                <DistributionBarChart loading={loading} color="var(--chart-2)" data={(summary?.byStyle ?? []).map(({ label, count }) => ({ label, count }))} />
+                <DistributionBarChart loading={loading} color="var(--chart-2)" data={countBy('estilo')} />
               </CardContent>
             </Card>
           </div>

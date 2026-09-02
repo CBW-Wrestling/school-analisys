@@ -4,8 +4,8 @@ import { AthleteCell } from '../components/AthleteCell'
 import { FilterDropdown } from '../components/FilterDropdown'
 import { Metric } from '../components/Metric'
 import { PageHeader } from '../components/PageHeader'
-import { SearchableSelect } from '../components/SearchableSelect'
-import { useApiRows } from '../lib/api'
+import { apiGet, useApiRows } from '../lib/api'
+import { competitionCodesForScope, useReportingScope, useScopedCompetitionAthletes } from '../lib/reportingScope'
 import { AthleteDetailPage } from './AthleteDetailPage'
 import type { CompetitionRow, ResultRow } from '../types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -22,46 +22,49 @@ import {
 } from '@/components/ui/table'
 
 export function ResultsPage() {
-  const [competitionId, setCompetitionId] = useState<string>('')
   const [selectedEntry, setSelectedEntry] = useState<string | null>(null)
+  const [rows, setRows] = useState<ResultRow[]>([])
+  const [resultsLoading, setResultsLoading] = useState(false)
+  const [resultsError, setResultsError] = useState<string | null>(null)
 
   const {
     rows: competitions,
     loading: competitionsLoading,
     error: competitionsError,
   } = useApiRows<CompetitionRow>('/api/competitions')
+  const { scope } = useReportingScope()
+  const scopedCompetitionCodes = useMemo(() => competitionCodesForScope(scope, competitions), [scope, competitions])
+  const { athletes: scopedAthletes, loading: athletesLoading } = useScopedCompetitionAthletes(scope, competitions)
 
   useEffect(() => {
-    if (!competitionId && competitions.length > 0) {
-      setCompetitionId(competitions[0].id)
-    }
-  }, [competitions, competitionId])
-
-  const {
-    rows,
-    loading: resultsLoading,
-    error: resultsError,
-  } = useApiRows<ResultRow>(
-    competitionId ? `/api/results?competitionId=${competitionId}` : '/api/results',
-    Boolean(competitionId)
-  )
+    const selectedCompetitions = competitions.filter((competition) => scopedCompetitionCodes.includes(competition.code))
+    if (!selectedCompetitions.length) { setRows([]); setResultsLoading(false); return }
+    let alive = true
+    setResultsLoading(true)
+    Promise.all(selectedCompetitions.map((competition) => apiGet<ResultRow[]>(`/api/results?competitionId=${encodeURIComponent(competition.id)}`)))
+      .then((lists) => { if (alive) { setRows(lists.flat()); setResultsError(null) } })
+      .catch(() => { if (alive) setResultsError('Não foi possível carregar os resultados.') })
+      .finally(() => { if (alive) setResultsLoading(false) })
+    return () => { alive = false }
+  }, [competitions, scopedCompetitionCodes])
 
   const weightOptions = useMemo(() => [...new Set(rows.map((row) => row.weightCategoryShortName).filter((value): value is string => Boolean(value)))].sort(), [rows])
   const stateOptions = useMemo(() => [...new Set(rows.map((row) => row.teamAlternateName).filter((value): value is string => Boolean(value)))].sort(), [rows])
   const [selectedWeights, setSelectedWeights] = useState<string[]>([])
   const [selectedStates, setSelectedStates] = useState<string[]>([])
 
-  useEffect(() => { setSelectedWeights([]); setSelectedStates([]) }, [competitionId])
+  useEffect(() => { setSelectedWeights([]); setSelectedStates([]) }, [scope.competitionCode, scope.year, scope.styles])
   useEffect(() => { if (weightOptions.length && selectedWeights.length === 0) setSelectedWeights(weightOptions) }, [weightOptions, selectedWeights])
   useEffect(() => { if (stateOptions.length && selectedStates.length === 0) setSelectedStates(stateOptions) }, [stateOptions, selectedStates])
 
+  const scopedAthleteIds = useMemo(() => new Set(scopedAthletes.map((athlete) => athlete.entryId)), [scopedAthletes])
   const filteredRows = useMemo(() => rows.filter((row) =>
-    selectedWeights.includes(row.weightCategoryShortName ?? '') && selectedStates.includes(row.teamAlternateName ?? ''),
-  ), [rows, selectedWeights, selectedStates])
+    scopedAthleteIds.has(row.entryId) && selectedWeights.includes(row.weightCategoryShortName ?? '') && selectedStates.includes(row.teamAlternateName ?? ''),
+  ), [rows, scopedAthleteIds, selectedWeights, selectedStates])
 
   const selectedCompetition = useMemo(
-    () => competitions.find((c) => c.id === competitionId),
-    [competitions, competitionId]
+    () => scope.competitionCode === 'all' ? null : competitions.find((competition) => competition.code === scope.competitionCode),
+    [competitions, scope.competitionCode]
   )
 
   if (selectedEntry) {
@@ -79,7 +82,7 @@ export function ResultsPage() {
   const fights = filteredRows.reduce((total, row) => total + Number(row.countFights || 0), 0)
   const statesCount = new Set(filteredRows.map((row) => row.teamAlternateName)).size
   const categories = new Set(filteredRows.map((row) => row.weightCategoryShortName)).size
-  const loading = competitionsLoading || resultsLoading
+  const loading = competitionsLoading || resultsLoading || athletesLoading
 
   return (
     <PageHeader active="results">
@@ -99,7 +102,6 @@ export function ResultsPage() {
             <div className="flex flex-wrap items-end gap-2">
               <FilterDropdown label="Categoria" options={weightOptions.map((value) => ({ value, label: value }))} value={selectedWeights} onChange={setSelectedWeights} disabled={resultsLoading} />
               <FilterDropdown label="UF" options={stateOptions.map((value) => ({ value, label: value }))} value={selectedStates} onChange={setSelectedStates} disabled={resultsLoading} />
-              <SearchableSelect className="w-56" placeholder="Competição" ariaLabel="Selecionar competição" disabled={competitionsLoading} value={competitionId} onChange={setCompetitionId} options={competitions.map((competition) => ({ value: competition.id, label: `${competition.name} · ${competition.year}` }))} />
             </div>
           </div>
 
@@ -130,7 +132,7 @@ export function ResultsPage() {
                     <CardDescription>
                       {selectedCompetition
                         ? 'Ordenada por posição na categoria'
-                        : 'Selecione uma competição'}
+                        : 'Consolidada a partir do recorte global'}
                     </CardDescription>
                   </div>
                   {selectedCompetition && <Badge variant="outline" className="shrink-0">{selectedCompetition.code}</Badge>}
