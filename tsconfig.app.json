@@ -7,6 +7,7 @@
     "types": ["vite/client"],
     "ignoreDeprecations": "6.0",
     "allowArbitraryExtensions": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
 
     /* Bundler mode */

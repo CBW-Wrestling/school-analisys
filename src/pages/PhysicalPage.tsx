@@ -3,9 +3,10 @@ import { Fragment } from 'react'
 import { Bar, BarChart, CartesianGrid, Scatter, ScatterChart, Tooltip, XAxis, YAxis } from 'recharts'
 import { ChevronRight } from 'lucide-react'
 import { Metric } from '../components/Metric'
+import { InfoTooltip } from '../components/InfoTooltip'
 import { PageHeader } from '../components/PageHeader'
 import { useApiData, useApiRows } from '../lib/api'
-import { pearsonCorrelation } from '../lib/correlation'
+import { pearsonCorrelation, PEARSON_EXPLANATION } from '../lib/correlation'
 import { aggregateByStyleAndWeight, parseMetric } from '../lib/physicalMetrics'
 import { cn } from '@/lib/utils'
 import type { PhysicalRow, PhysicalSummary } from '../types'
@@ -161,7 +162,7 @@ export function PhysicalPage() {
           <Card>
             <CardHeader>
               <CardDescription className="text-xs font-medium tracking-wide">RELAÇÃO</CardDescription>
-              <CardTitle>Envergadura × prensão manual (D)</CardTitle>
+              <CardTitle className="flex items-center gap-2">Envergadura × prensão manual (D)<InfoTooltip label="O que é coeficiente de correlação?" content={PEARSON_EXPLANATION} /></CardTitle>
               <p className="text-sm text-muted-foreground">Coeficiente de correlação: {coefEnvergaduraPrensao === null ? '—' : coefEnvergaduraPrensao.toFixed(2)} (dado real, por avaliação).</p>
             </CardHeader>
             <CardContent>

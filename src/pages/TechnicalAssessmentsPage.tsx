@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Bar, BarChart, CartesianGrid, Line, LineChart, Scatter, ScatterChart, XAxis, YAxis } from 'recharts'
-import { Info, RotateCcw } from 'lucide-react'
-import { BarRow } from '../components/BarRow'
+import { Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, Pie, PieChart, Scatter, XAxis, YAxis } from 'recharts'
+import { BookOpen, CheckCircle2, Crosshair, Database, Gauge, ListChecks, ListOrdered, Percent, RotateCcw, Target, Trophy } from 'lucide-react'
 import { FilterDropdown } from '../components/FilterDropdown'
-import { Metric } from '../components/Metric'
+import { InfoTooltip } from '../components/InfoTooltip'
+import { KpiCard } from '../components/KpiCard'
 import { PageHeader } from '../components/PageHeader'
+import { TabbedChartCard } from '../components/TabbedChartCard'
 import { BrazilHeatmap } from '../components/dashboard/BrazilHeatmap'
 import { apiGet, useApiRows } from '../lib/api'
-import { pearsonCorrelation } from '../lib/correlation'
-import { REGION_BY_STATE, REGION_ORDER, average, completionPctByEstado, labelForStyle, scoreByEstado, scoreFor, visibleMotorRows } from '../lib/motorScore'
+import { PEARSON_EXPLANATION, pearsonCorrelation, regressionLine } from '../lib/correlation'
+import { AVERAGE_SCORE_EXPLANATION, COMPLETION_EXPLANATION, REGION_BY_STATE, REGION_ORDER, average, completionPctByEstado, labelForStyle, scoreByEstado, scoreFor, visibleMotorRows } from '../lib/motorScore'
 import { Z_SCORE_EXPLANATION, meanAndStdDev, zScoreFor } from '../lib/zscore'
 import type { CompetitionRow, MotorRow, ResultRow } from '../types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -17,7 +18,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 const DIMENSIONS = ['Acrobacias', 'Pé', 'Solo'] as const
 const RESULT_LABELS: Record<string, string> = {
@@ -34,21 +34,6 @@ function dimensionFor(row: MotorRow): (typeof DIMENSIONS)[number] {
   if (/ponte|acrob|rolamento/.test(movement)) return 'Acrobacias'
   if (/guarda|role|arranco|nelson|cruzeta|solo/.test(movement)) return 'Solo'
   return 'Pé'
-}
-
-function ZScoreInfo() {
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button type="button" className="inline-flex items-center text-muted-foreground hover:text-foreground" aria-label="O que é Z-Score?">
-            <Info className="size-4" aria-hidden />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-64">{Z_SCORE_EXPLANATION}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  )
 }
 
 export function TechnicalAssessmentsPage() {
@@ -80,6 +65,7 @@ export function TechnicalAssessmentsPage() {
     const competencies = [...new Set(rows.map((row) => row.competencia).filter((value): value is string => Boolean(value)))].sort()
     return competencies.map((competency) => ({ code: competency, label: competency, count: rows.filter((row) => row.competencia === competency).length }))
   }, [rows])
+  const resultPieData = useMemo(() => overviewByResult.map((item, index) => ({ ...item, fill: `var(--chart-${(index % 5) + 1})` })), [overviewByResult])
   const completedRows = rows.filter((row) => row.resultado === 'COMPLETE').length
 
   const regionalData = useMemo(() => REGION_ORDER.map((region) => {
@@ -132,6 +118,9 @@ export function TechnicalAssessmentsPage() {
   const coefRank = pearsonCorrelation(rankScatter)
   const coefWins = pearsonCorrelation(winsScatter)
   const coefPoints = pearsonCorrelation(pointsScatter)
+  const rankRegression = regressionLine(rankScatter)
+  const pointsRegression = regressionLine(pointsScatter)
+  const winsRegression = regressionLine(winsScatter)
 
   const hasCustomFilters = dimensions.length !== DIMENSIONS.length || selectedStyles.length !== styles.length || selectedEvents.length !== events.length
   const resetFilters = () => { setDimensions([...DIMENSIONS]); setSelectedStyles(styles); setSelectedEvents(events.map((event) => event.value)) }
@@ -169,45 +158,147 @@ export function TechnicalAssessmentsPage() {
 
             <TabsContent value="overview" className="flex flex-col gap-4">
               <div className="grid grid-cols-2 gap-4 @xl/main:grid-cols-4">
-                <Metric loading={loading} label="Movimentos válidos" value={String(rows.length)} />
-                <Metric loading={loading} label="Execuções completas" value={String(completedRows)} />
-                <Metric loading={loading} label="Taxa de domínio" value={rows.length ? `${Math.round((completedRows / rows.length) * 100)}%` : '—'} />
-                <Metric loading={loading} label="Competências avaliadas" value={String(overviewByCompetency.length)} />
+                <KpiCard loading={loading} icon={ListChecks} label="Movimentos válidos" value={String(rows.length)} />
+                <KpiCard loading={loading} icon={CheckCircle2} label="Execuções completas" value={String(completedRows)} />
+                <KpiCard loading={loading} icon={Target} label="Taxa de domínio" value={rows.length ? `${Math.round((completedRows / rows.length) * 100)}%` : '—'} />
+                <KpiCard loading={loading} icon={BookOpen} label="Competências avaliadas" value={String(overviewByCompetency.length)} />
               </div>
               <p className="text-sm text-muted-foreground">Considera apenas movimentos aplicáveis ao estilo de cada atleta e os filtros selecionados.</p>
               <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2">
-                <Card><CardHeader><CardDescription className="text-xs font-medium tracking-wide">RESULTADO</CardDescription><CardTitle>Qualidade da execução</CardTitle></CardHeader><CardContent>{loading ? <Skeleton className="h-40 w-full" /> : overviewByResult.length ? overviewByResult.map(({ code, label, count }) => <BarRow key={code} label={label} value={count} total={rows.length} />) : <p className="text-sm text-muted-foreground">Nenhum movimento válido no recorte atual.</p>}</CardContent></Card>
-                <Card><CardHeader><CardDescription className="text-xs font-medium tracking-wide">COBERTURA</CardDescription><CardTitle>Movimentos por competência</CardTitle></CardHeader><CardContent>{loading ? <Skeleton className="h-40 w-full" /> : overviewByCompetency.length ? overviewByCompetency.map(({ code, label, count }) => <BarRow key={code} label={label} value={count} total={rows.length} />) : <p className="text-sm text-muted-foreground">Nenhum movimento válido no recorte atual.</p>}</CardContent></Card>
+                <Card>
+                  <CardHeader>
+                    <CardDescription className="text-xs font-medium tracking-wide">RESULTADO</CardDescription>
+                    <CardTitle>Qualidade da execução</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {loading ? <Skeleton className="h-64 w-full" /> : !overviewByResult.length ? <p className="text-sm text-muted-foreground">Nenhum movimento válido no recorte atual.</p> : (
+                      <div className="flex flex-col items-center gap-4">
+                        <ChartContainer config={{ count: { label: 'Movimentos' } }} className="aspect-square max-h-56 w-full max-w-56 shrink-0" role="img" aria-label="Composição dos resultados de execução.">
+                          <PieChart>
+                            <ChartTooltip content={<ChartTooltipContent hideLabel formatter={(value, name, item) => (
+                              <span className="flex w-full items-center justify-between gap-3">
+                                <span className="flex items-center gap-1.5"><span className="size-2 shrink-0 rounded-[2px]" style={{ backgroundColor: item.payload?.fill }} aria-hidden />{name}</span>
+                                <span className="font-mono font-medium tabular-nums">{value} · {rows.length ? Math.round((Number(value) / rows.length) * 100) : 0}%</span>
+                              </span>
+                            )} />} />
+                            <Pie data={resultPieData} dataKey="count" nameKey="label" innerRadius={56} outerRadius={88} paddingAngle={2} cornerRadius={4} />
+                          </PieChart>
+                        </ChartContainer>
+                        <div className="flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-2">
+                          {resultPieData.map((item) => (
+                            <span key={item.code} className="flex items-center gap-1.5 text-sm">
+                              <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.fill }} aria-hidden />
+                              {item.label}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardDescription className="text-xs font-medium tracking-wide">COBERTURA</CardDescription>
+                    <CardTitle>Movimentos por competência</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {loading ? <Skeleton className="h-64 w-full" /> : !overviewByCompetency.length ? <p className="text-sm text-muted-foreground">Nenhum movimento válido no recorte atual.</p> : (
+                      <ChartContainer config={{ count: { label: 'Movimentos', color: 'var(--chart-2)' } }} className="h-64 w-full" role="img" aria-label="Movimentos por competência.">
+                        <BarChart data={overviewByCompetency} margin={{ top: 12, right: 12, bottom: 8, left: 0 }}>
+                          <CartesianGrid vertical={false} />
+                          <XAxis dataKey="label" axisLine={false} tickLine={false} tickMargin={8} interval={0} angle={-12} textAnchor="end" height={48} />
+                          <YAxis axisLine={false} tickLine={false} allowDecimals={false} width={32} />
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <Bar dataKey="count" name="Movimentos" fill="var(--color-count)" radius={4} />
+                        </BarChart>
+                      </ChartContainer>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             </TabsContent>
 
             <TabsContent value="regional" className="flex flex-col gap-4">
-              <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-3"><Metric loading={loading} label="Pontuação média" value={averageScore === null ? '—' : averageScore.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} /><Metric loading={loading} label="Percentual de compleção" value={completionRate === null ? '—' : `${Math.round(completionRate * 100)}%`} /><Card className="bg-muted/35"><CardHeader><CardDescription>BASE ANALISADA</CardDescription><CardTitle className="font-mono text-2xl tabular-nums">{loading ? '—' : rows.length}</CardTitle><p className="text-sm text-muted-foreground">movimentos no recorte atual</p></CardHeader></Card></div>
+              <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-3">
+                <KpiCard loading={loading} icon={Gauge} label="Pontuação média" value={averageScore === null ? '—' : averageScore.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} info={<InfoTooltip label="O que é pontuação média?" content={AVERAGE_SCORE_EXPLANATION} />} />
+                <KpiCard loading={loading} icon={Percent} label="Percentual de compleção" value={completionRate === null ? '—' : `${Math.round(completionRate * 100)}%`} info={<InfoTooltip label="O que é percentual de compleção?" content={COMPLETION_EXPLANATION} />} />
+                <KpiCard loading={loading} icon={Database} label="Base analisada" value={loading ? '—' : String(rows.length)} description="movimentos no recorte atual" />
+              </div>
               {loading ? <div className="grid gap-4 @2xl/main:grid-cols-2"><Skeleton className="h-80 w-full rounded-lg" /><Skeleton className="h-80 w-full rounded-lg" /></div> : !regionalData.length && !stateData.length ? <p className="text-sm text-muted-foreground">Nenhum movimento no recorte atual.</p> : <div className="grid items-stretch gap-4 @2xl/main:grid-cols-2">
-                <Card><CardHeader><CardDescription>PONTUAÇÃO TÉCNICA</CardDescription><CardTitle>Pontuação média por região</CardTitle><p className="text-sm text-muted-foreground">Escala de 0 a 2 pontos por execução registrada.</p></CardHeader><CardContent><p id="regional-chart-description" className="sr-only">A linha compara a pontuação média entre as regiões brasileiras no recorte selecionado.</p><ChartContainer config={{ pontuacao: { label: 'Pontuação média', color: 'var(--chart-1)' } }} className="h-80 w-full" role="img" aria-label="Linha da pontuação média de execução por região brasileira." aria-describedby="regional-chart-description"><LineChart data={regionalData} margin={{ top: 12, right: 12, bottom: 8, left: 0 }}><CartesianGrid vertical={false} /><XAxis dataKey="region" axisLine={false} tickLine={false} tickMargin={8} /><YAxis domain={[0, 2]} ticks={[0, 1, 2]} axisLine={false} tickLine={false} width={28} /><ChartTooltip content={<ChartTooltipContent />} /><Line type="monotone" dataKey="pontuacao" stroke="var(--color-pontuacao)" strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} connectNulls /></LineChart></ChartContainer></CardContent></Card>
+                <Card><CardHeader><CardDescription>PONTUAÇÃO TÉCNICA</CardDescription><CardTitle>Pontuação média por região</CardTitle><p className="text-sm text-muted-foreground">Escala de 0 a 2 pontos por execução registrada.</p></CardHeader><CardContent><p id="regional-chart-description" className="sr-only">Barras comparam a pontuação média entre as regiões brasileiras no recorte selecionado.</p><ChartContainer config={{ pontuacao: { label: 'Pontuação média', color: 'var(--chart-1)' } }} className="h-80 w-full" role="img" aria-label="Barras da pontuação média de execução por região brasileira." aria-describedby="regional-chart-description"><BarChart data={regionalData} margin={{ top: 12, right: 12, bottom: 8, left: 0 }}><CartesianGrid vertical={false} /><XAxis dataKey="region" axisLine={false} tickLine={false} tickMargin={8} /><YAxis domain={[0, 2]} ticks={[0, 1, 2]} axisLine={false} tickLine={false} width={28} /><ChartTooltip content={<ChartTooltipContent />} /><Bar dataKey="pontuacao" fill="var(--color-pontuacao)" radius={4} /></BarChart></ChartContainer></CardContent></Card>
                 <Card><CardHeader><CardDescription>EXECUÇÃO POR UF</CardDescription><CardTitle>Percentuais de execução por estado</CardTitle><p className="text-sm text-muted-foreground">Estados ordenados do maior para o menor desempenho técnico.</p></CardHeader><CardContent><p id="state-chart-description" className="sr-only">Cada barra representa cem por cento dos movimentos avaliados em um estado e separa execução completa, parcial e não completada.</p><ChartContainer config={{ completo: { label: 'Completo', color: 'var(--chart-1)' }, parcial: { label: 'Parcial', color: 'var(--chart-4)' }, naoCompletou: { label: 'Não completou', color: 'var(--destructive)' } }} className="h-80 w-full" role="img" aria-label="Barras empilhadas a cem por cento com execução completa, parcial e não completada por estado." aria-describedby="state-chart-description"><BarChart data={stateData} margin={{ top: 12, right: 12, bottom: 8, left: 0 }}><CartesianGrid vertical={false} /><XAxis dataKey="estado" axisLine={false} tickLine={false} tickMargin={8} /><YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} axisLine={false} tickLine={false} width={42} /><ChartTooltip cursor={false} content={<ChartTooltipContent formatter={(value) => `${Number(value).toFixed(0)}%`} />} /><ChartLegend content={<ChartLegendContent />} /><Bar dataKey="completo" stackId="execucao" fill="var(--color-completo)" radius={[0, 0, 3, 3]} /><Bar dataKey="parcial" stackId="execucao" fill="var(--color-parcial)" /><Bar dataKey="naoCompletou" stackId="execucao" fill="var(--color-naoCompletou)" radius={[3, 3, 0, 0]} /></BarChart></ChartContainer></CardContent></Card>
               </div>}
             </TabsContent>
 
             <TabsContent value="zscore" className="flex flex-col gap-4">
-              <div className="flex items-center gap-2"><h2 className="text-lg font-semibold">Comparação por Z-Score</h2><ZScoreInfo /></div>
-              <BrazilHeatmap loading={loading} values={zScoreMapValues} selectedState={selectedZScoreState} nationalAverage={nationalStats.mean} nationalStdDev={nationalStats.stdDev} showEngagement={false} countLabel="Movimentos válidos" description="Distribuição por estado dos movimentos técnicos aplicáveis ao estilo no recorte atual." onSelect={setSelectedZScoreState} />
-              {loading ? <Skeleton className="h-72 w-full rounded-lg" /> : !zScoreBarData.length ? <p className="text-sm text-muted-foreground">Nenhum estado com dados suficientes para calcular Z-Score no recorte atual.</p> : <Card><CardHeader><CardDescription>RANKING ESTADUAL</CardDescription><CardTitle>Z-Score por estado</CardTitle><p className="text-sm text-muted-foreground">Estados ordenados do maior para o menor Z-Score técnico.</p></CardHeader><CardContent><p id="zscore-chart-description" className="sr-only">Barras ordenadas do maior para o menor Z-Score por estado.</p><ChartContainer config={{ zScore: { label: 'Z-Score', color: 'var(--chart-2)' } }} className="h-72 w-full" role="img" aria-label="Barras do Z-Score técnico por estado." aria-describedby="zscore-chart-description"><BarChart data={zScoreBarData} margin={{ top: 12, right: 12, bottom: 8, left: 0 }}><CartesianGrid vertical={false} /><XAxis dataKey="estado" axisLine={false} tickLine={false} tickMargin={8} /><YAxis axisLine={false} tickLine={false} width={36} /><ChartTooltip content={<ChartTooltipContent formatter={(value) => Number(value).toFixed(2)} />} /><Bar dataKey="zScore" fill="var(--color-zScore)" radius={[3, 3, 3, 3]} /></BarChart></ChartContainer></CardContent></Card>}
+              <div className="flex items-center gap-2"><h2 className="text-lg font-semibold">Comparação por Z-Score</h2><InfoTooltip label="O que é Z-Score?" content={Z_SCORE_EXPLANATION} /></div>
+              <BrazilHeatmap loading={loading} values={zScoreMapValues} selectedState={selectedZScoreState} nationalAverage={nationalStats.mean} nationalStdDev={nationalStats.stdDev} showEngagement={false} countLabel="Movimentos válidos" onSelect={setSelectedZScoreState} />
+              {loading ? <Skeleton className="h-72 w-full rounded-lg" /> : !zScoreBarData.length ? <p className="text-sm text-muted-foreground">Nenhum estado com dados suficientes para calcular Z-Score no recorte atual.</p> : <Card><CardHeader><CardDescription>RANKING ESTADUAL</CardDescription><CardTitle>Z-Score por estado</CardTitle><p className="text-sm text-muted-foreground">Estados ordenados do maior para o menor Z-Score técnico.</p></CardHeader><CardContent><p id="zscore-chart-description" className="sr-only">Barras ordenadas do maior para o menor Z-Score por estado.</p><ChartContainer config={{ zScore: { label: 'Z-Score', color: 'var(--chart-2)' } }} className="h-72 w-full" role="img" aria-label="Barras do Z-Score técnico por estado." aria-describedby="zscore-chart-description"><BarChart data={zScoreBarData} margin={{ top: 12, right: 12, bottom: 8, left: 0 }}><CartesianGrid vertical={false} /><XAxis dataKey="estado" axisLine={false} tickLine={false} tickMargin={8} /><YAxis axisLine={false} tickLine={false} width={36} /><ChartTooltip content={<ChartTooltipContent formatter={(value) => Number(value).toFixed(2)} />} /><Bar dataKey="zScore" radius={[3, 3, 3, 3]}>{zScoreBarData.map((entry) => <Cell key={entry.estado} fill={entry.estado === selectedZScoreState ? 'var(--foreground)' : 'var(--color-zScore)'} />)}</Bar></BarChart></ChartContainer></CardContent></Card>}
             </TabsContent>
 
             <TabsContent value="correlations" className="flex flex-col gap-4">
               <Alert><AlertDescription>A pontuação técnica por atleta usada nesta aba ainda é simulada — o backend não expõe esse cruzamento hoje (ver <code>BACKEND_GAPS.md</code>, GAP 1). Colocação, vitórias e pontos técnicos são dados reais.</AlertDescription></Alert>
               {!resultsLoading && !correlationRows.length ? <p className="text-sm text-muted-foreground">Nenhum resultado disponível para os eventos selecionados.</p> : <>
               <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-3">
-                <Metric loading={resultsLoading} label="Coeficiente vs. colocação" value={coefRank === null ? '—' : coefRank.toFixed(2)} />
-                <Metric loading={resultsLoading} label="Coeficiente vs. pontos técnicos" value={coefPoints === null ? '—' : coefPoints.toFixed(2)} />
-                <Metric loading={resultsLoading} label="Coeficiente vs. vitórias" value={coefWins === null ? '—' : coefWins.toFixed(2)} />
+                <KpiCard loading={resultsLoading} icon={ListOrdered} label="Coeficiente vs. colocação" value={coefRank === null ? '—' : coefRank.toFixed(2)} info={<InfoTooltip label="O que é coeficiente de correlação?" content={PEARSON_EXPLANATION} />} />
+                <KpiCard loading={resultsLoading} icon={Crosshair} label="Coeficiente vs. pontos técnicos" value={coefPoints === null ? '—' : coefPoints.toFixed(2)} />
+                <KpiCard loading={resultsLoading} icon={Trophy} label="Coeficiente vs. vitórias" value={coefWins === null ? '—' : coefWins.toFixed(2)} />
               </div>
-              {resultsLoading ? <Skeleton className="h-80 w-full rounded-lg" /> : <div className="grid gap-4 @2xl/main:grid-cols-3">
-                <Card><CardHeader><CardDescription>DISPERSÃO</CardDescription><CardTitle className="text-base">Pontuação × colocação</CardTitle></CardHeader><CardContent><ChartContainer config={{ score: { label: 'Pontuação', color: 'var(--chart-1)' } }} className="h-64 w-full" role="img" aria-label="Dispersão entre pontuação técnica e colocação."><ScatterChart margin={{ top: 12, right: 12, bottom: 8, left: 0 }}><CartesianGrid vertical={false} /><XAxis type="number" dataKey="x" name="Colocação" axisLine={false} tickLine={false} /><YAxis type="number" dataKey="y" name="Pontuação" domain={[0, 2]} axisLine={false} tickLine={false} width={28} /><ChartTooltip content={<ChartTooltipContent />} /><Scatter data={rankScatter} fill="var(--color-score)" /></ScatterChart></ChartContainer></CardContent></Card>
-                <Card><CardHeader><CardDescription>DISPERSÃO</CardDescription><CardTitle className="text-base">Pontuação × pontos técnicos</CardTitle></CardHeader><CardContent><ChartContainer config={{ score: { label: 'Pontuação', color: 'var(--chart-1)' } }} className="h-64 w-full" role="img" aria-label="Dispersão entre pontuação técnica e pontos técnicos marcados."><ScatterChart margin={{ top: 12, right: 12, bottom: 8, left: 0 }}><CartesianGrid vertical={false} /><XAxis type="number" dataKey="x" name="Pontos técnicos" axisLine={false} tickLine={false} /><YAxis type="number" dataKey="y" name="Pontuação" domain={[0, 2]} axisLine={false} tickLine={false} width={28} /><ChartTooltip content={<ChartTooltipContent />} /><Scatter data={pointsScatter} fill="var(--color-score)" /></ScatterChart></ChartContainer></CardContent></Card>
-                <Card><CardHeader><CardDescription>DISPERSÃO</CardDescription><CardTitle className="text-base">Pontuação × vitórias</CardTitle></CardHeader><CardContent><ChartContainer config={{ score: { label: 'Pontuação', color: 'var(--chart-1)' } }} className="h-64 w-full" role="img" aria-label="Dispersão entre pontuação técnica e número de vitórias."><ScatterChart margin={{ top: 12, right: 12, bottom: 8, left: 0 }}><CartesianGrid vertical={false} /><XAxis type="number" dataKey="x" name="Vitórias" axisLine={false} tickLine={false} /><YAxis type="number" dataKey="y" name="Pontuação" domain={[0, 2]} axisLine={false} tickLine={false} width={28} /><ChartTooltip content={<ChartTooltipContent />} /><Scatter data={winsScatter} fill="var(--color-score)" /></ScatterChart></ChartContainer></CardContent></Card>
-              </div>}
+              {resultsLoading ? <Skeleton className="h-80 w-full rounded-lg" /> : <TabbedChartCard
+                eyebrow="DISPERSÃO"
+                title="Pontuação técnica × desempenho competitivo"
+                description="A reta pontilhada mostra a tendência calculada a partir dos próprios pontos."
+                tabs={[
+                  {
+                    value: 'colocacao',
+                    label: 'vs. Colocação',
+                    content: (
+                      <ChartContainer config={{ score: { label: 'Pontuação', color: 'var(--chart-1)' } }} className="h-72 w-full" role="img" aria-label="Dispersão entre pontuação técnica e colocação, com linha de tendência.">
+                        <ComposedChart margin={{ top: 12, right: 12, bottom: 8, left: 0 }}>
+                          <CartesianGrid vertical={false} />
+                          <XAxis type="number" dataKey="x" name="Colocação" axisLine={false} tickLine={false} />
+                          <YAxis type="number" dataKey="y" name="Pontuação" domain={[0, 2]} axisLine={false} tickLine={false} width={28} />
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <Scatter data={rankScatter} dataKey="y" fill="var(--color-score)" />
+                          <Line data={rankRegression} dataKey="y" stroke="var(--color-score)" strokeWidth={2} strokeDasharray="4 4" dot={false} activeDot={false} legendType="none" />
+                        </ComposedChart>
+                      </ChartContainer>
+                    ),
+                  },
+                  {
+                    value: 'pontos',
+                    label: 'vs. Pontos técnicos',
+                    content: (
+                      <ChartContainer config={{ score: { label: 'Pontuação', color: 'var(--chart-1)' } }} className="h-72 w-full" role="img" aria-label="Dispersão entre pontuação técnica e pontos técnicos marcados, com linha de tendência.">
+                        <ComposedChart margin={{ top: 12, right: 12, bottom: 8, left: 0 }}>
+                          <CartesianGrid vertical={false} />
+                          <XAxis type="number" dataKey="x" name="Pontos técnicos" axisLine={false} tickLine={false} />
+                          <YAxis type="number" dataKey="y" name="Pontuação" domain={[0, 2]} axisLine={false} tickLine={false} width={28} />
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <Scatter data={pointsScatter} dataKey="y" fill="var(--color-score)" />
+                          <Line data={pointsRegression} dataKey="y" stroke="var(--color-score)" strokeWidth={2} strokeDasharray="4 4" dot={false} activeDot={false} legendType="none" />
+                        </ComposedChart>
+                      </ChartContainer>
+                    ),
+                  },
+                  {
+                    value: 'vitorias',
+                    label: 'vs. Vitórias',
+                    content: (
+                      <ChartContainer config={{ score: { label: 'Pontuação', color: 'var(--chart-1)' } }} className="h-72 w-full" role="img" aria-label="Dispersão entre pontuação técnica e número de vitórias, com linha de tendência.">
+                        <ComposedChart margin={{ top: 12, right: 12, bottom: 8, left: 0 }}>
+                          <CartesianGrid vertical={false} />
+                          <XAxis type="number" dataKey="x" name="Vitórias" axisLine={false} tickLine={false} />
+                          <YAxis type="number" dataKey="y" name="Pontuação" domain={[0, 2]} axisLine={false} tickLine={false} width={28} />
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <Scatter data={winsScatter} dataKey="y" fill="var(--color-score)" />
+                          <Line data={winsRegression} dataKey="y" stroke="var(--color-score)" strokeWidth={2} strokeDasharray="4 4" dot={false} activeDot={false} legendType="none" />
+                        </ComposedChart>
+                      </ChartContainer>
+                    ),
+                  },
+                ]}
+              />}
               </>}
             </TabsContent>
           </Tabs>

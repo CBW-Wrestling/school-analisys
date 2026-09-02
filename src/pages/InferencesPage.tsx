@@ -2,20 +2,19 @@ import { useEffect, useMemo, useState } from 'react'
 import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from 'recharts'
 import { Medal } from 'lucide-react'
 import { FilterDropdown } from '../components/FilterDropdown'
+import { InfoTooltip } from '../components/InfoTooltip'
 import { Metric } from '../components/Metric'
 import { PageHeader } from '../components/PageHeader'
 import { SearchableSelect } from '../components/SearchableSelect'
 import { useApiRows } from '../lib/api'
 import { buildInferenceSummary } from '../lib/inferenceSummary'
-import { average, labelForStyle, scoreAndCompletionByCompetencia, scoreFor, visibleMotorRows } from '../lib/motorScore'
+import { AVERAGE_SCORE_EXPLANATION, COMPLETION_EXPLANATION, average, labelForStyle, scoreAndCompletionByCompetencia, scoreFor, visibleMotorRows } from '../lib/motorScore'
 import { Z_SCORE_EXPLANATION, meanAndStdDev, zScoreFor } from '../lib/zscore'
 import type { CompetitionRow, MotorRow, ResultRow } from '../types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Info } from 'lucide-react'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 export function InferencesPage() {
   const { rows: competitions, loading: competitionsLoading, error: competitionsError } = useApiRows<CompetitionRow>('/api/competitions')
@@ -83,10 +82,10 @@ export function InferencesPage() {
           {!resultsLoading && selectedCompetition && !results.length && <p className="text-sm text-muted-foreground">Nenhum resultado encontrado para esta competição.</p>}
 
           <div className="grid gap-4 @2xl/main:grid-cols-[minmax(0,1fr)_minmax(280px,0.5fr)]">
-            {loading ? <Skeleton className="h-80 w-full rounded-lg" /> : !competencyStats.length ? <p className="text-sm text-muted-foreground">Nenhum dado técnico para esta competição.</p> : <Card><CardHeader><CardDescription>DESEMPENHO POR COMPETÊNCIA</CardDescription><CardTitle>Pontuação média e % de completação</CardTitle></CardHeader><CardContent><ChartContainer config={{ score: { label: 'Pontuação média', color: 'var(--chart-1)' }, completionPct: { label: '% Completação', color: 'var(--chart-2)' } }} className="h-72 w-full" role="img" aria-label="Barras de pontuação média e linha de percentual de completação por competência."><ComposedChart data={competencyStats} margin={{ top: 12, right: 12, bottom: 8, left: 0 }}><CartesianGrid vertical={false} /><XAxis dataKey="competencia" axisLine={false} tickLine={false} tickMargin={8} /><YAxis yAxisId="score" domain={[0, 2]} axisLine={false} tickLine={false} width={28} /><YAxis yAxisId="pct" orientation="right" domain={[0, 100]} tickFormatter={(value) => `${value}%`} axisLine={false} tickLine={false} width={42} /><ChartTooltip content={<ChartTooltipContent />} /><ChartLegend content={<ChartLegendContent />} /><Bar yAxisId="score" dataKey="score" fill="var(--color-score)" radius={4} /><Line yAxisId="pct" type="monotone" dataKey="completionPct" stroke="var(--color-completionPct)" strokeWidth={2.5} dot={{ r: 4 }} /></ComposedChart></ChartContainer></CardContent></Card>}
+            {loading ? <Skeleton className="h-80 w-full rounded-lg" /> : !competencyStats.length ? <p className="text-sm text-muted-foreground">Nenhum dado técnico para esta competição.</p> : <Card><CardHeader><CardDescription>DESEMPENHO POR COMPETÊNCIA</CardDescription><CardTitle className="flex items-center gap-2">Pontuação média e % de completação<InfoTooltip label="O que é pontuação média e % de completação?" content={<span className="flex flex-col gap-1"><span>{AVERAGE_SCORE_EXPLANATION}</span><span>{COMPLETION_EXPLANATION}</span></span>} /></CardTitle></CardHeader><CardContent><ChartContainer config={{ score: { label: 'Pontuação média', color: 'var(--chart-1)' }, completionPct: { label: '% Completação', color: 'var(--chart-2)' } }} className="h-72 w-full" role="img" aria-label="Barras de pontuação média e linha de percentual de completação por competência."><ComposedChart data={competencyStats} margin={{ top: 12, right: 12, bottom: 8, left: 0 }}><CartesianGrid vertical={false} /><XAxis dataKey="competencia" axisLine={false} tickLine={false} tickMargin={8} /><YAxis yAxisId="score" domain={[0, 2]} axisLine={false} tickLine={false} width={28} /><YAxis yAxisId="pct" orientation="right" domain={[0, 100]} tickFormatter={(value) => `${value}%`} axisLine={false} tickLine={false} width={42} /><ChartTooltip content={<ChartTooltipContent />} /><ChartLegend content={<ChartLegendContent />} /><Bar yAxisId="score" dataKey="score" fill="var(--color-score)" radius={4} /><Line yAxisId="pct" type="monotone" dataKey="completionPct" stroke="var(--color-completionPct)" strokeWidth={2.5} dot={{ r: 4 }} /></ComposedChart></ChartContainer></CardContent></Card>}
             <Card>
               <CardHeader>
-                <div className="flex items-center gap-2"><CardDescription>COMPARATIVO NACIONAL</CardDescription><InferencesZScoreInfo /></div>
+                <div className="flex items-center gap-2"><CardDescription>COMPARATIVO NACIONAL</CardDescription><InfoTooltip label="O que é Z-Score?" content={Z_SCORE_EXPLANATION} /></div>
                 <CardTitle className="flex items-center gap-2"><Medal className="size-4 text-muted-foreground" aria-hidden />Z-Score da competição</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-2">
@@ -98,20 +97,5 @@ export function InferencesPage() {
         </main>
       </div>
     </PageHeader>
-  )
-}
-
-function InferencesZScoreInfo() {
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button type="button" className="inline-flex items-center text-muted-foreground hover:text-foreground" aria-label="O que é Z-Score?">
-            <Info className="size-4" aria-hidden />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent className="max-w-64">{Z_SCORE_EXPLANATION}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
   )
 }

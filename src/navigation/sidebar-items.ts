@@ -1,13 +1,22 @@
 import {
   Activity,
   FileUp,
+  GraduationCap,
+  Handshake,
+  HeartPulse,
   LayoutDashboard,
   LayoutPanelTop,
+  LineChart,
+  ListChecks,
   Medal,
   Plus,
   ShieldPlus,
+  ShoppingBag,
   Sparkles,
+  Truck,
+  Users,
   UsersRound,
+  Wallet,
 } from 'lucide-react'
 import type { ComponentType } from 'react'
 
@@ -35,6 +44,15 @@ export const resultsNav: NavigationItem[] = [
 
 export const examplesNav: NavigationItem[] = [
   { id: 'default', label: 'Default', href: '?view=default', icon: LayoutPanelTop },
+  { id: 'analytics', label: 'Análises', href: '?view=analytics', icon: LineChart },
+  { id: 'crm', label: 'CRM', href: '?view=crm', icon: Handshake },
+  { id: 'ecommerce', label: 'E-commerce', href: '?view=ecommerce', icon: ShoppingBag },
+  { id: 'finance', label: 'Finanças', href: '?view=finance', icon: Wallet },
+  { id: 'academy', label: 'Academia', href: '?view=academy', icon: GraduationCap },
+  { id: 'logistics', label: 'Logística', href: '?view=logistics', icon: Truck },
+  { id: 'productivity', label: 'Produtividade', href: '?view=productivity', icon: ListChecks },
+  { id: 'patient-monitoring', label: 'Monitoramento', href: '?view=patient-monitoring', icon: HeartPulse },
+  { id: 'users', label: 'Usuários (exemplo)', href: '?view=users-example', icon: Users },
 ]
 
 export const operations: NavigationItem[] = [

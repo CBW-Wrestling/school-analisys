@@ -107,14 +107,11 @@ export function SqlImportFlow({ importType }: Props) {
   }
 
   return (
-    <section className="flex w-full max-w-[640px] flex-col gap-1 bg-background text-foreground">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Importação</p>
-      <h1 className="mt-1 text-3xl font-medium leading-none tracking-tight text-foreground">
-        {isResults ? 'Importar resultados' : 'Criar competição'}
-      </h1>
-      <p className="mt-1 mb-6 max-w-[640px] text-sm leading-relaxed text-muted-foreground">
-        {subtitle}
-      </p>
+    <section className="flex w-full max-w-[640px] flex-col gap-6 bg-background text-foreground">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl leading-none tracking-tight">{isResults ? 'Importar resultados' : 'Criar competição'}</h1>
+        <p className="text-sm text-muted-foreground">{subtitle}</p>
+      </div>
 
       {step === 'upload' && (
         <div>

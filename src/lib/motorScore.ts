@@ -27,6 +27,10 @@ export function scoreFor(result: string | null): number {
   return RESULT_SCORE[result ?? ''] ?? 0
 }
 
+export const AVERAGE_SCORE_EXPLANATION = 'Média das notas de execução dos movimentos, de 0 a 2. Quanto mais perto de 2, melhor a execução.'
+
+export const COMPLETION_EXPLANATION = 'Percentual de avaliações concluídas em relação ao total esperado. 100% é tudo avaliado.'
+
 export function average(values: number[]): number | null {
   return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null
 }

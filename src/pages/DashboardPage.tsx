@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Activity, ArrowRight, BarChart3, Dumbbell, Medal, Share2, UserRound } from 'lucide-react'
 import { FilterDropdown } from '../components/FilterDropdown'
+import { InfoTooltip } from '../components/InfoTooltip'
 import { PageHeader } from '../components/PageHeader'
 import { SearchableSelect } from '../components/SearchableSelect'
 import { BrazilHeatmap } from '../components/dashboard/BrazilHeatmap'
 import { useApiData, useApiRows } from '../lib/api'
-import { scoreFor, visibleMotorRows } from '../lib/motorScore'
+import { scoreFor, visibleMotorRows, COMPLETION_EXPLANATION } from '../lib/motorScore'
 import { meanAndStdDev } from '../lib/zscore'
 import type { CompetitionAthlete, CompetitionRow, HomeSummary, MotorRow, PhysicalRow, ProfileRow } from '../types'
 import { Button } from '@/components/ui/button'
@@ -47,12 +48,12 @@ function FilterBar({ competitions, events, styles, year, event, style, onYearCha
   )
 }
 
-function KpiCard({ icon, label, value, description, loading }: { icon: React.ReactNode; label: string; value: string; description: string; loading?: boolean }) {
+function KpiCard({ icon, label, value, description, loading, info }: { icon: React.ReactNode; label: string; value: string; description: string; loading?: boolean; info?: React.ReactNode }) {
   return (
     <Card className="min-w-0 bg-linear-to-t from-primary/5 to-card shadow-xs">
       <CardHeader className="gap-3">
         <div className="flex size-8 items-center justify-center rounded-lg border bg-muted text-muted-foreground">{icon}</div>
-        <CardDescription>{label}</CardDescription>
+        <CardDescription className="flex items-center gap-1.5">{label}{info}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-1">
         {loading ? <Skeleton className="h-9 w-24" /> : <div className="text-3xl font-medium leading-none tracking-tight tabular-nums">{value}</div>}
@@ -164,7 +165,7 @@ export function DashboardPage() {
           </div>
           <section className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
             <KpiCard loading={homeSummaryLoading || profilesLoading || physicalLoading || motorLoading || competitionAthletesLoading} icon={<UserRound className="size-4" />} label="Atletas cadastrados" value={totalAthletes.toLocaleString('pt-BR')} description="Total de atletas no filtro ativo" />
-            <KpiCard loading={homeSummaryLoading || profilesLoading || physicalLoading || motorLoading || competitionAthletesLoading} icon={<Activity className="size-4" />} label="Cobertura geral" value={`${coverage}%`} description={`${completedAthletes.toLocaleString('pt-BR')} com perfil + física + motora`} />
+            <KpiCard loading={homeSummaryLoading || profilesLoading || physicalLoading || motorLoading || competitionAthletesLoading} icon={<Activity className="size-4" />} label="Cobertura geral" value={`${coverage}%`} description={`${completedAthletes.toLocaleString('pt-BR')} com perfil + física + motora`} info={<InfoTooltip label="O que é cobertura geral?" content={COMPLETION_EXPLANATION} />} />
             <KpiCard loading={homeSummaryLoading || profilesLoading || physicalLoading || motorLoading || competitionAthletesLoading} icon={<BarChart3 className="size-4" />} label="Etapas concluídas" value={completedAthletes.toLocaleString('pt-BR')} description="Atletas com todos os blocos mínimos" />
             <KpiCard loading={homeSummaryLoading || profilesLoading || physicalLoading || motorLoading || competitionAthletesLoading} icon={<Medal className="size-4" />} label="Pendências" value={pendingAthletes.toLocaleString('pt-BR')} description={pendingAthletes === 0 ? 'Nenhuma pendência' : 'Aguardando perfil, física ou motora'} />
           </section>

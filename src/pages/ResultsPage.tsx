@@ -1,5 +1,6 @@
 import { Medal } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { AthleteCell } from '../components/AthleteCell'
 import { FilterDropdown } from '../components/FilterDropdown'
 import { Metric } from '../components/Metric'
 import { PageHeader } from '../components/PageHeader'
@@ -83,13 +84,12 @@ export function ResultsPage() {
   return (
     <PageHeader active="results">
       <div className="@container/main">
-        <section className="mx-auto flex w-full max-w-[1400px] flex-col gap-1 p-4 md:p-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Resultados oficiais</p>
-          <h1 className="text-3xl leading-none tracking-tight text-foreground">Classificações oficiais</h1>
-          <p className="text-sm leading-relaxed text-muted-foreground">Desempenho e pódio consolidados a partir dos resultados dos Jogos Escolares.</p>
-        </section>
+        <main className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 p-4 md:gap-6 md:p-6">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-3xl leading-none tracking-tight">Classificações oficiais</h1>
+            <p className="text-sm text-muted-foreground">Desempenho e pódio consolidados a partir dos resultados dos Jogos Escolares.</p>
+          </div>
 
-        <section className="mx-auto w-full max-w-[1400px] px-4 pb-6 md:px-6 md:pb-8">
           <div className="mb-4 flex flex-col items-start justify-between gap-3 @xl/main:flex-row @xl/main:items-end">
             <div>
               <p className="mb-1 text-xs font-medium tracking-wide text-muted-foreground">RANKING POR EVENTO</p>
@@ -167,7 +167,7 @@ export function ResultsPage() {
                           title="Ver detalhe do atleta"
                         >
                           <TableCell className="text-muted-foreground">{row.rank}</TableCell>
-                          <TableCell className="font-medium">{row.fullName}</TableCell>
+                          <TableCell className="font-medium"><AthleteCell name={row.fullName} /></TableCell>
                           <TableCell className="text-muted-foreground">{row.teamAlternateName}</TableCell>
                           <TableCell>{row.weightCategoryShortName}</TableCell>
                           <TableCell>{row.wins}-{row.losses}</TableCell>
@@ -222,7 +222,7 @@ export function ResultsPage() {
               </CardContent>
             </Card>
           </div>
-        </section>
+        </main>
       </div>
     </PageHeader>
   )

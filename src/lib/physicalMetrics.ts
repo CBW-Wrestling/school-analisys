@@ -1,5 +1,7 @@
 import type { PhysicalRow } from '../types'
 
+export const ENGAGEMENT_EXPLANATION = 'Percentual de atletas com avaliação física registrada. Quanto maior, mais completa é a base.'
+
 export function parseMetric(value: string | null): number | null {
   if (!value) return null
   const parsed = Number.parseFloat(value.replace(',', '.').replace(/[^0-9.-]/g, ''))

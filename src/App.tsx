@@ -5,6 +5,15 @@ import { saveTokens } from "./lib/auth"
 import { CollectionPage } from "./pages/CollectionPage"
 import { DashboardPage } from "./pages/DashboardPage"
 import { DefaultPage } from "./pages/DefaultPage"
+import { AnalyticsDashboardPage } from "./pages/AnalyticsDashboardPage"
+import { CrmDashboardPage } from "./pages/CrmDashboardPage"
+import { EcommerceDashboardPage } from "./pages/EcommerceDashboardPage"
+import { FinanceDashboardPage } from "./pages/FinanceDashboardPage"
+import { AcademyDashboardPage } from "./pages/AcademyDashboardPage"
+import { LogisticsDashboardPage } from "./pages/LogisticsDashboardPage"
+import { ProductivityDashboardPage } from "./pages/ProductivityDashboardPage"
+import { PatientMonitoringDashboardPage } from "./pages/PatientMonitoringDashboardPage"
+import { UsersDashboardPage } from "./pages/UsersDashboardPage"
 import { TechnicalAssessmentsPage } from "./pages/TechnicalAssessmentsPage"
 import { CompetitionImportPage } from "./pages/CompetitionImportPage"
 import { ResultsImportPage } from "./pages/ResultsImportPage"
@@ -37,6 +46,15 @@ function App() {
 
   const page = requestedForm && requestedForm in details ? <CollectionPage initialKind={requestedForm as FormKind} />
     : requestedView === "default" ? <DefaultPage />
+    : requestedView === "analytics" ? <AnalyticsDashboardPage />
+    : requestedView === "crm" ? <CrmDashboardPage />
+    : requestedView === "ecommerce" ? <EcommerceDashboardPage />
+    : requestedView === "finance" ? <FinanceDashboardPage />
+    : requestedView === "academy" ? <AcademyDashboardPage />
+    : requestedView === "logistics" ? <LogisticsDashboardPage />
+    : requestedView === "productivity" ? <ProductivityDashboardPage />
+    : requestedView === "patient-monitoring" ? <PatientMonitoringDashboardPage />
+    : requestedView === "users-example" ? <UsersDashboardPage />
     : requestedView === "results" ? <ResultsPage />
     : requestedView === "profiles" ? <ProfilesPage />
     : requestedView === "physical" ? <PhysicalPage />

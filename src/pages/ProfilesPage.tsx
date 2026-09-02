@@ -1,6 +1,7 @@
 import { Search } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts'
+import { AthleteCell } from '../components/AthleteCell'
 import { Metric } from '../components/Metric'
 import { PageHeader } from '../components/PageHeader'
 import { SearchableSelect } from '../components/SearchableSelect'
@@ -8,7 +9,6 @@ import { useApiData, useApiRows } from '../lib/api'
 import { AthleteDetailPage } from './AthleteDetailPage'
 import type { CompetitionAthlete, CompetitionRow, CountByCode, ProfileSummary } from '../types'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'
@@ -228,7 +228,7 @@ export function ProfilesPage() {
                         key={athlete.entryId}
                         className="hover:bg-muted/30"
                       >
-                        <TableCell className="font-medium"><Button variant="link" className="h-auto p-0 font-medium" onClick={() => selectAthlete(athlete.entryId)}>{athlete.athleteName}</Button></TableCell>
+                        <TableCell className="font-medium"><AthleteCell name={athlete.athleteName} subtitle={athlete.style} onClick={() => selectAthlete(athlete.entryId)} /></TableCell>
                         <TableCell className="text-muted-foreground">{athlete.style}</TableCell>
                         <TableCell>
                           <Badge variant="outline">{athlete.ageCategoryCode} · {athlete.weight}kg</Badge>

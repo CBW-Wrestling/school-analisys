@@ -10,4 +10,6 @@ export function zScoreFor(value: number | null, mean: number | null, stdDev: num
   return (value - mean) / stdDev
 }
 
-export const Z_SCORE_EXPLANATION = 'Mostra o quanto a pontuação média de um estado está acima ou abaixo da média nacional, em desvios-padrão. 0 = igual à média nacional; valores positivos (verde) indicam desempenho acima da média; negativos (vermelho), abaixo.'
+export const Z_SCORE_EXPLANATION = 'Compara o valor com a média nacional, em desvios-padrão. Verde é acima da média; vermelho é abaixo.'
+
+export const VARIATION_EXPLANATION = 'Diferença entre o valor local e a média nacional. Positivo é acima; negativo é abaixo.'
