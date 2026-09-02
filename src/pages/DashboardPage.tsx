@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react'
 import { Activity, ArrowRight, BarChart3, Dumbbell, Medal, Share2, UserRound } from 'lucide-react'
-import { FilterDropdown } from '../components/FilterDropdown'
 import { InfoTooltip } from '../components/InfoTooltip'
 import { PageHeader } from '../components/PageHeader'
 import { BrazilHeatmap } from '../components/dashboard/BrazilHeatmap'
-import { useApiData, useApiRows } from '../lib/api'
+import { useApiRows } from '../lib/api'
 import { scoreFor, visibleMotorRows, COMPLETION_EXPLANATION } from '../lib/motorScore'
 import { competitionCodesForScope, useReportingScope, useScopedCompetitionAthletes, withReportingScope } from '../lib/reportingScope'
 import { meanAndStdDev } from '../lib/zscore'
@@ -106,10 +105,10 @@ export function DashboardPage() {
               : 'Nenhum atleta foi encontrado no filtro atual. Ainda não há dados de perfil, física ou motora para esse conjunto.'}
           </div>
           <section className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
-<KpiCard loading={homeSummaryLoading || profilesLoading || physicalLoading || motorLoading || competitionAthletesLoading || athletesLoading} icon={<UserRound className="size-4" />} label="Atletas cadastrados" value={totalAthletes.toLocaleString('pt-BR')} description="Total de atletas no filtro ativo" />
-<KpiCard loading={homeSummaryLoading || profilesLoading || physicalLoading || motorLoading || competitionAthletesLoading || athletesLoading} icon={<Activity className="size-4" />} label="Cobertura geral" value={`${coverage}%`} description={`${completedAthletes.toLocaleString('pt-BR')} com perfil + física + motora`} info={<InfoTooltip label="O que é cobertura geral?" content={COMPLETION_EXPLANATION} />} />
-<KpiCard loading={homeSummaryLoading || profilesLoading || physicalLoading || motorLoading || competitionAthletesLoading || athletesLoading} icon={<BarChart3 className="size-4" />} label="Etapas concluídas" value={completedAthletes.toLocaleString('pt-BR')} description="Atletas com todos os blocos mínimos" />
-<KpiCard loading={homeSummaryLoading || profilesLoading || physicalLoading || motorLoading || competitionAthletesLoading || athletesLoading} icon={<Medal className="size-4" />} label="Pendências" value={pendingAthletes.toLocaleString('pt-BR')} description={pendingAthletes === 0 ? 'Nenhuma pendência' : 'Aguardando perfil, física ou motora'} />
+<KpiCard loading={profilesLoading || physicalLoading || motorLoading || athletesLoading} icon={<UserRound className="size-4" />} label="Atletas cadastrados" value={totalAthletes.toLocaleString('pt-BR')} description="Total de atletas no filtro ativo" />
+<KpiCard loading={profilesLoading || physicalLoading || motorLoading || athletesLoading} icon={<Activity className="size-4" />} label="Cobertura geral" value={`${coverage}%`} description={`${completedAthletes.toLocaleString('pt-BR')} com perfil + física + motora`} info={<InfoTooltip label="O que é cobertura geral?" content={COMPLETION_EXPLANATION} />} />
+<KpiCard loading={profilesLoading || physicalLoading || motorLoading || athletesLoading} icon={<BarChart3 className="size-4" />} label="Etapas concluídas" value={completedAthletes.toLocaleString('pt-BR')} description="Atletas com todos os blocos mínimos" />
+<KpiCard loading={profilesLoading || physicalLoading || motorLoading || athletesLoading} icon={<Medal className="size-4" />} label="Pendências" value={pendingAthletes.toLocaleString('pt-BR')} description={pendingAthletes === 0 ? 'Nenhuma pendência' : 'Aguardando perfil, física ou motora'} />
           </section>
           <BrazilHeatmap loading={profilesLoading || physicalLoading || motorLoading || athletesLoading} values={stateValues} selectedState={selectedState} nationalAverage={nationalAverage} nationalStdDev={nationalStdDev} onSelect={setSelectedState} />
           <section className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">

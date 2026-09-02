@@ -15,8 +15,7 @@ export function ReportingScopeFilters() {
 
   return (
     <div className="border-b bg-muted/20">
-      <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-end gap-2 px-4 py-2 md:px-6">
-        <p className="mr-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recorte global</p>
+      <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-end justify-end gap-2 px-4 py-4 md:px-6">
         <SearchableSelect className="w-32" triggerId="scope-year" placeholder="Todos os anos" value={scope.year} onChange={(year) => updateScope({ year, competitionCode: 'all' })} options={[{ value: 'all', label: 'Todos os anos' }, ...years.map((year) => ({ value: String(year), label: String(year) }))]} disabled={loading} />
         <SearchableSelect className="w-56" triggerId="scope-competition" placeholder="Todas as competições" value={scope.competitionCode} onChange={(competitionCode) => updateScope({ competitionCode })} options={[{ value: 'all', label: 'Todas as competições' }, ...availableCompetitions.map((competition) => ({ value: competition.code, label: `${competition.name}${competition.year ? ` · ${competition.year}` : ''}` }))]} disabled={loading} />
         <FilterDropdown label="Estilos" options={WRESTLING_STYLES.map((style) => ({ value: style, label: style }))} value={scope.styles} onChange={(styles) => updateScope({ styles })} disabled={loading} />
