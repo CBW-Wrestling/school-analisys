@@ -1,4 +1,4 @@
-const BASE = (import.meta.env.BASE_URL_API as string | undefined)?.replace(/\/$/, '')
+const BASE = (import.meta.env.VITE_BASE_URL_API as string | undefined)?.replace(/\/$/, '')
 
 function apiUrl(path: string) {
   return `${BASE ?? ''}${path}`

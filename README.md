@@ -14,7 +14,7 @@ npm install
 npm run dev       # http://localhost:5173
 ```
 
-Requer um `.env` com `BASE_URL_API` apontando para o backend local (ver `.env` existente ou
+Requer um `.env` com `VITE_BASE_URL_API` apontando para o backend local (ver `.env` existente ou
 pedir as variáveis ao time; nunca commitar esse arquivo).
 
 ```bash

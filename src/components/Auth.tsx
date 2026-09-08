@@ -123,7 +123,7 @@ function LoginScreen({
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const googleUrl = `${import.meta.env.BASE_URL_API}/api/auth/google`
+  const googleUrl = `${import.meta.env.VITE_BASE_URL_API}/api/auth/google`
 
   const signIn = async () => {
     setBusy(true)
