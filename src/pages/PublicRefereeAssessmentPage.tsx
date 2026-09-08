@@ -1,11 +1,13 @@
-import { ArrowLeft, ArrowRight, ClipboardCheck, ShieldPlus } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ClipboardCheck, ShieldPlus, Activity } from 'lucide-react'
 import { useState } from 'react'
 import { AssessmentWizard } from '../components/AssessmentWizard'
 import { SelectPairs } from '../components/Field'
+import { AthleteProgressTable, StateProgressTable } from '../components/RegistrationProgressTables'
 import logo from '../assets/logo.svg'
 import { useApiData } from '../lib/api'
 import type { CompetitionRow, FormKind } from '../types'
 import type { Referee } from '../lib/refereeApi'
+import type { RegistrationProgress, RegistrationStateAthletes } from '../lib/registrationProgress'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -20,12 +22,62 @@ const publicKinds: Array<{ kind: FormKind; label: string; description: string; i
   { kind: 'motor', label: 'Registro motor', description: 'Movimentos técnicos avaliados pelo árbitro.', icon: ShieldPlus },
 ]
 
+/** Progresso motor agregado por estado, com detalhe por atleta ao clicar (só leitura, sem login). */
+function MotorProgressView({ competitionCode, onBack }: { competitionCode: string; onBack: () => void }) {
+  const [selectedState, setSelectedState] = useState<{ code: string; name: string } | null>(null)
+  const { data, loading, error } = useApiData<RegistrationProgress>(
+    `/api/public/competitions/${encodeURIComponent(competitionCode)}/registration-progress`
+  )
+  const { data: stateData, loading: stateLoading, error: stateError } = useApiData<RegistrationStateAthletes>(
+    selectedState ? `/api/public/competitions/${encodeURIComponent(competitionCode)}/registration-progress/states/${encodeURIComponent(selectedState.code)}/athletes` : '',
+    Boolean(selectedState)
+  )
+
+  if (selectedState) {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold tracking-tight">{selectedState.name} ({selectedState.code})</h2>
+          <Button variant="outline" size="sm" onClick={() => setSelectedState(null)}><ArrowLeft data-icon="inline-start" aria-hidden="true" /> Estados</Button>
+        </div>
+        {stateError && (
+          <Alert variant="destructive">
+            <AlertTitle>Não foi possível carregar os atletas</AlertTitle>
+            <AlertDescription>{stateError}</AlertDescription>
+          </Alert>
+        )}
+        <AthleteProgressTable athletes={stateData?.athletes ?? []} loading={stateLoading} showSocial={false} />
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-xl font-semibold tracking-tight">Progresso motor por estado</h2>
+        <Button variant="outline" size="sm" onClick={onBack}><ArrowLeft data-icon="inline-start" aria-hidden="true" /> Voltar</Button>
+      </div>
+      {error && (
+        <Alert variant="destructive">
+          <AlertTitle>Não foi possível carregar o progresso</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      {loading
+        ? <p className="text-sm text-muted-foreground">Carregando…</p>
+        : <StateProgressTable states={data?.states ?? []} registeredKey="motorRegistered" percentageKey="motorPercentage" statusKey="motorStatus" onSelectState={(state) => setSelectedState({ code: state.stateCode, name: state.stateName })} />
+      }
+    </div>
+  )
+}
+
 export function PublicRefereeAssessmentPage() {
   const params = new URLSearchParams(window.location.search)
   const accessToken = params.get('token') ?? ''
   const competitionCode = params.get('competition') ?? ''
   const [refereeId, setRefereeId] = useState('')
   const [kind, setKind] = useState<FormKind | null>(null)
+  const [showProgress, setShowProgress] = useState(false)
   const publicPath = accessToken
     ? `/api/public/referee-assessments/${accessToken}`
     : competitionCode
@@ -51,6 +103,22 @@ export function PublicRefereeAssessmentPage() {
         finishHref={accessToken ? `/?view=referee-assessment&token=${encodeURIComponent(accessToken)}` : `/?view=referee-assessment&competition=${encodeURIComponent(data.competition.code)}`}
         headerLabel={`${selectedReferee.name} · ${selectedReferee.state}`}
       />
+    )
+  }
+
+  if (showProgress && data) {
+    return (
+      <main className="min-h-dvh bg-background text-foreground">
+        <header className="flex h-12 w-full items-center justify-between border-b border-border bg-background px-4 md:px-6">
+          <a className="flex items-center gap-2 text-sm font-semibold text-foreground" href="/">
+            <img className="size-7 object-contain" src={logo} alt="" />
+            <span>Coleta de arbitragem</span>
+          </a>
+        </header>
+        <section className="mx-auto flex w-full max-w-[960px] flex-col gap-6 p-6 md:p-10">
+          <MotorProgressView competitionCode={data.competition.code} onBack={() => setShowProgress(false)} />
+        </section>
+      </main>
     )
   }
 
@@ -131,6 +199,11 @@ export function PublicRefereeAssessmentPage() {
             </div>
             {selectedReferee && (
               <p className="text-sm text-muted-foreground">Os registros serão salvos como {selectedReferee.name} ({selectedReferee.state}).</p>
+            )}
+            {data && (
+              <Button type="button" variant="outline" onClick={() => setShowProgress(true)}>
+                <Activity data-icon="inline-start" aria-hidden="true" /> Ver progresso motor por estado
+              </Button>
             )}
             <Button variant="outline" asChild>
               <a href="/"><ArrowLeft data-icon="inline-start" aria-hidden="true" /> Voltar</a>

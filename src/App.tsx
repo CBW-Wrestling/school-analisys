@@ -22,6 +22,7 @@ import { RefereeImportPage } from "./pages/RefereeImportPage"
 import { PublicRefereeAssessmentPage } from "./pages/PublicRefereeAssessmentPage"
 import { StateLinksPage } from "./pages/StateLinksPage"
 import { PublicStateAssessmentPage } from "./pages/PublicStateAssessmentPage"
+import { RegistrationProgressPage } from "./pages/RegistrationProgressPage"
 import { ProfilePage } from "./pages/ProfilePage"
 import { PhysicalPage } from "./pages/PhysicalPage"
 import { InferencesPage } from "./pages/InferencesPage"
@@ -74,6 +75,7 @@ function App() {
     : requestedView === "results-import" ? <ResultsImportPage />
     : requestedView === "referee-import" ? <RefereeImportPage />
     : requestedView === "state-links" ? <StateLinksPage />
+    : requestedView === "registration-progress" ? <RegistrationProgressPage />
     : requestedView === "profile" ? <ProfilePage />
     : <DashboardPage />
 
