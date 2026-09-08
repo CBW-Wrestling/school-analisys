@@ -5,6 +5,7 @@ import App from './App.tsx'
 import './theme.css'
 import { AuthGate } from './components/Auth'
 import { TooltipProvider } from './components/ui/tooltip'
+import { Toaster } from './components/ui/sonner'
 
 const initialTheme = localStorage.getItem('theme') ?? 'dark'
 document.documentElement.classList.toggle('dark', initialTheme === 'dark')
@@ -16,6 +17,7 @@ createRoot(document.getElementById('root')!).render(
       <AuthGate>
         <App />
       </AuthGate>
+      <Toaster />
     </TooltipProvider>
   </StrictMode>,
 )

@@ -12,7 +12,7 @@ import logo from '../assets/logo.svg'
 import { details } from '../constants'
 import { fetchCurrentUser, logout, type UserInfo } from '../lib/auth'
 import { withReportingScope } from '../lib/reportingScope'
-import { allNavItems, assessmentsNav, examplesNav, operations, overviewNav, resultsNav, type NavigationItem } from '../navigation/sidebar-items'
+import { allNavItems, assessmentsNav, /* examplesNav, */ operations, overviewNav, resultsNav, type NavigationItem } from '../navigation/sidebar-items'
 import { AppHeader } from './AppHeader'
 import { ReportingScopeFilters } from './ReportingScopeFilters'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -184,10 +184,12 @@ export function PageHeader({
               <NavigationItems active={active} items={operations} />
             </SidebarGroupContent>
           </SidebarGroup>
+          {/* Atalhos de exemplo do template desativados no CBW.
           <SidebarGroup>
             <SidebarGroupLabel>Exemplos</SidebarGroupLabel>
             <SidebarGroupContent><NavigationItems active={active} items={examplesNav} /></SidebarGroupContent>
           </SidebarGroup>
+          */}
         </SidebarContent>
         <SidebarFooter>
           <NavUser active={active} />

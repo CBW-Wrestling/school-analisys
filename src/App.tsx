@@ -20,6 +20,8 @@ import { CompetitionImportPage } from "./pages/CompetitionImportPage"
 import { ResultsImportPage } from "./pages/ResultsImportPage"
 import { RefereeImportPage } from "./pages/RefereeImportPage"
 import { PublicRefereeAssessmentPage } from "./pages/PublicRefereeAssessmentPage"
+import { StateLinksPage } from "./pages/StateLinksPage"
+import { PublicStateAssessmentPage } from "./pages/PublicStateAssessmentPage"
 import { ProfilePage } from "./pages/ProfilePage"
 import { PhysicalPage } from "./pages/PhysicalPage"
 import { InferencesPage } from "./pages/InferencesPage"
@@ -38,7 +40,7 @@ function App() {
   const refreshToken = params.get("refreshToken")
 
   useEffect(() => {
-    if (requestedView === "referee-assessment") return
+    if (requestedView === "referee-assessment" || requestedView === "state-assessment") return
     if (accessToken && refreshToken) {
       saveTokens(accessToken, refreshToken)
       window.history.replaceState({}, '', window.location.pathname)
@@ -47,6 +49,7 @@ function App() {
   }, [accessToken, refreshToken, requestedView])
 
   if (requestedView === "referee-assessment") return <PublicRefereeAssessmentPage />
+  if (requestedView === "state-assessment") return <PublicStateAssessmentPage />
 
   if (accessToken && refreshToken) return null // aguarda reload
 
@@ -70,6 +73,7 @@ function App() {
     : requestedView === "competition-import" ? <CompetitionImportPage />
     : requestedView === "results-import" ? <ResultsImportPage />
     : requestedView === "referee-import" ? <RefereeImportPage />
+    : requestedView === "state-links" ? <StateLinksPage />
     : requestedView === "profile" ? <ProfilePage />
     : <DashboardPage />
 

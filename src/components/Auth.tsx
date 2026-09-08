@@ -20,7 +20,7 @@ type AuthScreen = 'login' | 'register'
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const params = new URLSearchParams(window.location.search)
-  const isPublicRoute = params.get('view') === 'referee-assessment'
+  const isPublicRoute = params.get('view') === 'referee-assessment' || params.get('view') === 'state-assessment'
   const [authed, setAuthed] = useState(false)
   const [ready, setReady] = useState(false)
   const [screen, setScreen] = useState<AuthScreen>('login')

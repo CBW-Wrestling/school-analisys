@@ -9,6 +9,7 @@ import {
   LineChart,
   ListChecks,
   Medal,
+  MapPinned,
   Plus,
   ShieldPlus,
   ShoppingBag,
@@ -60,6 +61,7 @@ export const operations: NavigationItem[] = [
   { id: 'competition-import', label: 'Criar competição', href: '?view=competition-import', icon: Plus },
   { id: 'results-import', label: 'Importar resultados', href: '?view=results-import', icon: FileUp },
   { id: 'referee-import', label: 'Árbitros', href: '?view=referee-import', icon: UserCheck },
+  { id: 'state-links', label: 'Links por estado', href: '?view=state-links', icon: MapPinned },
 ]
 
 export const allNavItems: NavigationItem[] = [

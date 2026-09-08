@@ -460,6 +460,7 @@ export function AssessmentWizard({
 
   const motorMovementCodes = motorMovementGroups.flatMap((group) => group.movements.map((movement) => movement.code))
   const codeToLabel: Record<string, string> = {}
+  for (const competition of competitions) codeToLabel[competition.code] = competition.name
   for (const option of [...practiceTimes, ...practiceLocations, ...weeklyFrequencies, ...motorResults]) codeToLabel[option.code] = option.label
   for (const group of motorMovementGroups) for (const movement of group.movements) codeToLabel[movement.code] = movement.label
   for (const field of physicalFields) codeToLabel[field.key] = field.label

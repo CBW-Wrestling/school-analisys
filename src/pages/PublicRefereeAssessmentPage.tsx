@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, ClipboardCheck, Dumbbell, ShieldPlus } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ClipboardCheck, ShieldPlus } from 'lucide-react'
 import { useState } from 'react'
 import { AssessmentWizard } from '../components/AssessmentWizard'
 import { SelectPairs } from '../components/Field'
@@ -16,8 +16,7 @@ type PublicCompetitionReferees = {
   referees?: Referee[]
 }
 
-const publicKinds: Array<{ kind: FormKind; label: string; description: string; icon: typeof Dumbbell }> = [
-  { kind: 'physical', label: 'Registro físico', description: 'Medidas antropométricas do atleta.', icon: Dumbbell },
+const publicKinds: Array<{ kind: FormKind; label: string; description: string; icon: typeof ShieldPlus }> = [
   { kind: 'motor', label: 'Registro motor', description: 'Movimentos técnicos avaliados pelo árbitro.', icon: ShieldPlus },
 ]
 
@@ -68,7 +67,7 @@ export function PublicRefereeAssessmentPage() {
           <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><ClipboardCheck aria-hidden="true" /></span>
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Rota pública</p>
-            <h1 className="text-3xl font-medium leading-none tracking-tight">Registro físico e motor</h1>
+            <h1 className="text-3xl font-medium leading-none tracking-tight">Registro motor</h1>
           </div>
         </div>
 
@@ -109,7 +108,7 @@ export function PublicRefereeAssessmentPage() {
                 </div>
               </dl>
             )}
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3">
               {publicKinds.map((item) => {
                 const Icon = item.icon
                 return (

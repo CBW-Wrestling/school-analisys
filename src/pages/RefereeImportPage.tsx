@@ -1,10 +1,12 @@
 import * as XLSX from 'xlsx'
-import { AlertCircle, CheckCircle2, Download, FileSpreadsheet, Upload, UsersRound } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Download, FileSpreadsheet, FileText, Upload, UsersRound } from 'lucide-react'
 import { useCallback, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { PageHeader } from '../components/PageHeader'
 import { SelectPairs } from '../components/Field'
 import { useApiRows } from '../lib/api'
 import { importReferees, regenerateRefereeLinks, type ImportedReferee, type RefereeImportResponse } from '../lib/refereeApi'
+import { openPrintableLinks } from '../lib/printableLinks'
 import type { CompetitionRow } from '../types'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -64,9 +66,23 @@ function fileSafeName(value: string) {
     .toLowerCase()
 }
 
+// Cada link fica isolado em sua própria linha para ficar clicável no dontpad/WhatsApp.
 function linksText(result: RefereeImportResponse) {
-  const lines = result.referees.map((referee) => `${referee.name} (${referee.state}): ${publicUrl(referee.accessToken)}`)
-  return [`Competição: ${result.competition.name}`, `Link único: ${competitionPublicUrl(result.competition.code)}`, '', 'Links individuais:', ...lines].join('\n')
+  const individualLines = result.referees.flatMap((referee) => [`${referee.name} (${referee.state})`, publicUrl(referee.accessToken), ''])
+  return [
+    `Competição: ${result.competition.name}`,
+    '',
+    'Link único (tablets):',
+    competitionPublicUrl(result.competition.code),
+    '',
+    'Links individuais:',
+    ...individualLines,
+  ].join('\n').trimEnd()
+}
+
+async function copyToClipboard(text: string, successMessage: string) {
+  await navigator.clipboard?.writeText(text)
+  toast.success(successMessage)
 }
 
 function downloadTextLinks(result: RefereeImportResponse) {
@@ -87,6 +103,14 @@ function downloadSpreadsheetLinks(result: RefereeImportResponse) {
   })))
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Links')
   XLSX.writeFile(workbook, `links-arbitros-${fileSafeName(result.competition.code)}.xlsx`)
+}
+
+function downloadPdfLinks(result: RefereeImportResponse) {
+  const opened = openPrintableLinks(`Links de árbitros - ${result.competition.name}`, [
+    { heading: 'Link único (tablets)', items: [{ label: 'Todos os árbitros', url: competitionPublicUrl(result.competition.code) }] },
+    { heading: 'Links individuais', items: result.referees.map((referee) => ({ label: `${referee.name} (${referee.state})`, url: publicUrl(referee.accessToken) })) },
+  ])
+  if (!opened) toast.error('Não foi possível abrir a janela de impressão. Verifique o bloqueador de pop-ups.')
 }
 
 export function RefereeImportPage() {
@@ -205,7 +229,7 @@ export function RefereeImportPage() {
                 <UsersRound className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                 <code className="min-w-0 flex-1 truncate text-xs">{competitionPublicUrl(selectedLinkCompetition.code)}</code>
                 <div className="flex shrink-0 gap-2">
-                  <Button type="button" size="sm" onClick={() => void navigator.clipboard?.writeText(competitionPublicUrl(selectedLinkCompetition.code))}>Copiar</Button>
+                  <Button type="button" size="sm" onClick={() => void copyToClipboard(competitionPublicUrl(selectedLinkCompetition.code), 'Link único copiado.')}>Copiar</Button>
                   <Button
                     type="button"
                     size="sm"
@@ -348,7 +372,7 @@ export function RefereeImportPage() {
               <div className="flex w-full items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-left">
                 <UsersRound className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                 <code className="min-w-0 flex-1 truncate text-xs">{competitionPublicUrl(result.competition.code)}</code>
-                <Button type="button" variant="outline" size="sm" onClick={() => void navigator.clipboard?.writeText(competitionPublicUrl(result.competition.code))}>Copiar</Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => void copyToClipboard(competitionPublicUrl(result.competition.code), 'Link único copiado.')}>Copiar</Button>
               </div>
               <div className="w-full overflow-hidden rounded-lg border">
                 <Table>
@@ -367,7 +391,7 @@ export function RefereeImportPage() {
                           <TableCell className="font-medium">{referee.name} · {referee.state}</TableCell>
                           <TableCell className="max-w-[420px] truncate font-mono text-xs text-muted-foreground">{link}</TableCell>
                           <TableCell className="text-right">
-                            <Button type="button" variant="outline" size="sm" onClick={() => void navigator.clipboard?.writeText(link)}>Copiar</Button>
+                            <Button type="button" variant="outline" size="sm" onClick={() => void copyToClipboard(link, `Link de ${referee.name} copiado.`)}>Copiar</Button>
                           </TableCell>
                         </TableRow>
                       )
@@ -376,7 +400,7 @@ export function RefereeImportPage() {
                 </Table>
               </div>
               <div className="flex flex-wrap justify-center gap-3">
-                <Button type="button" onClick={() => void navigator.clipboard?.writeText(result.referees.map((referee) => `${referee.name} (${referee.state}): ${publicUrl(referee.accessToken)}`).join('\n'))}>
+                <Button type="button" onClick={() => void copyToClipboard(linksText(result), 'Todos os links foram copiados.')}>
                   <UsersRound data-icon="inline-start" aria-hidden="true" /> Copiar todos os links
                 </Button>
                 <Button type="button" variant="outline" onClick={() => downloadTextLinks(result)}>
@@ -384,6 +408,9 @@ export function RefereeImportPage() {
                 </Button>
                 <Button type="button" variant="outline" onClick={() => downloadSpreadsheetLinks(result)}>
                   <FileSpreadsheet data-icon="inline-start" aria-hidden="true" /> Baixar .xlsx
+                </Button>
+                <Button type="button" variant="outline" onClick={() => downloadPdfLinks(result)}>
+                  <FileText data-icon="inline-start" aria-hidden="true" /> Baixar PDF
                 </Button>
                 <Button type="button" variant="outline" onClick={reset}>Cadastrar outra lista</Button>
               </div>
