@@ -3,6 +3,8 @@ import { getValidToken, isDemoMode } from './auth'
 
 const BASE = import.meta.env.VITE_BASE_URL_API as string
 
+console.log('🚀 API BASE:', BASE)
+
 async function authHeaders(): Promise<HeadersInit> {
   const token = await getValidToken()
   return token ? { Authorization: `Bearer ${token}`, Accept: 'application/json' } : { Accept: 'application/json' }
