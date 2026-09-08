@@ -24,3 +24,7 @@ export type RefereeImportResponse = {
 export async function importReferees(competitionId: string, referees: ImportedReferee[]) {
   return apiPost<RefereeImportResponse>('/api/referees/import', { competitionId, referees })
 }
+
+export async function regenerateRefereeLinks(competitionId: string) {
+  return apiPost<RefereeImportResponse>(`/api/referees/competitions/${competitionId}/links`, {})
+}

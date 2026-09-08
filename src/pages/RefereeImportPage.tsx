@@ -4,7 +4,7 @@ import { useCallback, useRef, useState } from 'react'
 import { PageHeader } from '../components/PageHeader'
 import { SelectPairs } from '../components/Field'
 import { useApiRows } from '../lib/api'
-import { importReferees, type ImportedReferee, type RefereeImportResponse } from '../lib/refereeApi'
+import { importReferees, regenerateRefereeLinks, type ImportedReferee, type RefereeImportResponse } from '../lib/refereeApi'
 import type { CompetitionRow } from '../types'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -96,12 +96,16 @@ export function RefereeImportPage() {
   const [isDragging, setIsDragging] = useState(false)
   const [referees, setReferees] = useState<ImportedReferee[]>([])
   const [selectedCompetitionId, setSelectedCompetitionId] = useState('')
+  const [selectedLinkCompetitionId, setSelectedLinkCompetitionId] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [linkError, setLinkError] = useState<string | null>(null)
+  const [regeneratingLinks, setRegeneratingLinks] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<RefereeImportResponse | null>(null)
   const { rows: competitions, loading: competitionsLoading } = useApiRows<CompetitionRow>('/api/competitions')
 
   const competitionOptions = competitions.map((competition) => ({ label: competition.name, value: competition.id }))
+  const selectedLinkCompetition = competitions.find((competition) => competition.id === selectedLinkCompetitionId)
 
   const handleDrop = useCallback((event: React.DragEvent) => {
     event.preventDefault()
@@ -140,12 +144,28 @@ export function RefereeImportPage() {
     }
   }
 
+  async function handleRegenerateLinks() {
+    if (!selectedLinkCompetitionId) return
+    setRegeneratingLinks(true)
+    setLinkError(null)
+    try {
+      const response = await regenerateRefereeLinks(selectedLinkCompetitionId)
+      setResult(response)
+      setStep('done')
+    } catch (err) {
+      setLinkError(err instanceof Error ? err.message : 'Não foi possível gerar os links individuais.')
+    } finally {
+      setRegeneratingLinks(false)
+    }
+  }
+
   function reset() {
     setStep('upload')
     setSelectedFile(null)
     setReferees([])
     setSelectedCompetitionId('')
     setError(null)
+    setLinkError(null)
     setResult(null)
     if (fileRef.current) fileRef.current.value = ''
   }
@@ -153,18 +173,69 @@ export function RefereeImportPage() {
   return (
     <PageHeader
       active="referee-import"
-      breadcrumb={[{ label: 'Operações' }, { label: 'Cadastrar árbitros' }]}
+      breadcrumb={[{ label: 'Operações' }, { label: 'Árbitros' }]}
     >
       <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-4 p-4 md:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex flex-col gap-1">
-            <h1 className="text-3xl leading-none tracking-tight">Cadastrar árbitros</h1>
+            <h1 className="text-3xl leading-none tracking-tight">Árbitros</h1>
             <p className="max-w-2xl text-sm text-muted-foreground">Importe a lista de árbitros por planilha e vincule os nomes a uma competição.</p>
           </div>
           <Button type="button" variant="outline" onClick={downloadTemplate}>
             <Download data-icon="inline-start" aria-hidden="true" /> Baixar modelo limpo
           </Button>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Link dos tablets</CardTitle>
+            <CardDescription>Recupere o link único de uma competição já cadastrada para abrir nos tablets.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <SelectPairs
+              label="Competição"
+              value={selectedLinkCompetitionId}
+              placeholder={competitionsLoading ? 'Carregando competições…' : 'Selecione a competição'}
+              options={competitionOptions}
+              onChange={setSelectedLinkCompetitionId}
+              disabled={competitionsLoading}
+            />
+            {selectedLinkCompetition && (
+              <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3 sm:flex-row sm:items-center">
+                <UsersRound className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <code className="min-w-0 flex-1 truncate text-xs">{competitionPublicUrl(selectedLinkCompetition.code)}</code>
+                <div className="flex shrink-0 gap-2">
+                  <Button type="button" size="sm" onClick={() => void navigator.clipboard?.writeText(competitionPublicUrl(selectedLinkCompetition.code))}>Copiar</Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const blob = new Blob([`Competição: ${selectedLinkCompetition.name}\nLink único: ${competitionPublicUrl(selectedLinkCompetition.code)}\n`], { type: 'text/plain;charset=utf-8' })
+                      const anchor = document.createElement('a')
+                      anchor.href = URL.createObjectURL(blob)
+                      anchor.download = `link-arbitros-${fileSafeName(selectedLinkCompetition.code)}.txt`
+                      anchor.click()
+                      URL.revokeObjectURL(anchor.href)
+                    }}
+                  >
+                    Baixar .txt
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" disabled={regeneratingLinks} onClick={handleRegenerateLinks}>
+                    {regeneratingLinks ? 'Gerando…' : 'Gerar links individuais'}
+                  </Button>
+                </div>
+              </div>
+            )}
+            {linkError && (
+              <Alert variant="destructive">
+                <AlertCircle className="size-4" aria-hidden="true" />
+                <AlertTitle>Não foi possível gerar links</AlertTitle>
+                <AlertDescription>{linkError}</AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
 
         {step === 'upload' && (
           <Card>
@@ -257,7 +328,7 @@ export function RefereeImportPage() {
               <div className="flex flex-wrap gap-3">
                 <Button variant="outline" onClick={reset}>Voltar</Button>
                 <Button disabled={!selectedCompetitionId || submitting} onClick={submit}>
-                  {submitting ? 'Cadastrando…' : 'Cadastrar árbitros'}
+                  {submitting ? 'Salvando…' : 'Salvar árbitros'}
                 </Button>
               </div>
             </CardContent>
