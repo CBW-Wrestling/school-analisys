@@ -1,0 +1,3 @@
+[submodule "references/next-shadcn-admin-dashboard"]
+	path = references/next-shadcn-admin-dashboard
+	url = https://github.com/arhamkhnz/next-shadcn-admin-dashboard.git

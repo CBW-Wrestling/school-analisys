@@ -1,0 +1,327 @@
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --navy: var(--foreground);
+  --ink: var(--foreground);
+  --green: var(--accent);
+  --mint: color-mix(in oklab, var(--primary) 12%, var(--background));
+  --yellow: var(--chart-3);
+  --line: var(--border);
+  --paper: var(--card);
+  background: var(--background);
+}
+
+:root[data-theme='dark'] body,
+:root[data-theme='dark'] .app-shell,
+:root[data-theme='dark'] .dashboard-page,
+:root[data-theme='dark'] .analysis-page,
+:root[data-theme='dark'] .explorer-page,
+:root[data-theme='dark'] .results-page,
+:root[data-theme='dark'] .collection-page {
+  background: var(--background);
+}
+
+:root[data-theme='dark'] .topbar,
+:root[data-theme='dark'] .form-screen-header,
+:root[data-theme='dark'] .explore-card,
+:root[data-theme='dark'] .analysis-panel,
+:root[data-theme='dark'] .results-table,
+:root[data-theme='dark'] .podium,
+:root[data-theme='dark'] .result-kpis article,
+:root[data-theme='dark'] .explorer-chart,
+:root[data-theme='dark'] .competencia-card,
+:root[data-theme='dark'] .detail-section,
+:root[data-theme='dark'] .detail-rank-badge,
+:root[data-theme='dark'] .avaliacao-filter,
+:root[data-theme='dark'] .filter-check--pill,
+:root[data-theme='dark'] .event-select select,
+:root[data-theme='dark'] .secondary,
+:root[data-theme='dark'] .back-btn {
+  background: var(--paper);
+  border-color: var(--line);
+}
+
+:root[data-theme='dark'] .competencia-header:hover,
+:root[data-theme='dark'] .filter-check--pill:has(input:checked),
+:root[data-theme='dark'] .result-row--clickable:hover {
+  background: color-mix(in oklab, var(--green) 20%, var(--paper));
+}
+
+.theme-toggle {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--paper);
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.brand-logo {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+}
+
+.theme-toggle:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.theme-toggle:focus-visible {
+  border-color: var(--ring);
+  color: var(--ring);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.primary:focus-visible,
+.header-action:focus-visible {
+  box-shadow: none;
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+
+/* Legacy field focus styles must not add a ring on mouse interaction. */
+.field input:focus,
+.field select:focus {
+  border-color: var(--line);
+  box-shadow: none;
+}
+
+.field input:focus-visible,
+.field select:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--green) 55%, transparent);
+  outline-offset: 2px;
+}
+
+
+.dashboard-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.dashboard-link:focus-visible {
+  border-radius: 8px;
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+}
+
+.dashboard-card {
+  display: flex;
+  min-height: 207px;
+  flex-direction: column;
+  border: 1px solid var(--line);
+}
+
+.dashboard-card [data-slot='card-header'] {
+  display: grid;
+  gap: 10px;
+}
+
+.dashboard-card [data-slot='card-title'] {
+  margin-top: 8px;
+  color: var(--navy);
+  font-size: 15px;
+}
+
+.dashboard-card [data-slot='card-description'] {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.dashboard-card [data-slot='card-footer'] {
+  margin-top: auto;
+  color: var(--green);
+}
+
+.dashboard-card-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--mint);
+  color: var(--green);
+}
+
+
+.auth-shell {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  background: var(--background);
+}
+
+.auth-brand-logo {
+  width: 42px;
+  height: 42px;
+}
+
+.auth-card-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px clamp(24px, 5vw, 40px) 0;
+}
+
+.auth-form-panel {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  padding: 32px 20px;
+}
+
+.auth-card {
+  width: min(100%, 470px);
+}
+
+.auth-card-header,
+.auth-card-content,
+.auth-card-footer {
+  padding-inline: clamp(24px, 5vw, 40px);
+}
+
+.auth-card-header {
+  padding-top: clamp(28px, 5vw, 44px);
+}
+
+.auth-card-title {
+  margin: 0;
+  color: var(--navy);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.auth-card-description {
+  margin-top: 8px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.auth-card-content {
+  display: grid;
+  gap: 24px;
+  padding-block: 28px;
+}
+
+.auth-google-link {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--green);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-google-link:hover,
+.auth-google-link:focus-visible {
+  background: color-mix(in oklab, var(--green) 6%, var(--paper));
+  text-decoration: none;
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.auth-divider {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+
+.auth-form {
+  display: grid;
+  gap: 18px;
+}
+
+.auth-field {
+  display: grid;
+  gap: 7px;
+}
+
+.auth-field [data-slot='input-group'] {
+  min-height: 46px;
+}
+
+.auth-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding-bottom: clamp(28px, 5vw, 40px);
+}
+
+.auth-footer-text {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+.auth-success {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  padding: clamp(40px, 8vw, 72px);
+  text-align: center;
+}
+
+.auth-success > svg {
+  color: var(--green);
+}
+
+:root[data-theme='dark'] .auth-shell {
+  background: var(--background);
+}
+
+:root[data-theme='dark'] .auth-card {
+  background: var(--card);
+}
+
+:root[data-theme='dark'] .auth-card-title {
+  color: var(--foreground);
+}
+
+:root[data-theme='dark'] .auth-card-description,
+:root[data-theme='dark'] .auth-footer-text,
+:root[data-theme='dark'] .auth-divider {
+  color: var(--muted-foreground);
+}
+
+:root[data-theme='dark'] .auth-google-link {
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+:root[data-theme='dark'] .auth-google-link:hover {
+  background: var(--surface-hover);
+}
+
+@media (max-width: 520px) {
+  .auth-form-panel {
+    padding: 16px;
+  }
+
+  .auth-card {
+    width: 100%;
+  }
+}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getValidToken } from './auth'
+import { getValidToken, isDemoMode } from './auth'
 
 const BASE = import.meta.env.VITE_API_URL as string
 
@@ -10,7 +10,11 @@ async function authHeaders(): Promise<HeadersInit> {
 
 export async function apiGet<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`, { headers: await authHeaders() })
-  if (res.status === 401) { localStorage.clear(); location.reload(); throw new Error('UNAUTHORIZED') }
+  // Em modo demo não há sessão real para expirar: um 401 aqui é esperado ao
+  // acessar endpoint protegido, não uma sessão inválida — não deve limpar
+  // storage nem recarregar a página (isso reativaria o próprio modo demo e
+  // repetiria a mesma chamada, causando reload em loop).
+  if (res.status === 401 && !isDemoMode()) { localStorage.clear(); location.reload(); throw new Error('UNAUTHORIZED') }
   if (!res.ok) throw new Error(await res.text())
   return res.json() as Promise<T>
 }

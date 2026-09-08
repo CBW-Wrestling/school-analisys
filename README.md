@@ -1,32 +1,32 @@
-# React + TypeScript + Vite
+# School Analysis — Frontend (CBW)
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Painel de análise de dados de competições e avaliações da CBW (Confederação Brasileira de
+Wrestling): dashboards, resultados por competição, perfil/físico/técnico dos atletas e coleta
+de avaliações via formulário.
 
-Currently, two official plugins are available:
+Frontend em React 19 + TypeScript + Vite, consumindo o backend em
+[`school-analysis-backend`](../school-analysis-backend) (Kotlin/Spring Boot) via HTTP/JSON.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Rodando localmente
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev       # http://localhost:5173
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Requer um `.env` com `VITE_API_URL` apontando para o backend local (ver `.env` existente ou
+pedir as variáveis ao time; nunca commitar esse arquivo).
+
+```bash
+npm run build     # typecheck + build de produção
+npm run lint      # oxlint
+npm run preview   # preview do build
+```
+
+## Documentação
+
+- **[AGENTS.md](AGENTS.md)** — stack, estrutura de pastas, convenções e dívidas conhecidas.
+  Comece por aqui.
+- **[DESIGN.md](DESIGN.md)** — design system: tokens, padrões de página, formulário, gráfico e
+  tabela.
+- **[CLAUDE.md](CLAUDE.md)** — skills e regras específicas para Claude Code.

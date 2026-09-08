@@ -2,16 +2,30 @@ import "./App.css"
 import { useEffect } from "react"
 import { details } from "./constants"
 import { saveTokens } from "./lib/auth"
-import { CollectionHome } from "./pages/CollectionHome"
 import { CollectionPage } from "./pages/CollectionPage"
 import { DashboardPage } from "./pages/DashboardPage"
-import { ExplorerPage } from "./pages/ExplorerPage"
-import { ImportPage } from "./pages/ImportPage"
+import { DefaultPage } from "./pages/DefaultPage"
+import { AnalyticsDashboardPage } from "./pages/AnalyticsDashboardPage"
+import { CrmDashboardPage } from "./pages/CrmDashboardPage"
+import { EcommerceDashboardPage } from "./pages/EcommerceDashboardPage"
+import { FinanceDashboardPage } from "./pages/FinanceDashboardPage"
+import { AcademyDashboardPage } from "./pages/AcademyDashboardPage"
+import { LogisticsDashboardPage } from "./pages/LogisticsDashboardPage"
+import { ProductivityDashboardPage } from "./pages/ProductivityDashboardPage"
+import { PatientMonitoringDashboardPage } from "./pages/PatientMonitoringDashboardPage"
+import { UsersDashboardPage } from "./pages/UsersDashboardPage"
+import { TechnicalAssessmentsPage } from "./pages/TechnicalAssessmentsPage"
+import { StateExecutionPage } from "./pages/StateExecutionPage"
+import { CompetitionImportPage } from "./pages/CompetitionImportPage"
+import { ResultsImportPage } from "./pages/ResultsImportPage"
+import { RefereeImportPage } from "./pages/RefereeImportPage"
+import { PublicRefereeAssessmentPage } from "./pages/PublicRefereeAssessmentPage"
 import { ProfilePage } from "./pages/ProfilePage"
-import { MotorPage } from "./pages/MotorPage"
 import { PhysicalPage } from "./pages/PhysicalPage"
+import { InferencesPage } from "./pages/InferencesPage"
 import { ProfilesPage } from "./pages/ProfilesPage"
 import { ResultsPage } from "./pages/ResultsPage"
+import { SidebarProvider } from "./components/ui/sidebar"
 import type { FormKind } from "./types"
 
 function App() {
@@ -24,25 +38,42 @@ function App() {
   const refreshToken = params.get("refreshToken")
 
   useEffect(() => {
+    if (requestedView === "referee-assessment") return
     if (accessToken && refreshToken) {
       saveTokens(accessToken, refreshToken)
       window.history.replaceState({}, '', window.location.pathname)
       window.location.reload()
     }
-  }, [accessToken, refreshToken])
+  }, [accessToken, refreshToken, requestedView])
+
+  if (requestedView === "referee-assessment") return <PublicRefereeAssessmentPage />
 
   if (accessToken && refreshToken) return null // aguarda reload
 
-  if (requestedForm && requestedForm in details) return <CollectionPage initialKind={requestedForm as FormKind} />
-  if (requestedView === "explorer")   return <ExplorerPage />
-  if (requestedView === "results")    return <ResultsPage />
-  if (requestedView === "profiles")   return <ProfilesPage />
-  if (requestedView === "physical")   return <PhysicalPage />
-  if (requestedView === "motor")      return <MotorPage />
-  if (requestedView === "collection") return <CollectionHome />
-  if (requestedView === "import")     return <ImportPage />
-  if (requestedView === "profile")    return <ProfilePage />
-  return <DashboardPage />
+  const page = requestedForm && requestedForm in details ? <CollectionPage initialKind={requestedForm as FormKind} />
+    : requestedView === "default" ? <DefaultPage />
+    : requestedView === "analytics" ? <AnalyticsDashboardPage />
+    : requestedView === "crm" ? <CrmDashboardPage />
+    : requestedView === "ecommerce" ? <EcommerceDashboardPage />
+    : requestedView === "finance" ? <FinanceDashboardPage />
+    : requestedView === "academy" ? <AcademyDashboardPage />
+    : requestedView === "logistics" ? <LogisticsDashboardPage />
+    : requestedView === "productivity" ? <ProductivityDashboardPage />
+    : requestedView === "patient-monitoring" ? <PatientMonitoringDashboardPage />
+    : requestedView === "users-example" ? <UsersDashboardPage />
+    : requestedView === "results" ? <ResultsPage />
+    : requestedView === "profiles" ? <ProfilesPage />
+    : requestedView === "physical" ? <PhysicalPage />
+    : requestedView === "motor" ? <TechnicalAssessmentsPage />
+    : requestedView === "motor-states" ? <StateExecutionPage />
+    : requestedView === "inferences" ? <InferencesPage />
+    : requestedView === "competition-import" ? <CompetitionImportPage />
+    : requestedView === "results-import" ? <ResultsImportPage />
+    : requestedView === "referee-import" ? <RefereeImportPage />
+    : requestedView === "profile" ? <ProfilePage />
+    : <DashboardPage />
+
+  return <SidebarProvider defaultOpen>{page}</SidebarProvider>
 }
 
 export default App

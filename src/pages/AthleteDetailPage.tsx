@@ -1,17 +1,55 @@
-import { ArrowLeft, Medal, User, Dumbbell, Brain } from 'lucide-react'
+import { ArrowLeft, Brain, Dumbbell, Info, Medal, User } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { useApiData } from '../lib/api'
-import type { AthleteDetail, MotorItem } from '../types'
+import type { AthleteDetail, AthleteDetailItem } from '../types'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 interface Props {
   entryId: string
   onBack: () => void
+  backLabel?: string
 }
 
-function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
+// Ícones conhecidos que o backend pode enviar por seção; qualquer valor não
+// mapeado cai no ícone neutro (Info) em vez de quebrar a renderização.
+const SECTION_ICONS: Record<string, LucideIcon> = {
+  medal: Medal,
+  user: User,
+  dumbbell: Dumbbell,
+  brain: Brain,
+}
+
+const SECTION_GROUPS = [
+  { value: 'results', label: 'Resultado', icon: 'medal' },
+  { value: 'profile', label: 'Perfil', icon: 'user' },
+  { value: 'physical', label: 'Físico', icon: 'dumbbell' },
+  { value: 'technical', label: 'Técnico', icon: 'brain' },
+  { value: 'other', label: 'Outros', icon: 'other' },
+] as const
+
+function iconFor(icon: string): LucideIcon {
+  return SECTION_ICONS[icon] ?? Info
+}
+
+function DetailRow({ item }: { item: AthleteDetailItem }) {
   return (
-    <div className="detail-row">
-      <dt>{label}</dt>
-      <dd>{value ?? <span className="detail-empty-val">—</span>}</dd>
+    <div className="flex items-baseline justify-between gap-3 border-b py-1.5 last:border-b-0">
+      <dt className="text-xs font-medium text-muted-foreground">{item.label}</dt>
+      <dd className="text-right text-sm font-medium text-foreground">
+        {item.value || <span className="font-normal text-muted-foreground">—</span>}
+      </dd>
     </div>
   )
 }
@@ -26,122 +64,126 @@ function DetailSection({
   children: React.ReactNode
 }) {
   return (
-    <section className="detail-section">
-      <header className="detail-section-header">
-        <span className="detail-section-icon">{icon}</span>
-        <h3>{title}</h3>
-      </header>
-      <dl className="detail-grid">{children}</dl>
-    </section>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2.5">
+          <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">{icon}</span>
+          <CardTitle>{title}</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <dl>{children}</dl>
+      </CardContent>
+    </Card>
   )
 }
 
-function boolLabel(v: boolean | null, yes = 'Sim', no = 'Não') {
-  if (v === null || v === undefined) return null
-  return v ? yes : no
+function initialsFor(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  const first = parts[0]?.[0] ?? ''
+  const last = parts.length > 1 ? parts[parts.length - 1][0] : ''
+  return `${first}${last}`.toUpperCase()
 }
 
-function formatDate(iso: string | null) {
-  if (!iso) return null
-  const [y, m, d] = iso.split('-')
-  return `${d}/${m}/${y}`
-}
-
-export function AthleteDetailPage({ entryId, onBack }: Props) {
+export function AthleteDetailPage({ entryId, onBack, backLabel = 'Voltar' }: Props) {
   const { data: d, loading, error } = useApiData<AthleteDetail>(`/api/athletes/entries/${entryId}`)
 
-  if (loading) return <div className="detail-loading"><p>Carregando dados do atleta…</p></div>
+  if (loading) return (
+    <div className="mx-auto w-full max-w-[1400px] px-4 py-16 text-center text-sm text-muted-foreground md:px-6">Carregando dados do atleta…</div>
+  )
 
   if (error) return (
-    <div className="detail-error">
-      <p>Erro ao carregar dados: {error}</p>
-      <button className="back-btn" onClick={onBack}><ArrowLeft size={14} /> Voltar</button>
+    <div className="mx-auto w-full max-w-[1400px] px-4 py-16 text-center md:px-6">
+      <p className="mb-4 text-sm text-muted-foreground">Erro ao carregar dados: {error}</p>
+      <Button variant="outline" size="sm" onClick={onBack}><ArrowLeft data-icon="inline-start" aria-hidden="true" /> {backLabel}</Button>
     </div>
   )
 
   if (!d) return (
-    <div className="detail-error">
-      <p>Atleta não encontrado.</p>
-      <button className="back-btn" onClick={onBack}><ArrowLeft size={14} /> Voltar</button>
+    <div className="mx-auto w-full max-w-[1400px] px-4 py-16 text-center md:px-6">
+      <p className="mb-4 text-sm text-muted-foreground">Atleta não encontrado.</p>
+      <Button variant="outline" size="sm" onClick={onBack}><ArrowLeft data-icon="inline-start" aria-hidden="true" /> {backLabel}</Button>
     </div>
   )
 
-  const motorByComp = (d.motorData ?? []).reduce<Record<string, MotorItem[]>>(
-    (acc, item) => { (acc[item.competency] ??= []).push(item); return acc },
-    {},
-  )
+  const groupedSections = SECTION_GROUPS.map((group) => ({
+    ...group,
+    sections: d.sections.filter((section) => group.icon === 'other'
+      ? !Object.hasOwn(SECTION_ICONS, section.icon)
+      : section.icon === group.icon),
+  })).filter((group) => group.sections.length > 0)
 
   return (
-    <div className="athlete-detail">
-      <div className="detail-topbar">
-        <button className="back-btn" onClick={onBack}><ArrowLeft size={14} /> Resultados</button>
-      </div>
+    <div className="@container/main">
+      <main className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 p-4 md:gap-6 md:p-6">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild><button type="button" onClick={onBack}>{backLabel}</button></BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{d.athleteName}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
 
-      <div className="detail-hero">
-        <div>
-          <p className="eyebrow">{d.competitionName}</p>
-          <h2>{d.athleteName}</h2>
-          <div className="detail-tags">
-            <span>{d.style}</span>
-            <span>{d.gender === 'M' ? 'Masculino' : 'Feminino'}</span>
-            <span>{d.ageCategoryCode}</span>
-            {d.state && <span>{d.state}</span>}
-            {d.weight > 0 && <span>{d.weight} kg</span>}
+        <div className="flex flex-col gap-5 @xl/main:flex-row @xl/main:items-end @xl/main:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <Avatar className="size-16 shrink-0 sm:size-20">
+              <AvatarFallback className="text-lg font-semibold">{initialsFor(d.athleteName)}</AvatarFallback>
+            </Avatar>
+            <div className="flex min-w-0 flex-col gap-1">
+              <p className="truncate text-xs font-medium tracking-wide text-muted-foreground">{d.competitionName}</p>
+              <h1 className="truncate text-2xl leading-tight tracking-tight text-foreground sm:text-3xl">{d.athleteName}</h1>
+              {d.tags.length > 0 && (
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {d.tags.map((tag) => <Badge key={tag} variant="secondary">{tag}</Badge>)}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-        {d.rank != null && (
-          <div className="detail-rank-badge"><Medal size={22} /><span>{d.rank}º lugar</span></div>
-        )}
-      </div>
-
-      <div className="detail-sections">
-        <DetailSection icon={<Medal size={15} />} title="Resultado na competição">
-          <DetailRow label="Colocação" value={d.rank != null ? `${d.rank}º` : null} />
-          <DetailRow label="Vitórias / Derrotas" value={d.wins != null ? `${d.wins}V — ${d.losses}D` : null} />
-          <DetailRow label="Lutas" value={d.countFights} />
-          <DetailRow label="Pontos marcados" value={d.technicalPointsFor} />
-          <DetailRow label="Pontos sofridos" value={d.technicalPointsAgainst} />
-          <DetailRow label="Saldo de pontos" value={d.technicalPointsDiff != null ? (d.technicalPointsDiff >= 0 ? `+${d.technicalPointsDiff}` : d.technicalPointsDiff) : null} />
-          <DetailRow label="Finalista ouro" value={boolLabel(d.isFinalistGold)} />
-          <DetailRow label="Não classificado" value={boolLabel(d.isNotRanked, 'Sim', 'Não')} />
-        </DetailSection>
-
-        <DetailSection icon={<User size={15} />} title="Dados sociais">
-          <DetailRow label="Escola" value={d.school} />
-          <DetailRow label="Nascimento" value={formatDate(d.birthDate)} />
-          <DetailRow label="Tempo de prática" value={d.practiceTime} />
-          <DetailRow label="Local de prática" value={d.practiceLocation} />
-          {d.practiceLocationName && <DetailRow label="Nome do local" value={d.practiceLocationName} />}
-          <DetailRow label="Freq. semanal" value={d.weeklyFrequency} />
-          <DetailRow label="Pratica outra modalidade" value={boolLabel(d.practicesOtherSport)} />
-          {d.otherSports && d.otherSports.length > 0 && <DetailRow label="Outras modalidades" value={d.otherSports.join(', ')} />}
-          <DetailRow label="Iniciou na luta" value={boolLabel(d.startedInWrestling)} />
-        </DetailSection>
-
-        <DetailSection icon={<Dumbbell size={15} />} title="Avaliação física">
-          <DetailRow label="Estatura" value={d.heightCm != null ? `${d.heightCm} cm` : null} />
-          <DetailRow label="Envergadura" value={d.armSpanCm != null ? `${d.armSpanCm} cm` : null} />
-          <DetailRow label="Base" value={d.baseCm != null ? `${d.baseCm} cm` : null} />
-          <DetailRow label="Antebraço D" value={d.forearmRightCm != null ? `${d.forearmRightCm} cm` : null} />
-          <DetailRow label="Antebraço E" value={d.forearmLeftCm != null ? `${d.forearmLeftCm} cm` : null} />
-          <DetailRow label="Prensão D" value={d.handGripRight != null ? `${d.handGripRight} kgf` : null} />
-          <DetailRow label="Prensão E" value={d.handGripLeft != null ? `${d.handGripLeft} kgf` : null} />
-          <DetailRow label="Placement" value={d.placement} />
-        </DetailSection>
-
-        <DetailSection icon={<Brain size={15} />} title="Avaliação motora">
-          {Object.keys(motorByComp).length === 0 ? (
-            <p className="detail-no-data">Sem avaliação motora registrada.</p>
-          ) : (
-            Object.entries(motorByComp).map(([comp, items]) => (
-              <div key={comp} className="motor-competency">
-                <p className="eyebrow motor-comp-label">{comp}</p>
-                {items.map((item) => <DetailRow key={item.movement} label={item.movement} value={item.result} />)}
-              </div>
-            ))
+          {d.rank != null && (
+            <div className="flex shrink-0 flex-col items-center gap-1 rounded-lg border bg-card px-5 py-3.5">
+              <Medal className="size-5 text-muted-foreground" aria-hidden="true" />
+              <span className="font-mono text-lg font-bold text-foreground">{d.rank}º lugar</span>
+            </div>
           )}
-        </DetailSection>
-      </div>
+        </div>
+
+        {groupedSections.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhuma informação adicional disponível.</p>
+        ) : (
+          <Tabs defaultValue={groupedSections[0].value} className="gap-0">
+            <div className="scrollbar-none touch-pan-x overflow-x-auto overscroll-x-contain border-y">
+              <TabsList className="w-max min-w-full justify-start gap-4 px-1 *:data-[slot=tabs-trigger]:flex-none sm:px-4" variant="line">
+                {groupedSections.map((group) => {
+                  const Icon = iconFor(group.icon)
+                  return <TabsTrigger key={group.value} value={group.value}><Icon aria-hidden="true" />{group.label}</TabsTrigger>
+                })}
+              </TabsList>
+            </div>
+            {groupedSections.map((group) => (
+              <TabsContent key={group.value} value={group.value} className="py-4 md:py-6">
+                <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2">
+                  {group.sections.map((section) => {
+                    const Icon = iconFor(section.icon)
+                    return (
+                      <DetailSection key={section.code} icon={<Icon className="size-4" aria-hidden="true" />} title={section.title}>
+                        {section.items.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">Nenhum dado registrado.</p>
+                        ) : (
+                          section.items.map((item) => <DetailRow key={item.code} item={item} />)
+                        )}
+                      </DetailSection>
+                    )
+                  })}
+                </div>
+              </TabsContent>
+            ))}
+          </Tabs>
+        )}
+      </main>
     </div>
   )
 }
