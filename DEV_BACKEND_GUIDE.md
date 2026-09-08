@@ -7,7 +7,7 @@ Supabase; eles não criam os controllers HTTP do backend.
 
 ## 1. Antes de iniciar
 
-1. Configure o frontend com `VITE_API_URL=http://localhost:8082` (ajuste a porta se necessário).
+1. Configure o frontend com `BASE_URL_API=http://localhost:8082` (ajuste a porta se necessário).
 2. Suba o backend com CORS liberado para `http://localhost:5173` e suporte a
    `Authorization: Bearer <access-token>`.
 3. Crie ao menos um usuário autenticável e dados de referência: estilos `FS`, `GR`, `WW`, UFs,

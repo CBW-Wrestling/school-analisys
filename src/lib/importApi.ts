@@ -1,6 +1,6 @@
 import { getValidToken } from './auth'
 
-const BASE = import.meta.env.VITE_API_URL as string
+const BASE = import.meta.env.BASE_URL_API as string
 
 async function authHeaders(): Promise<HeadersInit> {
   const token = await getValidToken()
