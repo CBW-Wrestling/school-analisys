@@ -5,6 +5,7 @@ import { SelectPairs } from '../components/Field'
 import { AthleteProgressTable, StateProgressTable } from '../components/RegistrationProgressTables'
 import logo from '../assets/logo.svg'
 import { useApiData } from '../lib/api'
+import { useBackStack } from '../lib/useBackStack'
 import type { CompetitionRow, FormKind } from '../types'
 import type { Referee } from '../lib/refereeApi'
 import type { RegistrationProgress, RegistrationStateAthletes } from '../lib/registrationProgress'
@@ -18,38 +19,25 @@ type PublicCompetitionReferees = {
   referees?: Referee[]
 }
 
+type RefereeScreen =
+  | { name: 'menu' }
+  | { name: 'progress-states' }
+  | { name: 'progress-athletes'; stateCode: string; stateName: string }
+  | { name: 'form'; kind: FormKind; entryId?: string }
+
 const publicKinds: Array<{ kind: FormKind; label: string; description: string; icon: typeof ShieldPlus }> = [
   { kind: 'motor', label: 'Registro motor', description: 'Movimentos técnicos avaliados pelo árbitro.', icon: ShieldPlus },
 ]
 
-/** Progresso motor agregado por estado, com detalhe por atleta ao clicar (só leitura, sem login). */
-function MotorProgressView({ competitionCode, onBack }: { competitionCode: string; onBack: () => void }) {
-  const [selectedState, setSelectedState] = useState<{ code: string; name: string } | null>(null)
+/** Progresso motor agregado por estado (só leitura, sem login). */
+function MotorProgressStates({ competitionCode, onBack, onSelectState }: {
+  competitionCode: string
+  onBack: () => void
+  onSelectState: (stateCode: string, stateName: string) => void
+}) {
   const { data, loading, error } = useApiData<RegistrationProgress>(
     `/api/public/competitions/${encodeURIComponent(competitionCode)}/registration-progress`
   )
-  const { data: stateData, loading: stateLoading, error: stateError } = useApiData<RegistrationStateAthletes>(
-    selectedState ? `/api/public/competitions/${encodeURIComponent(competitionCode)}/registration-progress/states/${encodeURIComponent(selectedState.code)}/athletes` : '',
-    Boolean(selectedState)
-  )
-
-  if (selectedState) {
-    return (
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold tracking-tight">{selectedState.name} ({selectedState.code})</h2>
-          <Button variant="outline" size="sm" onClick={() => setSelectedState(null)}><ArrowLeft data-icon="inline-start" aria-hidden="true" /> Estados</Button>
-        </div>
-        {stateError && (
-          <Alert variant="destructive">
-            <AlertTitle>Não foi possível carregar os atletas</AlertTitle>
-            <AlertDescription>{stateError}</AlertDescription>
-          </Alert>
-        )}
-        <AthleteProgressTable athletes={stateData?.athletes ?? []} loading={stateLoading} showSocial={false} />
-      </div>
-    )
-  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -65,8 +53,37 @@ function MotorProgressView({ competitionCode, onBack }: { competitionCode: strin
       )}
       {loading
         ? <p className="text-sm text-muted-foreground">Carregando…</p>
-        : <StateProgressTable states={data?.states ?? []} registeredKey="motorRegistered" percentageKey="motorPercentage" statusKey="motorStatus" onSelectState={(state) => setSelectedState({ code: state.stateCode, name: state.stateName })} />
+        : <StateProgressTable states={data?.states ?? []} registeredKey="motorRegistered" percentageKey="motorPercentage" statusKey="motorStatus" onSelectState={(state) => onSelectState(state.stateCode, state.stateName)} />
       }
+    </div>
+  )
+}
+
+/** Atletas de um estado, apenas com a coluna motora (responsabilidade do árbitro). */
+function MotorProgressAthletes({ competitionCode, stateCode, stateName, onBack, onRegister }: {
+  competitionCode: string
+  stateCode: string
+  stateName: string
+  onBack: () => void
+  onRegister: (entryId: string) => void
+}) {
+  const { data, loading, error } = useApiData<RegistrationStateAthletes>(
+    `/api/public/competitions/${encodeURIComponent(competitionCode)}/registration-progress/states/${encodeURIComponent(stateCode)}/athletes`
+  )
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-xl font-semibold tracking-tight">{stateName} ({stateCode})</h2>
+        <Button variant="outline" size="sm" onClick={onBack}><ArrowLeft data-icon="inline-start" aria-hidden="true" /> Voltar</Button>
+      </div>
+      {error && (
+        <Alert variant="destructive">
+          <AlertTitle>Não foi possível carregar os atletas</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      <AthleteProgressTable athletes={data?.athletes ?? []} loading={loading} showSocial={false} onRegister={(athlete) => onRegister(athlete.entryId)} />
     </div>
   )
 }
@@ -76,8 +93,7 @@ export function PublicRefereeAssessmentPage() {
   const accessToken = params.get('token') ?? ''
   const competitionCode = params.get('competition') ?? ''
   const [refereeId, setRefereeId] = useState('')
-  const [kind, setKind] = useState<FormKind | null>(null)
-  const [showProgress, setShowProgress] = useState(false)
+  const { current: screen, push, pop, reset } = useBackStack<RefereeScreen>({ name: 'menu' })
   const publicPath = accessToken
     ? `/api/public/referee-assessments/${accessToken}`
     : competitionCode
@@ -89,12 +105,12 @@ export function PublicRefereeAssessmentPage() {
   )
   const selectedReferee = data?.referee ?? data?.referees?.find((referee) => referee.id === refereeId)
 
-  if (kind && data && selectedReferee) {
+  if (screen.name === 'form' && data && selectedReferee) {
     return (
       <AssessmentWizard
-        key={`${kind}-${selectedReferee.id}`}
-        kind={kind}
-        onAnother={() => setKind(null)}
+        key={`${screen.kind}-${selectedReferee.id}-${screen.entryId ?? ''}`}
+        kind={screen.kind}
+        onAnother={() => reset({ name: 'menu' })}
         lockedCompetition={data.competition}
         submitPath="/api/public/referee-assessments"
         buildSubmitBody={(payload) => accessToken ? { accessToken, payload } : { refereeId: selectedReferee.id, payload }}
@@ -102,11 +118,12 @@ export function PublicRefereeAssessmentPage() {
         allowDuplicate={false}
         finishHref={accessToken ? `/?view=referee-assessment&token=${encodeURIComponent(accessToken)}` : `/?view=referee-assessment&competition=${encodeURIComponent(data.competition.code)}`}
         headerLabel={`${selectedReferee.name} · ${selectedReferee.state}`}
+        initialEntryId={screen.entryId}
       />
     )
   }
 
-  if (showProgress && data) {
+  if (screen.name === 'progress-states' && data) {
     return (
       <main className="min-h-dvh bg-background text-foreground">
         <header className="flex h-12 w-full items-center justify-between border-b border-border bg-background px-4 md:px-6">
@@ -116,7 +133,33 @@ export function PublicRefereeAssessmentPage() {
           </a>
         </header>
         <section className="mx-auto flex w-full max-w-[960px] flex-col gap-6 p-6 md:p-10">
-          <MotorProgressView competitionCode={data.competition.code} onBack={() => setShowProgress(false)} />
+          <MotorProgressStates
+            competitionCode={data.competition.code}
+            onBack={pop}
+            onSelectState={(stateCode, stateName) => push({ name: 'progress-athletes', stateCode, stateName })}
+          />
+        </section>
+      </main>
+    )
+  }
+
+  if (screen.name === 'progress-athletes' && data) {
+    return (
+      <main className="min-h-dvh bg-background text-foreground">
+        <header className="flex h-12 w-full items-center justify-between border-b border-border bg-background px-4 md:px-6">
+          <a className="flex items-center gap-2 text-sm font-semibold text-foreground" href="/">
+            <img className="size-7 object-contain" src={logo} alt="" />
+            <span>Coleta de arbitragem</span>
+          </a>
+        </header>
+        <section className="mx-auto flex w-full max-w-[960px] flex-col gap-6 p-6 md:p-10">
+          <MotorProgressAthletes
+            competitionCode={data.competition.code}
+            stateCode={screen.stateCode}
+            stateName={screen.stateName}
+            onBack={pop}
+            onRegister={(entryId) => push({ name: 'form', kind: 'motor', entryId })}
+          />
         </section>
       </main>
     )
@@ -185,7 +228,7 @@ export function PublicRefereeAssessmentPage() {
                     type="button"
                     disabled={!selectedReferee}
                     className="flex min-h-32 flex-col items-start gap-3 rounded-lg border bg-card p-4 text-left transition-colors hover:bg-muted/40 disabled:pointer-events-none disabled:opacity-50"
-                    onClick={() => setKind(item.kind)}
+                    onClick={() => push({ name: 'form', kind: item.kind })}
                   >
                     <span className="inline-flex size-9 items-center justify-center rounded-md bg-primary/10 text-primary"><Icon aria-hidden="true" /></span>
                     <span className="flex flex-1 flex-col gap-1">
@@ -201,7 +244,7 @@ export function PublicRefereeAssessmentPage() {
               <p className="text-sm text-muted-foreground">Os registros serão salvos como {selectedReferee.name} ({selectedReferee.state}).</p>
             )}
             {data && (
-              <Button type="button" variant="outline" onClick={() => setShowProgress(true)}>
+              <Button type="button" variant="outline" disabled={!selectedReferee} onClick={() => push({ name: 'progress-states' })}>
                 <Activity data-icon="inline-start" aria-hidden="true" /> Ver progresso motor por estado
               </Button>
             )}

@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 import {
@@ -79,14 +80,16 @@ export function AthleteProgressTable({
   emptyMessage = 'Nenhum atleta encontrado.',
   showSocial = true,
   showMotor = true,
+  onRegister,
 }: {
   athletes: RegistrationAthlete[]
   loading?: boolean
   emptyMessage?: string
   showSocial?: boolean
   showMotor?: boolean
+  onRegister?: (athlete: RegistrationAthlete) => void
 }) {
-  const columnCount = 4 + (showSocial ? 1 : 0) + (showMotor ? 1 : 0) + 1
+  const columnCount = 4 + (showSocial ? 1 : 0) + (showMotor ? 1 : 0) + 1 + (onRegister ? 1 : 0)
   return (
     <div className="overflow-hidden rounded-lg border">
       <Table>
@@ -99,6 +102,7 @@ export function AthleteProgressTable({
             {showSocial && <TableHead className="text-center">Social</TableHead>}
             {showMotor && <TableHead className="text-center">Motora</TableHead>}
             <TableHead className="text-center">Pendências</TableHead>
+            {onRegister && <TableHead className="text-center">Ação</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -108,31 +112,41 @@ export function AthleteProgressTable({
           {!loading && athletes.length === 0 && (
             <TableRow><TableCell colSpan={columnCount} className="text-center text-sm text-muted-foreground">{emptyMessage}</TableCell></TableRow>
           )}
-          {athletes.map((athlete) => (
-            <TableRow key={athlete.entryId}>
-              <TableCell className="text-center font-medium">{athlete.athleteName}</TableCell>
-              <TableCell className="text-center">{athlete.style}</TableCell>
-              <TableCell className="text-center tabular-nums">{athlete.weight != null ? `${athlete.weight} kg` : '—'}</TableCell>
-              <TableCell className="text-center">{athlete.ageCategoryCode}</TableCell>
-              {showSocial && (
-                <TableCell className="text-center"><div className="flex justify-center"><RegistrationStatusBadge status={athlete.socialStatus} /></div></TableCell>
-              )}
-              {showMotor && (
+          {athletes.map((athlete) => {
+            const visiblePending = athlete.pending.filter((item) =>
+              (item.type === 'SOCIAL' && showSocial) || (item.type === 'MOTOR' && showMotor)
+            )
+            return (
+              <TableRow key={athlete.entryId}>
+                <TableCell className="text-center font-medium">{athlete.athleteName}</TableCell>
+                <TableCell className="text-center">{athlete.style}</TableCell>
+                <TableCell className="text-center tabular-nums">{athlete.weight != null ? `${athlete.weight} kg` : '—'}</TableCell>
+                <TableCell className="text-center">{athlete.ageCategoryCode}</TableCell>
+                {showSocial && (
+                  <TableCell className="text-center"><div className="flex justify-center"><RegistrationStatusBadge status={athlete.socialStatus} /></div></TableCell>
+                )}
+                {showMotor && (
+                  <TableCell className="text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-xs tabular-nums text-muted-foreground">{athlete.motorRegistered}/{athlete.motorExpected}</span>
+                      <RegistrationStatusBadge status={athlete.motorStatus} />
+                    </div>
+                  </TableCell>
+                )}
                 <TableCell className="text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-xs tabular-nums text-muted-foreground">{athlete.motorRegistered}/{athlete.motorExpected}</span>
-                    <RegistrationStatusBadge status={athlete.motorStatus} />
-                  </div>
+                  {visiblePending.length === 0
+                    ? <span className="text-xs text-muted-foreground">Sem pendências</span>
+                    : <div className="flex flex-wrap justify-center gap-1">{visiblePending.map((item) => <Badge key={item.type} variant="outline" className="text-xs">{item.message}</Badge>)}</div>
+                  }
                 </TableCell>
-              )}
-              <TableCell className="text-center">
-                {athlete.pending.length === 0
-                  ? <span className="text-xs text-muted-foreground">Sem pendências</span>
-                  : <div className="flex flex-wrap justify-center gap-1">{athlete.pending.map((item) => <Badge key={item} variant="outline" className="text-xs">{item}</Badge>)}</div>
-                }
-              </TableCell>
-            </TableRow>
-          ))}
+                {onRegister && (
+                  <TableCell className="text-center">
+                    <Button type="button" size="sm" variant="outline" onClick={() => onRegister(athlete)}>Registrar</Button>
+                  </TableCell>
+                )}
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
     </div>

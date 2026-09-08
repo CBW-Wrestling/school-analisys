@@ -1,5 +1,5 @@
 import { ArrowLeft, ArrowRight, Check, Copy } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { details } from '../constants'
 import logo from '../assets/logo.svg'
@@ -412,6 +412,7 @@ export function AssessmentWizard({
   allowDuplicate = true,
   finishHref = '/',
   headerLabel = 'Coleta',
+  initialEntryId,
 }: {
   kind: FormKind
   onAnother: () => void
@@ -422,6 +423,7 @@ export function AssessmentWizard({
   allowDuplicate?: boolean
   finishHref?: string
   headerLabel?: string
+  initialEntryId?: string
 }) {
   const [step, setStep] = useState(1)
   const [answers, setAnswers] = useState<Answers>((): Answers => {
@@ -445,6 +447,25 @@ export function AssessmentWizard({
     selectedEvent ? athletesPathForEvent(selectedEvent) : '/api/competitions/__none__/athletes',
     Boolean(selectedEvent)
   )
+
+  // Quando o link chega com um atleta pré-selecionado (botão "Registrar" na tela de progresso),
+  // preenche a identidade automaticamente e pula direto para o formulário.
+  useEffect(() => {
+    if (!initialEntryId || answers.entry_id || athletes.length === 0) return
+    const found = athletes.find((athlete) => athlete.entryId === initialEntryId)
+    if (!found) return
+    setAnswers((current) => ({
+      ...current,
+      entry_id: found.entryId,
+      name: found.athleteName,
+      state: found.state,
+      style: found.style,
+      weight: String(found.weight),
+      gender: found.gender,
+      age_category_code: found.ageCategoryCode,
+    }))
+    setStep(2)
+  }, [initialEntryId, athletes, answers.entry_id])
 
   const { rows: motorMovementGroups } = useApiRows<MotorMovementGroup>(
     answers.style ? `/api/motor/movements?style=${answers.style}` : '/api/motor/movements',

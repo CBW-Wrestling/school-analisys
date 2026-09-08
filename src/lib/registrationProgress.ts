@@ -18,6 +18,13 @@ export type RegistrationProgress = {
   states: RegistrationStateSummary[]
 }
 
+export type RegistrationPendingType = 'SOCIAL' | 'MOTOR'
+
+export type RegistrationPendingItem = {
+  type: RegistrationPendingType
+  message: string
+}
+
 export type RegistrationAthlete = {
   entryId: string
   athleteName: string
@@ -28,7 +35,7 @@ export type RegistrationAthlete = {
   motorRegistered: number
   motorExpected: number
   motorStatus: RegistrationStatus
-  pending: string[]
+  pending: RegistrationPendingItem[]
 }
 
 export type RegistrationStateAthletes = {

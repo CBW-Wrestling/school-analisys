@@ -1,9 +1,9 @@
 import { ArrowLeft, ArrowRight, ClipboardList, MapPinned } from 'lucide-react'
-import { useState } from 'react'
 import { AssessmentWizard } from '../components/AssessmentWizard'
 import { AthleteProgressTable } from '../components/RegistrationProgressTables'
 import logo from '../assets/logo.svg'
 import { useApiData } from '../lib/api'
+import { useBackStack } from '../lib/useBackStack'
 import type { CompetitionRow } from '../types'
 import type { RegistrationStateAthletes } from '../lib/registrationProgress'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -15,26 +15,30 @@ type PublicStateContext = {
   state: { id: string; code: string; name: string }
 }
 
+type StateScreen =
+  | { name: 'menu' }
+  | { name: 'progress' }
+  | { name: 'form'; entryId?: string }
+
 export function PublicStateAssessmentPage() {
   const params = new URLSearchParams(window.location.search)
   const accessToken = params.get('token') ?? ''
-  const [started, setStarted] = useState(false)
-  const [showProgress, setShowProgress] = useState(false)
+  const { current: screen, push, pop, reset } = useBackStack<StateScreen>({ name: 'menu' })
   const { data, loading, error } = useApiData<PublicStateContext>(
     accessToken ? `/api/public/state-links/${accessToken}` : '/api/public/state-links/__missing__',
     Boolean(accessToken)
   )
   const { data: progressData, loading: progressLoading, error: progressError } = useApiData<RegistrationStateAthletes>(
     accessToken ? `/api/public/state-links/${accessToken}/progress` : '',
-    Boolean(accessToken) && showProgress
+    Boolean(accessToken) && screen.name === 'progress'
   )
 
-  if (started && data) {
+  if (screen.name === 'form' && data) {
     return (
       <AssessmentWizard
-        key={`profile-${accessToken}`}
+        key={`profile-${accessToken}-${screen.entryId ?? ''}`}
         kind="profile"
-        onAnother={() => setStarted(false)}
+        onAnother={() => reset({ name: 'menu' })}
         lockedCompetition={data.competition}
         submitPath="/api/public/state-assessments"
         buildSubmitBody={(payload) => ({ accessToken, payload })}
@@ -42,11 +46,12 @@ export function PublicStateAssessmentPage() {
         allowDuplicate={false}
         finishHref={`/?view=state-assessment&token=${encodeURIComponent(accessToken)}`}
         headerLabel={`${data.state.name} (${data.state.code})`}
+        initialEntryId={screen.entryId}
       />
     )
   }
 
-  if (showProgress && data) {
+  if (screen.name === 'progress' && data) {
     return (
       <main className="min-h-dvh bg-background text-foreground">
         <header className="flex h-12 w-full items-center justify-between border-b border-border bg-background px-4 md:px-6">
@@ -58,7 +63,7 @@ export function PublicStateAssessmentPage() {
         <section className="mx-auto flex w-full max-w-[960px] flex-col gap-6 p-6 md:p-10">
           <div className="flex items-center justify-between gap-3">
             <h1 className="text-2xl font-semibold tracking-tight">Pendências de {data.state.name} ({data.state.code})</h1>
-            <Button variant="outline" size="sm" onClick={() => setShowProgress(false)}><ArrowLeft data-icon="inline-start" aria-hidden="true" /> Voltar</Button>
+            <Button variant="outline" size="sm" onClick={pop}><ArrowLeft data-icon="inline-start" aria-hidden="true" /> Voltar</Button>
           </div>
           {progressError && (
             <Alert variant="destructive">
@@ -66,7 +71,12 @@ export function PublicStateAssessmentPage() {
               <AlertDescription>{progressError}</AlertDescription>
             </Alert>
           )}
-          <AthleteProgressTable athletes={progressData?.athletes ?? []} loading={progressLoading} />
+          <AthleteProgressTable
+            athletes={progressData?.athletes ?? []}
+            loading={progressLoading}
+            showMotor={false}
+            onRegister={(athlete) => push({ name: 'form', entryId: athlete.entryId })}
+          />
         </section>
       </main>
     )
@@ -117,12 +127,12 @@ export function PublicStateAssessmentPage() {
                 </div>
               </dl>
             )}
-            <Button type="button" disabled={!data} onClick={() => setStarted(true)}>
+            <Button type="button" disabled={!data} onClick={() => push({ name: 'form' })}>
               Iniciar preenchimento<ArrowRight data-icon="inline-end" aria-hidden="true" />
             </Button>
             {data && (
-              <Button type="button" variant="outline" onClick={() => setShowProgress(true)}>
-                <ClipboardList data-icon="inline-start" aria-hidden="true" /> Ver pendências dos meus atletas
+              <Button type="button" variant="outline" onClick={() => push({ name: 'progress' })}>
+                <ClipboardList data-icon="inline-start" aria-hidden="true" /> Ver pendências dos atletas
               </Button>
             )}
             <Button variant="outline" asChild>
