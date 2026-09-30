@@ -25,12 +25,14 @@ export function StateProgressTable({
   percentageKey,
   statusKey,
   onSelectState,
+  emptyMessage = 'Nenhum atleta encontrado para esta competição.',
 }: {
   states: RegistrationStateSummary[]
   registeredKey: 'socialRegistered' | 'motorRegistered'
   percentageKey: 'socialPercentage' | 'motorPercentage'
   statusKey: 'socialStatus' | 'motorStatus'
   onSelectState: (state: RegistrationStateSummary) => void
+  emptyMessage?: string
 }) {
   return (
     <div className="overflow-hidden rounded-lg border">
@@ -64,7 +66,7 @@ export function StateProgressTable({
           ))}
           {states.length === 0 && (
             <TableRow>
-              <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">Nenhum atleta encontrado para esta competição.</TableCell>
+              <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">{emptyMessage}</TableCell>
             </TableRow>
           )}
         </TableBody>

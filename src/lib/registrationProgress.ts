@@ -56,3 +56,26 @@ export const REGISTRATION_STATUS_CLASSNAME: Record<RegistrationStatus, string> =
   IN_PROGRESS: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400',
   COMPLETE: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
 }
+
+export const REGISTRATION_STATUS_ORDER: RegistrationStatus[] = ['COMPLETE', 'IN_PROGRESS', 'NOT_STARTED']
+
+/** Estados cujo status na dimensão informada (social ou motora) está entre os selecionados. */
+export function filterStatesByStatus(
+  states: RegistrationStateSummary[],
+  statusKey: 'socialStatus' | 'motorStatus',
+  selected: RegistrationStatus[],
+): RegistrationStateSummary[] {
+  return states.filter((state) => selected.includes(state[statusKey]))
+}
+
+export type RegistrationSummary = { registered: number; total: number; percentage: number }
+
+/** Soma registrados e atletas dos estados informados; porcentagem é 0 quando não há atletas. */
+export function summarizeStates(
+  states: RegistrationStateSummary[],
+  registeredKey: 'socialRegistered' | 'motorRegistered',
+): RegistrationSummary {
+  const registered = states.reduce((sum, state) => sum + state[registeredKey], 0)
+  const total = states.reduce((sum, state) => sum + state.totalAthletes, 0)
+  return { registered, total, percentage: total > 0 ? (registered / total) * 100 : 0 }
+}

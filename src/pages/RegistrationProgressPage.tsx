@@ -1,11 +1,20 @@
 import { Activity, ArrowLeft, ClipboardList, MapPin, Users } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { PageHeader } from '../components/PageHeader'
 import { KpiCard } from '../components/KpiCard'
+import { FilterDropdown } from '../components/FilterDropdown'
 import { AthleteProgressTable, StateProgressTable } from '../components/RegistrationProgressTables'
 import { useApiData } from '../lib/api'
 import { useReportingScope } from '../lib/reportingScope'
-import type { RegistrationProgress, RegistrationStateAthletes } from '../lib/registrationProgress'
+import {
+  REGISTRATION_STATUS_LABEL,
+  REGISTRATION_STATUS_ORDER,
+  filterStatesByStatus,
+  summarizeStates,
+  type RegistrationProgress,
+  type RegistrationStateAthletes,
+  type RegistrationStatus,
+} from '../lib/registrationProgress'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -57,15 +66,17 @@ export function RegistrationProgressPage() {
   const competitionCode = scope.competitionCode
   const hasCompetition = competitionCode !== 'all'
   const [selectedState, setSelectedState] = useState<{ code: string; name: string } | null>(null)
+  const [selectedStatuses, setSelectedStatuses] = useState<RegistrationStatus[]>(REGISTRATION_STATUS_ORDER)
   const { data, loading, error } = useApiData<RegistrationProgress>(
     hasCompetition ? `/api/dashboard/registration-progress?competitionCode=${encodeURIComponent(competitionCode)}` : '',
     hasCompetition
   )
 
-  const totalSocial = data?.states.reduce((sum, state) => sum + state.socialRegistered, 0) ?? 0
-  const totalMotor = data?.states.reduce((sum, state) => sum + state.motorRegistered, 0) ?? 0
-  const socialPct = data && data.totalAthletes > 0 ? (totalSocial / data.totalAthletes) * 100 : 0
-  const motorPct = data && data.totalAthletes > 0 ? (totalMotor / data.totalAthletes) * 100 : 0
+  const socialStates = useMemo(() => filterStatesByStatus(data?.states ?? [], 'socialStatus', selectedStatuses), [data, selectedStatuses])
+  const motorStates = useMemo(() => filterStatesByStatus(data?.states ?? [], 'motorStatus', selectedStatuses), [data, selectedStatuses])
+  const social = summarizeStates(socialStates, 'socialRegistered')
+  const motor = summarizeStates(motorStates, 'motorRegistered')
+  const filteredEmptyMessage = data && data.states.length > 0 ? 'Nenhum estado com os status selecionados.' : undefined
 
   if (selectedState && hasCompetition) {
     return (
@@ -115,8 +126,8 @@ export function RegistrationProgressPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <KpiCard icon={Users} label="Atletas na competição" value={loading ? '—' : String(data?.totalAthletes ?? 0)} loading={loading} />
               <KpiCard icon={MapPin} label="Estados" value={loading ? '—' : String(data?.states.length ?? 0)} loading={loading} />
-              <KpiCard icon={ClipboardList} label="Social registrado" value={loading ? '—' : `${socialPct.toFixed(1)}%`} description={loading ? undefined : `${totalSocial} de ${data?.totalAthletes ?? 0}`} loading={loading} />
-              <KpiCard icon={Activity} label="Motora registrada" value={loading ? '—' : `${motorPct.toFixed(1)}%`} description={loading ? undefined : `${totalMotor} de ${data?.totalAthletes ?? 0}`} loading={loading} />
+              <KpiCard icon={ClipboardList} label="Social registrado" value={loading ? '—' : `${social.percentage.toFixed(1)}%`} description={loading ? undefined : `${social.registered} de ${social.total}`} loading={loading} />
+              <KpiCard icon={Activity} label="Motora registrada" value={loading ? '—' : `${motor.percentage.toFixed(1)}%`} description={loading ? undefined : `${motor.registered} de ${motor.total}`} loading={loading} />
             </div>
 
             <Card>
@@ -126,15 +137,23 @@ export function RegistrationProgressPage() {
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="social">
-                  <TabsList>
-                    <TabsTrigger value="social">Social</TabsTrigger>
-                    <TabsTrigger value="motor">Motora</TabsTrigger>
-                  </TabsList>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <TabsList>
+                      <TabsTrigger value="social">Social</TabsTrigger>
+                      <TabsTrigger value="motor">Motora</TabsTrigger>
+                    </TabsList>
+                    <FilterDropdown
+                      label="Status"
+                      options={REGISTRATION_STATUS_ORDER.map((status) => ({ value: status, label: REGISTRATION_STATUS_LABEL[status] }))}
+                      value={selectedStatuses}
+                      onChange={(value) => setSelectedStatuses(REGISTRATION_STATUS_ORDER.filter((status) => value.includes(status)))}
+                    />
+                  </div>
                   <TabsContent value="social" className="mt-4">
-                    <StateProgressTable states={data?.states ?? []} registeredKey="socialRegistered" percentageKey="socialPercentage" statusKey="socialStatus" onSelectState={(state) => setSelectedState({ code: state.stateCode, name: state.stateName })} />
+                    <StateProgressTable states={socialStates} registeredKey="socialRegistered" percentageKey="socialPercentage" statusKey="socialStatus" emptyMessage={filteredEmptyMessage} onSelectState={(state) => setSelectedState({ code: state.stateCode, name: state.stateName })} />
                   </TabsContent>
                   <TabsContent value="motor" className="mt-4">
-                    <StateProgressTable states={data?.states ?? []} registeredKey="motorRegistered" percentageKey="motorPercentage" statusKey="motorStatus" onSelectState={(state) => setSelectedState({ code: state.stateCode, name: state.stateName })} />
+                    <StateProgressTable states={motorStates} registeredKey="motorRegistered" percentageKey="motorPercentage" statusKey="motorStatus" emptyMessage={filteredEmptyMessage} onSelectState={(state) => setSelectedState({ code: state.stateCode, name: state.stateName })} />
                   </TabsContent>
                 </Tabs>
               </CardContent>
