@@ -1,6 +1,4 @@
 schema: spec-driven
-# Specs e changes vivem na store OpenSpec da pasta pai do workspace (school-analysis/openspec/).
-# Registre-a nesta máquina com: openspec store register <caminho-da-pasta-pai>
+# Specs e changes vivem na store OpenSpec da pasta pai do workspace (school-analisys-fullstack).
+# Todo change é tratado numa sessão na pasta pai (ver AGENTS.md e ONBOARDING.md de lá).
 store: school-analysis
-githubCopilot:
-  cloudAgent: true
