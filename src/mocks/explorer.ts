@@ -1,8 +1,8 @@
 import type { CompetitionRow, MotorRow, ProfileRow } from '../types'
 
 export const explorerMockCompetitions: CompetitionRow[] = [
-  { id: 'mock-jebs-u14-2024', code: 'JEBS-U14-2024', name: "JEB's U14", year: 2024, arenaId: null },
-  { id: 'mock-jejs-u16-2025', code: 'JEJS-U16-2025', name: "JEJ's U16", year: 2025, arenaId: null },
+  { id: 'mock-jebs-u14-2024', code: 'JEBS-U14-2024', name: "JEB's U14", year: 2024, arenaId: null, series: null, parentCompetitionId: null, parentCompetitionName: null },
+  { id: 'mock-jejs-u16-2025', code: 'JEJS-U16-2025', name: "JEJ's U16", year: 2025, arenaId: null, series: null, parentCompetitionId: null, parentCompetitionName: null },
 ]
 
 export const explorerMockMotorRows: MotorRow[] = [

@@ -3,13 +3,63 @@ export type Answers = Record<string, string>
 export type Props = { answers: Answers; update: (key: string, value: string) => void }
 
 // ── Competições ────────────────────────────────────────────────────
+// A Ouro é a série principal; Prata e Bronze leem as avaliações da Ouro.
+export type Series = 'OURO' | 'PRATA' | 'BRONZE'
+
 export type CompetitionRow = {
   id: string
   code: string
   name: string
   year: number | null
   arenaId: string | null
+  series: Series | null
+  parentCompetitionId: string | null
+  parentCompetitionName: string | null
 }
+
+// ── Vínculo de séries secundárias ─────────────────────────────────
+export type LinkStatus = 'EXACT' | 'SUGGESTED' | 'AMBIGUOUS' | 'UNLINKED' | 'CONFIRMED'
+
+export type LinkHistorySource = 'IMPORT_AUTO' | 'IMPORT_REVIEW' | 'MANUAL' | 'SWAP'
+
+export type Page<T> = { content: T[]; totalElements: number }
+
+export type LinkedEntry = {
+  entryId: string
+  athleteName: string | null
+  state: string | null
+  style: string
+  weightKg: number | null
+}
+
+export type PrincipalCandidate = LinkedEntry & {
+  // Inscrição desta série já vinculada a este principal, se houver.
+  linkedEntryId: string | null
+}
+
+export type EntryLink = {
+  entryId: string
+  arenaAthleteName: string | null
+  state: string | null
+  style: string
+  weightKg: number | null
+  linkStatus: LinkStatus
+  principal: LinkedEntry | null
+  // Só em AMBIGUOUS.
+  candidates: PrincipalCandidate[] | null
+}
+
+export type EntryLinkHistory = {
+  fromPrincipalEntryId: string | null
+  toPrincipalEntryId: string | null
+  fromStatus: LinkStatus | null
+  toStatus: LinkStatus
+  source: LinkHistorySource
+  changedBy: string | null
+  changedAt: string
+}
+
+export type LinkSummary = { exact: number; suggested: number; ambiguous: number; unlinked: number }
 
 // ── Resultados ─────────────────────────────────────────────────────
 export type ResultRow = {
