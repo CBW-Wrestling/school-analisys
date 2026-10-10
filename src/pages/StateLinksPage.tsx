@@ -6,6 +6,7 @@ import { PageHeader } from '../components/PageHeader'
 import { SelectPairs } from '../components/Field'
 import { useApiRows } from '../lib/api'
 import { generateStateLinks, type StateLinkGenerationResponse } from '../lib/stateLinksApi'
+import { apiErrorOf, competitionLabel, isAssessable } from '../lib/seriesLinksApi'
 import { openPrintableLinks } from '../lib/printableLinks'
 import type { CompetitionRow } from '../types'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -73,7 +74,7 @@ export function StateLinksPage() {
   const [result, setResult] = useState<StateLinkGenerationResponse | null>(null)
   const { rows: competitions, loading: competitionsLoading } = useApiRows<CompetitionRow>('/api/competitions')
 
-  const competitionOptions = competitions.map((competition) => ({ label: competition.name, value: competition.id }))
+  const competitionOptions = competitions.filter(isAssessable).map((competition) => ({ label: competitionLabel(competition), value: competition.id }))
 
   async function handleGenerate() {
     if (!selectedCompetitionId) return
@@ -83,7 +84,7 @@ export function StateLinksPage() {
       const response = await generateStateLinks(selectedCompetitionId)
       setResult(response)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Não foi possível gerar os links por estado.')
+      setError(apiErrorOf(err, 'Não foi possível gerar os links por estado.').message)
     } finally {
       setGenerating(false)
     }

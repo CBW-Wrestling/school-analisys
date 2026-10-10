@@ -197,7 +197,7 @@ export function PageHeader({
       </Sidebar>
       <SidebarInset className="peer-data-[variant=inset]:border">
         <AppHeader crumbs={crumbs} />
-        <ReportingScopeFilters />
+        <ReportingScopeFilters assessableOnly={active === 'registration-progress'} />
         {children}
       </SidebarInset>
     </>

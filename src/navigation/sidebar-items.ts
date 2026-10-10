@@ -10,6 +10,7 @@ import {
   LineChart,
   ListChecks,
   Medal,
+  Link2,
   MapPinned,
   Plus,
   ShieldPlus,
@@ -64,6 +65,7 @@ export const operations: NavigationItem[] = [
   { id: 'results-import', label: 'Importar resultados', href: '?view=results-import', icon: FileUp },
   { id: 'referee-import', label: 'Árbitros', href: '?view=referee-import', icon: UserCheck },
   { id: 'state-links', label: 'Links por estado', href: '?view=state-links', icon: MapPinned },
+  { id: 'series-links', label: 'Vínculos de séries', href: '?view=series-links', icon: Link2 },
 ]
 
 export const allNavItems: NavigationItem[] = [

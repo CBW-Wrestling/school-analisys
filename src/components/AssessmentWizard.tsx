@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { cn } from '@/lib/utils'
+import { competitionLabel, isAssessable } from '../lib/seriesLinksApi'
 
 type SubmitPayload = Record<string, unknown>
 
@@ -113,7 +114,7 @@ function IdentityFields({
     update('age_category_code', found.ageCategoryCode)
   }
 
-  const competitionOptions = competitions.map(c => ({ label: c.name, value: c.code }))
+  const competitionOptions = competitions.filter(isAssessable).map(c => ({ label: competitionLabel(c), value: c.code }))
   const athleteOptions = athletes.map(a => ({
     label: `${a.athleteName} · ${a.style} ${a.weight}kg`,
     value: a.entryId,

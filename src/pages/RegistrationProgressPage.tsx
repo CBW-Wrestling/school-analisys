@@ -19,6 +19,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { apiErrorOf } from '../lib/seriesLinksApi'
 
 function StateAthletesView({
   competitionCode,
@@ -48,7 +49,7 @@ function StateAthletesView({
       {error && (
         <Alert variant="destructive">
           <AlertTitle>Não foi possível carregar os atletas</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{apiErrorOf(new Error(error), error).message}</AlertDescription>
         </Alert>
       )}
 
@@ -117,7 +118,7 @@ export function RegistrationProgressPage() {
         {error && (
           <Alert variant="destructive">
             <AlertTitle>Não foi possível carregar o acompanhamento</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{apiErrorOf(new Error(error), error).message}</AlertDescription>
           </Alert>
         )}
 
