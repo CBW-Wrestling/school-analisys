@@ -14,6 +14,8 @@ import { SeriesLinksTable, type EffectiveLink } from './SeriesLinksTable'
 
 const PAGE_SIZE = 20
 
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
 // Revisão obrigatória do de/para ao fim do import de uma série secundária.
 export function LinkReviewStep({ status, onCompleted }: { status: ImportStatus; onCompleted: (status: ImportStatus) => void }) {
   const [page, setPage] = useState(0)
@@ -84,10 +86,10 @@ export function LinkReviewStep({ status, onCompleted }: { status: ImportStatus; 
         </CardDescription>
         {summary && (
           <div className="flex flex-wrap gap-2 pt-2">
-            <Badge>{summary.exact} exatos</Badge>
-            <Badge variant="secondary">{summary.suggested} sugeridos</Badge>
-            <Badge variant="outline">{summary.ambiguous} ambíguos</Badge>
-            <Badge variant="destructive">{summary.unlinked} não vinculados</Badge>
+            <Badge>{plural(summary.exact, 'exato', 'exatos')}</Badge>
+            <Badge variant="secondary">{plural(summary.suggested, 'sugerido', 'sugeridos')}</Badge>
+            <Badge variant="outline">{plural(summary.ambiguous, 'ambíguo', 'ambíguos')}</Badge>
+            <Badge variant="destructive">{plural(summary.unlinked, 'não vinculado', 'não vinculados')}</Badge>
           </div>
         )}
       </CardHeader>
@@ -117,7 +119,7 @@ export function LinkReviewStep({ status, onCompleted }: { status: ImportStatus; 
       </CardContent>
       <CardFooter className="flex flex-col items-stretch gap-3 border-t py-4 sm:flex-row sm:items-center sm:justify-between">
         <span className="text-sm text-muted-foreground">
-          {changes === 0 ? 'Nenhuma alteração na proposta.' : `${changes} alteração(ões) na proposta.`}
+          {changes === 0 ? 'Nenhuma alteração na proposta.' : `${plural(changes, 'alteração', 'alterações')} na proposta.`}
         </span>
         <Button onClick={confirm} disabled={confirming || loading}>
           {confirming && <Spinner data-icon="inline-start" />}
