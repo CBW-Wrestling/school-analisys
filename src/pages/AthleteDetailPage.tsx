@@ -1,5 +1,6 @@
 import { ArrowLeft, Brain, Dumbbell, Info, Medal, User } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { EntryFightsCard } from '../components/EntryFightsCard'
 import { useApiData } from '../lib/api'
 import type { AthleteDetail, AthleteDetailItem } from '../types'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -183,6 +184,8 @@ export function AthleteDetailPage({ entryId, onBack, backLabel = 'Voltar' }: Pro
             ))}
           </Tabs>
         )}
+
+        <EntryFightsCard entryId={entryId} />
       </main>
     </div>
   )
