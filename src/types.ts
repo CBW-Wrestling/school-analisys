@@ -76,6 +76,23 @@ export type ResultRow = {
   isNotRanked: boolean
 }
 
+// Luta do ponto de vista da inscrição (GET /api/entries/{entryId}/fights). victoryType é o
+// código do Arena (VFA, VSU, VPO…).
+export type EntryFight = {
+  fightId: string
+  round: string | null
+  roundOrder: number | null
+  opponentEntryId: string
+  opponentName: string | null
+  opponentState: string | null
+  result: 'WIN' | 'LOSS'
+  technicalPointsFor: number
+  technicalPointsAgainst: number
+  classificationPointsFor: number
+  classificationPointsAgainst: number
+  victoryType: string | null
+}
+
 // ── Detalhe do atleta (BFF: backend monta seções/itens já formatados) ──
 export type AthleteDetailItem = {
   code: string
