@@ -93,6 +93,79 @@ export type EntryFight = {
   victoryType: string | null
 }
 
+// ── Competições e histórico do atleta ─────────────────────────────
+export type CompetitionSource = 'ARENA' | 'SPREADSHEET'
+
+export type CompetitionTotals = { entries: number; withResult: number; ranked: number; assessed: number }
+
+// GET /api/competitions/overview: competição pai traz as séries em children e os totais somados.
+export type CompetitionNode = {
+  id: string
+  code: string
+  name: string
+  year: number | null
+  series: Series | null
+  source: CompetitionSource
+  totals: CompetitionTotals
+  children: CompetitionNode[]
+}
+
+// GET /api/competitions/{id}/entries. athleteId é nulo na inscrição secundária não vinculada.
+export type CompetitionEntry = {
+  entryId: string
+  athleteId: string | null
+  athleteName: string | null
+  state: string | null
+  style: string | null
+  weight: number | null
+  rank: number | null
+  isNotRanked: boolean
+  wins: number | null
+  losses: number | null
+  linkStatus: LinkStatus | null
+}
+
+export type AthleteSearchRow = {
+  athleteId: string
+  name: string | null
+  states: string[]
+  competitions: number
+  lastYear: number | null
+}
+
+export type HistoryCompetition = {
+  id: string
+  name: string
+  code: string
+  year: number | null
+  series: Series | null
+  parentName: string | null
+}
+
+// Uma linha do histórico; assessmentFromPrincipal = avaliações vêm da Série Ouro.
+export type AthleteHistoryEntry = {
+  entryId: string
+  competition: HistoryCompetition
+  style: string | null
+  weight: number | null
+  state: string | null
+  rank: number | null
+  isNotRanked: boolean
+  wins: number | null
+  losses: number | null
+  technicalPointsFor: number | null
+  technicalPointsAgainst: number | null
+  countFights: number | null
+  assessmentFromPrincipal: boolean
+}
+
+export type AthleteHistory = {
+  athleteId: string
+  name: string
+  states: string[]
+  entries: AthleteHistoryEntry[]
+}
+
 // ── Detalhe do atleta (BFF: backend monta seções/itens já formatados) ──
 export type AthleteDetailItem = {
   code: string
@@ -113,6 +186,8 @@ export type AthleteDetail = {
   tags: string[]
   rank: number | null
   sections: AthleteDetailSection[]
+  // Nulo na inscrição secundária não vinculada, que não tem atleta.
+  athleteId: string | null
 }
 
 // ── Dashboard — resumos ────────────────────────────────────────────
