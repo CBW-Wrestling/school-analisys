@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiGet } from './api'
+import { isSecondarySeries } from './seriesLinksApi'
 import type { CompetitionAthlete, CompetitionRow } from '../types'
 
 export const WRESTLING_STYLES = ['FS', 'GR', 'WW'] as const
@@ -31,9 +32,12 @@ function readScope(): ReportingScope {
   }
 }
 
+// Escopo agregado (todas ou um ano) deixa Prata e Bronze de fora: a inscrição vinculada reaproveita
+// a avaliação da Ouro e contaria o mesmo atleta mais de uma vez. Escolhida, a série aparece normal.
 export function competitionCodesForScope(scope: ReportingScope, competitions: CompetitionRow[]) {
   if (scope.competitionCode !== 'all') return [scope.competitionCode]
   return competitions
+    .filter((competition) => !isSecondarySeries(competition))
     .filter((competition) => scope.year === 'all' || String(competition.year) === scope.year)
     .map((competition) => competition.code)
 }
