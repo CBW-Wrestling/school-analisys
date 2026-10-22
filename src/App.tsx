@@ -29,6 +29,8 @@ import { PhysicalPage } from "./pages/PhysicalPage"
 import { InferencesPage } from "./pages/InferencesPage"
 import { ProfilesPage } from "./pages/ProfilesPage"
 import { ResultsPage } from "./pages/ResultsPage"
+import { CompetitionsPage } from "./pages/CompetitionsPage"
+import { AthletePage } from "./pages/AthletePage"
 import { SidebarProvider } from "./components/ui/sidebar"
 import type { FormKind } from "./types"
 
@@ -67,6 +69,8 @@ function App() {
     : requestedView === "patient-monitoring" ? <PatientMonitoringDashboardPage />
     : requestedView === "users-example" ? <UsersDashboardPage />
     : requestedView === "results" ? <ResultsPage />
+    : requestedView === "competitions" ? <CompetitionsPage />
+    : requestedView === "athlete" ? <AthletePage athleteId={params.get("id") ?? ""} />
     : requestedView === "profiles" ? <ProfilesPage />
     : requestedView === "physical" ? <PhysicalPage />
     : requestedView === "motor" ? <TechnicalAssessmentsPage />

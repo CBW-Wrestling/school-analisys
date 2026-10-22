@@ -1,4 +1,5 @@
 import {
+  Trophy,
   Activity,
   ClipboardList,
   FileUp,
@@ -42,6 +43,7 @@ export const assessmentsNav: NavigationItem[] = [
 ]
 
 export const resultsNav: NavigationItem[] = [
+  { id: 'competitions', label: 'Competições', href: '?view=competitions', icon: Trophy },
   { id: 'results', label: 'Resultados', href: '?view=results', icon: Medal },
   { id: 'inferences', label: 'Inferências', href: '?view=inferences', icon: Sparkles },
   { id: 'registration-progress', label: 'Acompanhamento', href: '?view=registration-progress', icon: ClipboardList },
