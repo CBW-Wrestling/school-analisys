@@ -7,6 +7,7 @@ import { useApiRows } from '../lib/api'
 import { scoreFor, visibleMotorRows, COMPLETION_EXPLANATION } from '../lib/motorScore'
 import { competitionCodesForScope, useReportingScope, useScopedCompetitionAthletes, withReportingScope } from '../lib/reportingScope'
 import { meanAndStdDev } from '../lib/zscore'
+import { PHYSICAL_ENABLED } from '../lib/features'
 import type { CompetitionRow, MotorRow, PhysicalRow, ProfileRow } from '../types'
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -44,10 +45,12 @@ function NavigationHub({ href, icon, title, description }: { href: string; icon:
   )
 }
 
+const ASSESSMENT_BLOCKS = PHYSICAL_ENABLED ? 'perfil, avaliação física e motora' : 'perfil e avaliação motora'
+
 export function DashboardPage() {
   const { rows: competitions } = useApiRows<CompetitionRow>('/api/competitions')
   const { rows: profiles, loading: profilesLoading } = useApiRows<ProfileRow>('/api/dashboard/profiles')
-  const { rows: physical, loading: physicalLoading } = useApiRows<PhysicalRow>('/api/dashboard/physical')
+  const { rows: physical, loading: physicalLoading } = useApiRows<PhysicalRow>('/api/dashboard/physical', PHYSICAL_ENABLED)
   const { rows: motor, loading: motorLoading } = useApiRows<MotorRow>('/api/dashboard/motor')
   const { scope } = useReportingScope()
   const scopedCompetitionCodes = useMemo(() => competitionCodesForScope(scope, competitions), [scope, competitions])
@@ -84,7 +87,7 @@ export function DashboardPage() {
   const filteredPhysicalAthleteIds = new Set(basePhysical.map((row) => row.athleteEntryId).filter((value): value is string => Boolean(value)))
   const filteredMotorAthleteIds = new Set(baseMotor.map((row) => row.athleteEntryId).filter((value): value is string => Boolean(value)))
   const filteredAthleteIds = new Set(scopedAthletes.map((athlete) => athlete.entryId))
-  const filteredCompletedAthletes = new Set([...filteredAthleteIds].filter((id) => filteredProfileAthleteIds.has(id) && filteredPhysicalAthleteIds.has(id) && filteredMotorAthleteIds.has(id)))
+  const filteredCompletedAthletes = new Set([...filteredAthleteIds].filter((id) => filteredProfileAthleteIds.has(id) && (!PHYSICAL_ENABLED || filteredPhysicalAthleteIds.has(id)) && filteredMotorAthleteIds.has(id)))
   const totalAthletes = filteredAthleteIds.size
   const completedAthletes = filteredCompletedAthletes.size
   const pendingAthletes = Math.max(totalAthletes - completedAthletes, 0)
@@ -101,19 +104,19 @@ export function DashboardPage() {
           </div>
           <div className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
             {hasAthletes
-              ? 'Baseado em atletas cadastrados com perfil, avaliação física e motora no filtro atual.'
-              : 'Nenhum atleta foi encontrado no filtro atual. Ainda não há dados de perfil, física ou motora para esse conjunto.'}
+              ? `Baseado em atletas cadastrados com ${ASSESSMENT_BLOCKS} no filtro atual.`
+              : `Nenhum atleta foi encontrado no filtro atual. Ainda não há dados de ${ASSESSMENT_BLOCKS} para esse conjunto.`}
           </div>
           <section className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
 <KpiCard loading={profilesLoading || physicalLoading || motorLoading || athletesLoading} icon={<UserRound className="size-4" />} label="Atletas cadastrados" value={totalAthletes.toLocaleString('pt-BR')} description="Total de atletas no filtro ativo" />
-<KpiCard loading={profilesLoading || physicalLoading || motorLoading || athletesLoading} icon={<Activity className="size-4" />} label="Cobertura geral" value={`${coverage}%`} description={`${completedAthletes.toLocaleString('pt-BR')} com perfil + física + motora`} info={<InfoTooltip label="O que é cobertura geral?" content={COMPLETION_EXPLANATION} />} />
+<KpiCard loading={profilesLoading || physicalLoading || motorLoading || athletesLoading} icon={<Activity className="size-4" />} label="Cobertura geral" value={`${coverage}%`} description={`${completedAthletes.toLocaleString('pt-BR')} com ${PHYSICAL_ENABLED ? 'perfil + física + motora' : 'perfil + motora'}`} info={<InfoTooltip label="O que é cobertura geral?" content={COMPLETION_EXPLANATION} />} />
 <KpiCard loading={profilesLoading || physicalLoading || motorLoading || athletesLoading} icon={<BarChart3 className="size-4" />} label="Etapas concluídas" value={completedAthletes.toLocaleString('pt-BR')} description="Atletas com todos os blocos mínimos" />
-<KpiCard loading={profilesLoading || physicalLoading || motorLoading || athletesLoading} icon={<Medal className="size-4" />} label="Pendências" value={pendingAthletes.toLocaleString('pt-BR')} description={pendingAthletes === 0 ? 'Nenhuma pendência' : 'Aguardando perfil, física ou motora'} />
+<KpiCard loading={profilesLoading || physicalLoading || motorLoading || athletesLoading} icon={<Medal className="size-4" />} label="Pendências" value={pendingAthletes.toLocaleString('pt-BR')} description={pendingAthletes === 0 ? 'Nenhuma pendência' : `Aguardando ${PHYSICAL_ENABLED ? 'perfil, física ou motora' : 'perfil ou motora'}`} />
           </section>
-          <BrazilHeatmap loading={profilesLoading || physicalLoading || motorLoading || athletesLoading} values={stateValues} selectedState={selectedState} nationalAverage={nationalAverage} nationalStdDev={nationalStdDev} onSelect={setSelectedState} />
+          <BrazilHeatmap loading={profilesLoading || physicalLoading || motorLoading || athletesLoading} values={stateValues} selectedState={selectedState} nationalAverage={nationalAverage} nationalStdDev={nationalStdDev} showEngagement={PHYSICAL_ENABLED} onSelect={setSelectedState} />
           <section className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
             <NavigationHub href="?view=motor" icon={<BarChart3 className="size-4" />} title="Raio-X técnico" description="Acrobacias, pé e solo." />
-            <NavigationHub href="?view=physical" icon={<Dumbbell className="size-4" />} title="Perfil físico" description="Biometria, força e envergadura." />
+            {PHYSICAL_ENABLED && <NavigationHub href="?view=physical" icon={<Dumbbell className="size-4" />} title="Perfil físico" description="Biometria, força e envergadura." />}
             <NavigationHub href="?view=profiles" icon={<UserRound className="size-4" />} title="Contexto de prática" description="Clubes, projetos e frequência." />
             <NavigationHub href="?view=results" icon={<Share2 className="size-4" />} title="Inteligência e correlações" description="Vitórias e execução técnica." />
           </section>

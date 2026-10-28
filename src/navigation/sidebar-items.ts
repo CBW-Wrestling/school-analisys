@@ -25,6 +25,7 @@ import {
   Wallet,
 } from 'lucide-react'
 import type { ComponentType } from 'react'
+import { PHYSICAL_ENABLED } from '../lib/features'
 
 export type NavigationItem = {
   id: string
@@ -41,7 +42,7 @@ export const assessmentsNav: NavigationItem[] = [
   { id: 'motor', label: 'Técnico', href: '?view=motor', icon: ShieldPlus },
   { id: 'physical', label: 'Físico', href: '?view=physical', icon: Activity },
   { id: 'profiles', label: 'Atletas', href: '?view=profiles', icon: UsersRound },
-]
+].filter((item) => item.id !== 'physical' || PHYSICAL_ENABLED)
 
 export const resultsNav: NavigationItem[] = [
   { id: 'competitions', label: 'Competições', href: '?view=competitions', icon: Trophy },

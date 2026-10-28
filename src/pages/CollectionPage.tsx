@@ -1,7 +1,7 @@
 import { ArrowRight } from 'lucide-react'
 import { useState } from 'react'
 import { AssessmentWizard } from '../components/AssessmentWizard'
-import { details } from '../constants'
+import { details, enabledFormKinds } from '../constants'
 import type { FormKind } from '../types'
 
 function FormPicker({ onChoose }: { onChoose: (kind: FormKind) => void }) {
@@ -13,7 +13,7 @@ function FormPicker({ onChoose }: { onChoose: (kind: FormKind) => void }) {
         <p className="mt-1 text-sm text-muted-foreground">Escolha o próximo instrumento de coleta para este atleta.</p>
       </div>
       <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3">
-        {(Object.keys(details) as FormKind[]).map((kind) => {
+        {enabledFormKinds.map((kind) => {
           const item = details[kind]
           const Icon = item.icon
           return (

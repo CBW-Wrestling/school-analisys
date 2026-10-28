@@ -3,6 +3,7 @@ import { DetailSectionCard } from '../components/AthleteDetailSections'
 import { SECTION_ICONS, iconFor, initialsFor } from '../lib/athleteDetail'
 import { EntryFightsCard } from '../components/EntryFightsCard'
 import { useApiData } from '../lib/api'
+import { PHYSICAL_ENABLED } from '../lib/features'
 import { athleteHref } from '../navigation/links'
 import type { AthleteDetail } from '../types'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -55,7 +56,7 @@ export function AthleteDetailPage({ entryId, onBack, backLabel = 'Voltar' }: Pro
 
   const groupedSections = SECTION_GROUPS.map((group) => ({
     ...group,
-    sections: d.sections.filter((section) => group.icon === 'other'
+    sections: d.sections.filter((section) => PHYSICAL_ENABLED || section.code !== 'physical').filter((section) => group.icon === 'other'
       ? !Object.hasOwn(SECTION_ICONS, section.icon)
       : section.icon === group.icon),
   })).filter((group) => group.sections.length > 0)

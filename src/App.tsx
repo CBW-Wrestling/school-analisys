@@ -1,6 +1,7 @@
 import "./App.css"
 import { useEffect } from "react"
-import { details } from "./constants"
+import { enabledFormKinds } from "./constants"
+import { PHYSICAL_ENABLED } from "./lib/features"
 import { saveTokens } from "./lib/auth"
 import { CollectionPage } from "./pages/CollectionPage"
 import { DashboardPage } from "./pages/DashboardPage"
@@ -58,7 +59,7 @@ function App() {
 
   if (accessToken && refreshToken) return null // aguarda reload
 
-  const page = requestedForm && requestedForm in details ? <CollectionPage initialKind={requestedForm as FormKind} />
+  const page = requestedForm && enabledFormKinds.includes(requestedForm as FormKind) ? <CollectionPage initialKind={requestedForm as FormKind} />
     : requestedView === "default" ? <DefaultPage />
     : requestedView === "analytics" ? <AnalyticsDashboardPage />
     : requestedView === "crm" ? <CrmDashboardPage />
@@ -73,7 +74,7 @@ function App() {
     : requestedView === "competitions" ? <CompetitionsPage />
     : requestedView === "athlete" ? <AthletePage athleteId={params.get("id") ?? ""} />
     : requestedView === "profiles" ? <ProfilesPage />
-    : requestedView === "physical" ? <PhysicalPage />
+    : requestedView === "physical" && PHYSICAL_ENABLED ? <PhysicalPage />
     : requestedView === "motor" ? <TechnicalAssessmentsPage />
     : requestedView === "motor-states" ? <StateExecutionPage />
     : requestedView === "inferences" ? <InferencesPage />

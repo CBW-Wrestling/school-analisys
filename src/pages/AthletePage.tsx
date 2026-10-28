@@ -5,6 +5,7 @@ import { initialsFor } from '../lib/athleteDetail'
 import { EntryFightsCard } from '../components/EntryFightsCard'
 import { PageHeader } from '../components/PageHeader'
 import { useApiData } from '../lib/api'
+import { PHYSICAL_ENABLED } from '../lib/features'
 import type { AthleteDetail, AthleteHistory, AthleteHistoryEntry, Series } from '../types'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -31,7 +32,7 @@ function EntryAssessments({ entry }: { entry: AthleteHistoryEntry }) {
   const { data, loading, error } = useApiData<AthleteDetail>(`/api/athletes/entries/${encodeURIComponent(entry.entryId)}`)
   if (loading) return <div className="flex justify-center py-4"><Spinner /></div>
   if (error || !data) return <p className="text-sm text-muted-foreground">Não foi possível carregar as avaliações.</p>
-  const sections = data.sections.filter((section) => section.icon !== 'medal')
+  const sections = data.sections.filter((section) => section.icon !== 'medal' && (PHYSICAL_ENABLED || section.code !== 'physical'))
   return (
     <div className="flex flex-col gap-3">
       {entry.assessmentFromPrincipal && (

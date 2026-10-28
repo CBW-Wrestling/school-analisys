@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import logo from '../assets/logo.svg'
-import { details } from '../constants'
+import { details, enabledFormKinds } from '../constants'
 import { fetchCurrentUser, logout, type UserInfo } from '../lib/auth'
 import { withReportingScope } from '../lib/reportingScope'
 import { allNavItems, assessmentsNav, /* examplesNav, */ operations, overviewNav, resultsNav, type NavigationItem } from '../navigation/sidebar-items'
@@ -41,7 +41,7 @@ function CollectionNavItem({ active }: { active: string }) {
         </CollapsibleTrigger>
         <CollapsibleContent>
           <SidebarMenuSub>
-            {(Object.keys(details) as (keyof typeof details)[]).map((kind) => (
+            {enabledFormKinds.map((kind) => (
               <SidebarMenuSubItem key={kind}>
                 <SidebarMenuSubButton asChild>
                   <a href={withReportingScope(`?form=${kind}`)}>{details[kind].label}</a>

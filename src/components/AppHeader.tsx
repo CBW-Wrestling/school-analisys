@@ -1,7 +1,6 @@
 import { Fragment, useEffect, useState } from 'react'
 import { ChevronsUpDown, ClipboardList, LogOut, Moon, Sun, User, UserCircle } from 'lucide-react'
-import { details } from '@/constants'
-import type { FormKind } from '@/types'
+import { details, enabledFormKinds } from '@/constants'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -126,7 +125,7 @@ export function AppHeader({ crumbs }: { crumbs: BreadcrumbItemData[] }) {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>Tipo de avaliação</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {(Object.keys(details) as FormKind[]).map((kind) => {
+            {enabledFormKinds.map((kind) => {
               const Icon = details[kind].icon
               return (
                 <DropdownMenuItem key={kind} asChild>
