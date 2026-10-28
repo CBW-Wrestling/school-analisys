@@ -1,12 +1,14 @@
 import { AlertCircle, ChevronDown, ChevronRight } from 'lucide-react'
 import { Fragment, useState } from 'react'
+import { AssessmentVersionsSheet } from '../components/AssessmentVersionsSheet'
 import { DetailSectionCard } from '../components/AthleteDetailSections'
+import { AthleteEvolutionTab } from '../components/AthleteEvolutionTab'
 import { initialsFor } from '../lib/athleteDetail'
 import { EntryFightsCard } from '../components/EntryFightsCard'
 import { PageHeader } from '../components/PageHeader'
 import { useApiData } from '../lib/api'
 import { PHYSICAL_ENABLED } from '../lib/features'
-import type { AthleteDetail, AthleteHistory, AthleteHistoryEntry, Series } from '../types'
+import type { AthleteDetail, AthleteEvolution, AthleteHistory, AthleteHistoryEntry, Series } from '../types'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -14,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 const SERIES_LABEL: Record<Series, string> = { OURO: 'Ouro', PRATA: 'Prata', BRONZE: 'Bronze' }
 
@@ -51,7 +54,9 @@ function EntryAssessments({ entry }: { entry: AthleteHistoryEntry }) {
 
 export function AthletePage({ athleteId }: { athleteId: string }) {
   const { data, loading, error } = useApiData<AthleteHistory>(`/api/athletes/${encodeURIComponent(athleteId)}`, Boolean(athleteId))
+  const evolution = useApiData<AthleteEvolution>(`/api/athletes/${encodeURIComponent(athleteId)}/evolution`, Boolean(athleteId))
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const versionsByEntry = new Map((evolution.data?.points ?? []).map((point) => [point.entryId, point.versions]))
 
   const toggle = (entryId: string) => setExpanded((current) => {
     const next = new Set(current)
@@ -92,74 +97,106 @@ export function AthletePage({ athleteId }: { athleteId: string }) {
                 </div>
               </div>
 
-              <Card className="gap-0 py-0">
-                <CardHeader className="border-b py-4 [.border-b]:pb-4">
-                  <CardTitle>Histórico</CardTitle>
-                  <CardDescription>Uma linha por competição, da mais recente para a mais antiga. Abra a linha para ver as lutas e as avaliações.</CardDescription>
-                </CardHeader>
-                <CardContent className="px-0">
-                  <div className="overflow-x-auto">
-                    <Table className="**:data-[slot='table-cell']:px-4 **:data-[slot='table-head']:px-4">
-                      <TableCaption className="sr-only">Competições de {data.name}</TableCaption>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-10"><span className="sr-only">Abrir</span></TableHead>
-                          <TableHead>Ano</TableHead>
-                          <TableHead>Competição</TableHead>
-                          <TableHead>Categoria</TableHead>
-                          <TableHead>UF</TableHead>
-                          <TableHead>Pos.</TableHead>
-                          <TableHead>V-D</TableHead>
-                          <TableHead>Pontos</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {data.entries.length === 0 ? (
-                          <TableRow><TableCell colSpan={8} className="text-muted-foreground">Nenhuma inscrição registrada.</TableCell></TableRow>
-                        ) : data.entries.map((entry) => {
-                          const open = expanded.has(entry.entryId)
-                          return (
-                            <Fragment key={entry.entryId}>
-                              <TableRow className="cursor-pointer hover:bg-muted/30" onClick={() => toggle(entry.entryId)}>
-                                <TableCell>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    aria-expanded={open}
-                                    aria-label={open ? 'Fechar lutas e avaliações' : 'Ver lutas e avaliações'}
-                                    onClick={(e) => { e.stopPropagation(); toggle(entry.entryId) }}
-                                  >
-                                    {open ? <ChevronDown aria-hidden="true" /> : <ChevronRight aria-hidden="true" />}
-                                  </Button>
-                                </TableCell>
-                                <TableCell className="text-muted-foreground">{entry.competition.year ?? '—'}</TableCell>
-                                <TableCell className="font-medium">{competitionLabel(entry)}</TableCell>
-                                <TableCell>{[entry.style, entry.weight != null ? `${entry.weight} kg` : null].filter(Boolean).join(' · ') || '—'}</TableCell>
-                                <TableCell className="text-muted-foreground">{entry.state ?? '—'}</TableCell>
-                                <TableCell className="font-mono">{placement(entry)}</TableCell>
-                                <TableCell className="font-mono">{entry.wins != null ? `${entry.wins}-${entry.losses ?? 0}` : '—'}</TableCell>
-                                <TableCell className="font-mono">
-                                  {entry.technicalPointsFor != null ? `${entry.technicalPointsFor}–${entry.technicalPointsAgainst ?? 0}` : '—'}
-                                </TableCell>
-                              </TableRow>
-                              {open && (
-                                <TableRow className="hover:bg-transparent">
-                                  <TableCell colSpan={8} className="bg-muted/20 whitespace-normal">
-                                    <div className="flex flex-col gap-4 py-2">
-                                      <EntryFightsCard entryId={entry.entryId} />
-                                      <EntryAssessments entry={entry} />
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              )}
-                            </Fragment>
-                          )
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
+              <Tabs defaultValue="competitions" className="gap-4">
+                <TabsList>
+                  <TabsTrigger value="competitions">Competições</TabsTrigger>
+                  <TabsTrigger value="evolution">Evolução</TabsTrigger>
+                </TabsList>
+                <TabsContent value="competitions">
+                  <Card className="gap-0 py-0">
+                    <CardHeader className="border-b py-4 [.border-b]:pb-4">
+                      <CardTitle>Histórico</CardTitle>
+                      <CardDescription>Uma linha por competição, da mais recente para a mais antiga. Abra a linha para ver as lutas e as avaliações.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="px-0">
+                      <div className="overflow-x-auto">
+                        <Table className="**:data-[slot='table-cell']:px-4 **:data-[slot='table-head']:px-4">
+                          <TableCaption className="sr-only">Competições de {data.name}</TableCaption>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-10"><span className="sr-only">Abrir</span></TableHead>
+                              <TableHead>Ano</TableHead>
+                              <TableHead>Competição</TableHead>
+                              <TableHead>Categoria</TableHead>
+                              <TableHead>UF</TableHead>
+                              <TableHead>Pos.</TableHead>
+                              <TableHead>V-D</TableHead>
+                              <TableHead>Pontos</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {data.entries.length === 0 ? (
+                              <TableRow><TableCell colSpan={8} className="text-muted-foreground">Nenhuma inscrição registrada.</TableCell></TableRow>
+                            ) : data.entries.map((entry) => {
+                              const open = expanded.has(entry.entryId)
+                              return (
+                                <Fragment key={entry.entryId}>
+                                  <TableRow className="cursor-pointer hover:bg-muted/30" onClick={() => toggle(entry.entryId)}>
+                                    <TableCell>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        aria-expanded={open}
+                                        aria-label={open ? 'Fechar lutas e avaliações' : 'Ver lutas e avaliações'}
+                                        onClick={(e) => { e.stopPropagation(); toggle(entry.entryId) }}
+                                      >
+                                        {open ? <ChevronDown aria-hidden="true" /> : <ChevronRight aria-hidden="true" />}
+                                      </Button>
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground">{entry.competition.year ?? '—'}</TableCell>
+                                    <TableCell className="font-medium">
+                                      <div className="flex flex-wrap items-center gap-1">
+                                        <span>{competitionLabel(entry)}</span>
+                                        {(versionsByEntry.get(entry.entryId) ?? 0) > 0 && (
+                                          <AssessmentVersionsSheet
+                                            entryId={entry.entryId}
+                                            count={versionsByEntry.get(entry.entryId)!}
+                                            competition={competitionLabel(entry)}
+                                          />
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell>{[entry.style, entry.weight != null ? `${entry.weight} kg` : null].filter(Boolean).join(' · ') || '—'}</TableCell>
+                                    <TableCell className="text-muted-foreground">{entry.state ?? '—'}</TableCell>
+                                    <TableCell className="font-mono">{placement(entry)}</TableCell>
+                                    <TableCell className="font-mono">{entry.wins != null ? `${entry.wins}-${entry.losses ?? 0}` : '—'}</TableCell>
+                                    <TableCell className="font-mono">
+                                      {entry.technicalPointsFor != null ? `${entry.technicalPointsFor}–${entry.technicalPointsAgainst ?? 0}` : '—'}
+                                    </TableCell>
+                                  </TableRow>
+                                  {open && (
+                                    <TableRow className="hover:bg-transparent">
+                                      <TableCell colSpan={8} className="bg-muted/20 whitespace-normal">
+                                        <div className="flex flex-col gap-4 py-2">
+                                          <EntryFightsCard entryId={entry.entryId} />
+                                          <EntryAssessments entry={entry} />
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
+                                </Fragment>
+                              )
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                <TabsContent value="evolution">
+                  {evolution.loading ? (
+                    <div className="flex justify-center py-16"><Spinner /></div>
+                  ) : evolution.error || !evolution.data ? (
+                    <Alert variant="destructive">
+                      <AlertCircle />
+                      <AlertTitle>Não foi possível carregar a evolução</AlertTitle>
+                      <AlertDescription>{evolution.error ?? 'Tente novamente em instantes.'}</AlertDescription>
+                    </Alert>
+                  ) : (
+                    <AthleteEvolutionTab evolution={evolution.data} />
+                  )}
+                </TabsContent>
+              </Tabs>
             </>
           )}
         </div>

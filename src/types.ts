@@ -166,6 +166,54 @@ export type AthleteHistory = {
   entries: AthleteHistoryEntry[]
 }
 
+// ── Evolução do atleta (GET /api/athletes/{id}/evolution) ─────────
+export type EvolutionCompetition = { id: string; name: string; year: number | null; parentName: string | null }
+
+// Códigos de athlete_profiles; rótulos em /api/enums/*.
+export type EvolutionProfile = {
+  practiceTime: string | null
+  practiceLocation: string | null
+  practiceLocationName: string | null
+  weeklyFrequency: string | null
+  practicesOtherSport: boolean | null
+  otherSports: string[]
+  startedInWrestling: boolean | null
+}
+
+export type EvolutionPhysical = {
+  heightCm: number | null
+  armSpanCm: number | null
+  handGripRight: number | null
+  handGripLeft: number | null
+  baseCm: number | null
+  forearmRightCm: number | null
+  forearmLeftCm: number | null
+}
+
+export type EvolutionMotor = { competency: string; movement: string; result: string }
+
+// Um ponto por competição avaliada, do ano mais antigo ao mais recente; sem séries secundárias.
+export type EvolutionPoint = {
+  entryId: string
+  competition: EvolutionCompetition
+  style: string | null
+  profile: EvolutionProfile | null
+  physical: EvolutionPhysical | null
+  motor: EvolutionMotor[]
+  versions: number
+}
+
+export type AthleteEvolution = { athleteId: string; name: string; points: EvolutionPoint[] }
+
+// GET /api/entries/{entryId}/assessment-versions — data traz as colunas da versão (snake_case).
+export type AssessmentVersion = {
+  kind: 'PROFILE' | 'PHYSICAL' | 'MOTOR'
+  operation: 'UPDATE' | 'DELETE'
+  data: Record<string, unknown>
+  changedBy: string | null
+  replacedAt: string
+}
+
 // ── Unificação de atletas duplicados ──────────────────────────────
 export type MergeGroupStatus = 'LIKELY' | 'DOUBTFUL'
 
