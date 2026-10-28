@@ -166,6 +166,46 @@ export type AthleteHistory = {
   entries: AthleteHistoryEntry[]
 }
 
+// ── Unificação de atletas duplicados ──────────────────────────────
+export type MergeGroupStatus = 'LIKELY' | 'DOUBTFUL'
+
+export type MergeCandidateEntry = {
+  entryId: string
+  competition: string
+  year: number | null
+  style: string | null
+  weight: number | null
+  state: string | null
+  rank: number | null
+}
+
+export type MergeCandidateAthlete = {
+  athleteId: string
+  name: string | null
+  fromArena: boolean
+  entries: MergeCandidateEntry[]
+}
+
+// GET /api/athlete-merges/candidates: registros com o mesmo nome normalizado.
+export type MergeCandidateGroup = {
+  normalizedName: string
+  status: MergeGroupStatus
+  suggestedSurvivorId: string | null
+  athletes: MergeCandidateAthlete[]
+}
+
+export type MergeResult = { survivorId: string; movedEntries: number }
+
+export type MergeHistory = {
+  id: string
+  survivorId: string
+  survivorName: string | null
+  mergedNames: string[]
+  movedEntries: number
+  mergedBy: string | null
+  mergedAt: string
+}
+
 // ── Detalhe do atleta (BFF: backend monta seções/itens já formatados) ──
 export type AthleteDetailItem = {
   code: string

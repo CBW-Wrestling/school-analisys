@@ -28,6 +28,8 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   })
   if (!res.ok) throw new Error(await res.text())
+  // 204 (No Content) não tem corpo para ler.
+  if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
 }
 
