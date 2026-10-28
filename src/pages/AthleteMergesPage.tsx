@@ -2,7 +2,15 @@ import { AlertCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { PageHeader } from '../components/PageHeader'
-import { dismissMergeGroup, getMergeCandidates, getMergeHistory, mergeAthletes } from '../lib/athleteMergesApi'
+import {
+  type BulkMergeFailure,
+  dismissMergeGroup,
+  getAllLikelyGroups,
+  getMergeCandidates,
+  getMergeHistory,
+  mergeAthletes,
+  mergeLikelyGroups,
+} from '../lib/athleteMergesApi'
 import { apiErrorOf } from '../lib/seriesLinksApi'
 import { athleteHref } from '../navigation/links'
 import type { MergeCandidateGroup, MergeGroupStatus, MergeHistory, Page } from '../types'
@@ -155,6 +163,134 @@ function GroupCard({ group, onDone }: { group: MergeCandidateGroup; onDone: () =
   )
 }
 
+type BulkState =
+  | { step: 'closed' }
+  | { step: 'loading' }
+  | { step: 'confirm'; groups: MergeCandidateGroup[] }
+  | { step: 'running'; groups: MergeCandidateGroup[]; done: number }
+  | { step: 'finished'; merged: number; failures: BulkMergeFailure[] }
+
+function survivorOf(group: MergeCandidateGroup) {
+  return group.athletes.find((a) => a.athleteId === group.suggestedSurvivorId)
+}
+
+// Unifica de uma vez os grupos prováveis, cada um no registro sugerido; os duvidosos ficam de fora.
+function BulkMergeLikely({ reload, onDone }: { reload: number; onDone: () => void }) {
+  const [likely, setLikely] = useState<number | null>(null)
+  const [state, setState] = useState<BulkState>({ step: 'closed' })
+
+  useEffect(() => {
+    let alive = true
+    getMergeCandidates({ status: 'LIKELY', page: 0, size: 1 })
+      .then((d) => { if (alive) setLikely(d.totalElements) })
+      .catch(() => { if (alive) setLikely(null) })
+    return () => { alive = false }
+  }, [reload])
+
+  const open = async () => {
+    setState({ step: 'loading' })
+    try {
+      const groups = await getAllLikelyGroups()
+      setState({ step: 'confirm', groups })
+    } catch (err) {
+      toast.error(apiErrorOf(err, 'Não foi possível carregar os grupos prováveis.').message)
+      setState({ step: 'closed' })
+    }
+  }
+
+  const run = async (groups: MergeCandidateGroup[]) => {
+    setState({ step: 'running', groups, done: 0 })
+    const result = await mergeLikelyGroups(groups, (done) => setState({ step: 'running', groups, done }))
+    setState({ step: 'finished', ...result })
+  }
+
+  const close = () => {
+    const finished = state.step === 'finished'
+    setState({ step: 'closed' })
+    if (finished) onDone()
+  }
+
+  return (
+    <>
+      <Button size="sm" disabled={!likely || state.step !== 'closed'} onClick={open}>
+        {state.step === 'loading' && <Spinner data-icon="inline-start" />}
+        Unificar todos os prováveis{likely ? ` (${likely})` : ''}
+      </Button>
+
+      <AlertDialog open={state.step === 'confirm' || state.step === 'running' || state.step === 'finished'}>
+        <AlertDialogContent>
+          {state.step === 'confirm' && (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Unificar {state.groups.length} grupos prováveis</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Em cada grupo, as inscrições dos outros registros passam para o registro abaixo, e os outros são removidos.
+                  Colocações, lutas e avaliações continuam nas inscrições, e cada unificação fica no histórico. A tela não
+                  desfaz a unificação; os duvidosos ficam de fora.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="max-h-72 overflow-y-auto rounded-lg border">
+                <ul className="flex flex-col divide-y text-sm">
+                  {state.groups.map((group) => {
+                    const kept = survivorOf(group)
+                    return (
+                      <li key={group.normalizedName} className="flex items-center justify-between gap-2 px-3 py-2">
+                        <span className="min-w-0 truncate">{kept?.name ?? group.athletes[0]?.name ?? group.normalizedName}</span>
+                        <span className="shrink-0 text-muted-foreground">
+                          {group.athletes.length} registros → {kept ? (kept.fromArena ? 'Arena' : 'Planilha') : 'sem sugestão'}
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={close}>Cancelar</AlertDialogCancel>
+                <Button onClick={() => run(state.groups)}>Unificar {state.groups.length} grupos</Button>
+              </AlertDialogFooter>
+            </>
+          )}
+          {state.step === 'running' && (
+            <AlertDialogHeader>
+              <AlertDialogTitle>Unificando…</AlertDialogTitle>
+              <AlertDialogDescription className="flex items-center gap-2">
+                <Spinner /> {state.done} de {state.groups.length} grupos. Não feche esta página.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+          )}
+          {state.step === 'finished' && (
+            <>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{state.merged} {state.merged === 1 ? 'grupo unificado' : 'grupos unificados'}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {state.failures.length === 0
+                    ? 'Todos os grupos prováveis foram unificados.'
+                    : `${state.failures.length} ${state.failures.length === 1 ? 'grupo não foi unificado e continua' : 'grupos não foram unificados e continuam'} na lista para revisão.`}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              {state.failures.length > 0 && (
+                <div className="max-h-60 overflow-y-auto rounded-lg border">
+                  <ul className="flex flex-col divide-y text-sm">
+                    {state.failures.map(({ group, message }) => (
+                      <li key={group.normalizedName} className="flex flex-col gap-0.5 px-3 py-2">
+                        <span className="font-medium">{group.athletes[0]?.name ?? group.normalizedName}</span>
+                        <span className="text-muted-foreground">{message}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <AlertDialogFooter>
+                <AlertDialogAction onClick={close}>Fechar</AlertDialogAction>
+              </AlertDialogFooter>
+            </>
+          )}
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  )
+}
+
 function Candidates() {
   const [status, setStatus] = useState<MergeGroupStatus | 'ALL'>('ALL')
   const [page, setPage] = useState(0)
@@ -180,18 +316,21 @@ function Candidates() {
         <p className="text-sm text-muted-foreground">
           Provável: uma UF só e nenhuma competição em comum. Duvidoso: confira com cuidado antes de unificar.
         </p>
-        <Select value={status} onValueChange={(v) => { setStatus(v as MergeGroupStatus | 'ALL'); setPage(0) }}>
-          <SelectTrigger size="sm" className="w-40" aria-label="Filtrar por grau de certeza">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent position="item-aligned" align="center">
-            <SelectGroup>
-              <SelectItem value="ALL">Todos</SelectItem>
-              <SelectItem value="LIKELY">Prováveis</SelectItem>
-              <SelectItem value="DOUBTFUL">Duvidosos</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <BulkMergeLikely reload={reload} onDone={() => { setPage(0); setReload((n) => n + 1) }} />
+          <Select value={status} onValueChange={(v) => { setStatus(v as MergeGroupStatus | 'ALL'); setPage(0) }}>
+            <SelectTrigger size="sm" className="w-40" aria-label="Filtrar por grau de certeza">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="item-aligned" align="center">
+              <SelectGroup>
+                <SelectItem value="ALL">Todos</SelectItem>
+                <SelectItem value="LIKELY">Prováveis</SelectItem>
+                <SelectItem value="DOUBTFUL">Duvidosos</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       {error ? (
         <Alert variant="destructive">
