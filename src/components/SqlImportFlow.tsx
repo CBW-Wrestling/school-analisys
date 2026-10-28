@@ -4,8 +4,16 @@ import { LoadingSpinner } from './LoadingSpinner'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Switch } from '@/components/ui/switch'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { cn } from '@/lib/utils'
+import { SearchableSelect } from './SearchableSelect'
+import { LinkReviewStep } from './series-links/LinkReviewStep'
+import { useApiRows } from '../lib/api'
+import { apiErrorOf, competitionLabel } from '../lib/seriesLinksApi'
+import type { CompetitionRow } from '../types'
 import {
   uploadImport,
   selectCompetition,
@@ -14,9 +22,11 @@ import {
   selectResultsCompetition,
   getResultsImportStatus,
   type CompetitionOption,
+  type ImportStatus,
+  type SecondarySeriesSelection,
 } from '../lib/importApi'
 
-type Step = 'upload' | 'select' | 'processing' | 'done' | 'error'
+type Step = 'upload' | 'select' | 'processing' | 'review' | 'done' | 'error'
 
 interface Props {
   importType: 'competition' | 'results'
@@ -31,12 +41,23 @@ export function SqlImportFlow({ importType }: Props) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [asSecondary, setAsSecondary] = useState(false)
+  const [principalId, setPrincipalId] = useState('')
+  const [series, setSeries] = useState<SecondarySeriesSelection['series'] | ''>('')
+  const [reviewStatus, setReviewStatus] = useState<ImportStatus | null>(null)
+  const [reviewed, setReviewed] = useState(false)
 
   const isResults = importType === 'results'
   const subtitle = isResults
     ? 'Upload do dump .sql final do Arena para importar os resultados da competição.'
     : 'Upload do dump .sql inicial do Arena para criar a estrutura da competição no banco.'
-  const actionLabel = isResults ? 'Importar resultados' : 'Criar competição'
+  const actionLabel = isResults ? 'Importar resultados' : asSecondary ? 'Importar série secundária' : 'Criar competição'
+
+  const { rows: competitionRows } = useApiRows<CompetitionRow>('/api/competitions', !isResults)
+  const ouroOptions = competitionRows
+    .filter((c) => c.series === 'OURO')
+    .map((c) => ({ value: c.id, label: competitionLabel(c) }))
+  const secondaryIncomplete = asSecondary && (!principalId || !series)
 
   async function handleUpload(file: File) {
     try {
@@ -56,13 +77,14 @@ export function SqlImportFlow({ importType }: Props) {
     if (!importId || !selected) return
     try {
       setStep('processing')
-      const selectFn = isResults ? selectResultsCompetition : selectCompetition
       const statusFn = isResults ? getResultsImportStatus : getImportStatus
-      await selectFn(importId, selected)
+      if (isResults) await selectResultsCompetition(importId, selected)
+      else await selectCompetition(importId, selected, asSecondary && series ? { principalCompetitionId: principalId, series } : undefined)
       let tries = 0
       const poll = async () => {
         const status = await statusFn(importId)
         if (status.status === 'COMPLETED') { setStep('done'); return }
+        if (status.status === 'WAITING_LINK_REVIEW') { setReviewStatus(status); setStep('review'); return }
         if (status.status === 'FAILED') {
           setErrorMsg(status.errorMessage ?? 'Falha no processamento')
           setStep('error')
@@ -72,7 +94,7 @@ export function SqlImportFlow({ importType }: Props) {
       }
       await poll()
     } catch (e: unknown) {
-      setErrorMsg(e instanceof Error ? e.message : 'Erro no processamento')
+      setErrorMsg(apiErrorOf(e, 'Erro no processamento').message)
       setStep('error')
     }
   }
@@ -103,11 +125,16 @@ export function SqlImportFlow({ importType }: Props) {
     setSelected('')
     setErrorMsg(null)
     setSelectedFile(null)
+    setAsSecondary(false)
+    setPrincipalId('')
+    setSeries('')
+    setReviewStatus(null)
+    setReviewed(false)
     if (fileRef.current) fileRef.current.value = ''
   }
 
   return (
-    <section className="flex w-full max-w-[640px] flex-col gap-6 bg-background text-foreground">
+    <section className={cn('flex w-full flex-col gap-6 bg-background text-foreground', step !== 'review' && 'max-w-[640px]')}>
       <div className="flex flex-col gap-1">
         <h1 className="text-3xl leading-none tracking-tight">{isResults ? 'Importar resultados' : 'Criar competição'}</h1>
         <p className="text-sm text-muted-foreground">{subtitle}</p>
@@ -197,10 +224,51 @@ export function SqlImportFlow({ importType }: Props) {
               </label>
             ))}
           </RadioGroup>
+          {!isResults && (
+            <FieldGroup className="mt-5 rounded-lg border p-4">
+              <Field orientation="horizontal">
+                <FieldContent>
+                  <FieldLabel htmlFor="secondary-series">Série secundária de uma Série Ouro</FieldLabel>
+                  <FieldDescription>
+                    Para Prata ou Bronze: nenhum atleta é criado e cada inscrição é vinculada à da Ouro, de onde vêm as avaliações.
+                  </FieldDescription>
+                </FieldContent>
+                <Switch id="secondary-series" checked={asSecondary} onCheckedChange={setAsSecondary} />
+              </Field>
+              {asSecondary && (
+                <>
+                  <Field>
+                    <FieldLabel htmlFor="principal-competition">Série Ouro</FieldLabel>
+                    <SearchableSelect
+                      triggerId="principal-competition"
+                      value={principalId}
+                      onChange={setPrincipalId}
+                      options={ouroOptions}
+                      placeholder={ouroOptions.length ? 'Escolha a Série Ouro' : 'Nenhuma Série Ouro cadastrada'}
+                      disabled={!ouroOptions.length}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel>Série deste evento</FieldLabel>
+                    <ToggleGroup
+                      type="single"
+                      variant="outline"
+                      value={series}
+                      onValueChange={(v) => setSeries(v as SecondarySeriesSelection['series'] | '')}
+                      aria-label="Série deste evento"
+                    >
+                      <ToggleGroupItem value="PRATA">Prata</ToggleGroupItem>
+                      <ToggleGroupItem value="BRONZE">Bronze</ToggleGroupItem>
+                    </ToggleGroup>
+                  </Field>
+                </>
+              )}
+            </FieldGroup>
+          )}
           <div className="mt-5 flex gap-3">
             <Button variant="outline" onClick={reset}>Voltar</Button>
             <Button
-              disabled={!selected}
+              disabled={!selected || secondaryIncomplete}
               onClick={handleSelectCompetition}
             >
               {actionLabel}
@@ -209,17 +277,23 @@ export function SqlImportFlow({ importType }: Props) {
         </div>
       )}
 
+      {step === 'review' && reviewStatus && (
+        <LinkReviewStep status={reviewStatus} onCompleted={() => { setReviewed(true); setStep('done') }} />
+      )}
+
       {step === 'done' && (
         <Card className="mt-10 text-center">
           <CardContent className="flex flex-col items-center gap-1 pt-6">
             <CheckCircle className="size-[52px] text-primary" aria-hidden="true" />
             <h3 className="mt-4 text-xl font-semibold text-foreground">
-              {isResults ? 'Resultados importados!' : 'Competição criada!'}
+              {isResults ? 'Resultados importados!' : reviewed ? 'Série importada!' : 'Competição criada!'}
             </h3>
             <p className="text-sm text-muted-foreground">
               {isResults
                 ? 'Os resultados foram gravados com sucesso no banco.'
-                : 'A estrutura da competição foi criada com sucesso no banco.'}
+                : reviewed
+                  ? 'Os vínculos foram confirmados. Ajustes posteriores ficam em Operações › Vínculos de séries.'
+                  : 'A estrutura da competição foi criada com sucesso no banco.'}
             </p>
             <Button className="mt-6" onClick={reset}>
               Nova importação

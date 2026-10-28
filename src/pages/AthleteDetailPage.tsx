@@ -1,7 +1,10 @@
-import { ArrowLeft, Brain, Dumbbell, Info, Medal, User } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { ArrowLeft, History, Medal } from 'lucide-react'
+import { DetailSectionCard } from '../components/AthleteDetailSections'
+import { SECTION_ICONS, iconFor, initialsFor } from '../lib/athleteDetail'
+import { EntryFightsCard } from '../components/EntryFightsCard'
 import { useApiData } from '../lib/api'
-import type { AthleteDetail, AthleteDetailItem } from '../types'
+import { athleteHref } from '../navigation/links'
+import type { AthleteDetail } from '../types'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -13,22 +16,12 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 interface Props {
   entryId: string
   onBack: () => void
   backLabel?: string
-}
-
-// Ícones conhecidos que o backend pode enviar por seção; qualquer valor não
-// mapeado cai no ícone neutro (Info) em vez de quebrar a renderização.
-const SECTION_ICONS: Record<string, LucideIcon> = {
-  medal: Medal,
-  user: User,
-  dumbbell: Dumbbell,
-  brain: Brain,
 }
 
 const SECTION_GROUPS = [
@@ -38,52 +31,6 @@ const SECTION_GROUPS = [
   { value: 'technical', label: 'Técnico', icon: 'brain' },
   { value: 'other', label: 'Outros', icon: 'other' },
 ] as const
-
-function iconFor(icon: string): LucideIcon {
-  return SECTION_ICONS[icon] ?? Info
-}
-
-function DetailRow({ item }: { item: AthleteDetailItem }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3 border-b py-1.5 last:border-b-0">
-      <dt className="text-xs font-medium text-muted-foreground">{item.label}</dt>
-      <dd className="text-right text-sm font-medium text-foreground">
-        {item.value || <span className="font-normal text-muted-foreground">—</span>}
-      </dd>
-    </div>
-  )
-}
-
-function DetailSection({
-  icon,
-  title,
-  children,
-}: {
-  icon: React.ReactNode
-  title: string
-  children: React.ReactNode
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-2.5">
-          <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">{icon}</span>
-          <CardTitle>{title}</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <dl>{children}</dl>
-      </CardContent>
-    </Card>
-  )
-}
-
-function initialsFor(name: string): string {
-  const parts = name.trim().split(/\s+/)
-  const first = parts[0]?.[0] ?? ''
-  const last = parts.length > 1 ? parts[parts.length - 1][0] : ''
-  return `${first}${last}`.toUpperCase()
-}
 
 export function AthleteDetailPage({ entryId, onBack, backLabel = 'Voltar' }: Props) {
   const { data: d, loading, error } = useApiData<AthleteDetail>(`/api/athletes/entries/${entryId}`)
@@ -143,6 +90,13 @@ export function AthleteDetailPage({ entryId, onBack, backLabel = 'Voltar' }: Pro
               )}
             </div>
           </div>
+          {d.athleteId && (
+            <Button variant="outline" size="sm" asChild className="self-start @xl/main:self-end">
+              <a href={athleteHref(d.athleteId)}>
+                <History data-icon="inline-start" aria-hidden="true" /> Ver histórico do atleta
+              </a>
+            </Button>
+          )}
           {d.rank != null && (
             <div className="flex shrink-0 flex-col items-center gap-1 rounded-lg border bg-card px-5 py-3.5">
               <Medal className="size-5 text-muted-foreground" aria-hidden="true" />
@@ -166,23 +120,14 @@ export function AthleteDetailPage({ entryId, onBack, backLabel = 'Voltar' }: Pro
             {groupedSections.map((group) => (
               <TabsContent key={group.value} value={group.value} className="py-4 md:py-6">
                 <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2">
-                  {group.sections.map((section) => {
-                    const Icon = iconFor(section.icon)
-                    return (
-                      <DetailSection key={section.code} icon={<Icon className="size-4" aria-hidden="true" />} title={section.title}>
-                        {section.items.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">Nenhum dado registrado.</p>
-                        ) : (
-                          section.items.map((item) => <DetailRow key={item.code} item={item} />)
-                        )}
-                      </DetailSection>
-                    )
-                  })}
+                  {group.sections.map((section) => <DetailSectionCard key={section.code} section={section} />)}
                 </div>
               </TabsContent>
             ))}
           </Tabs>
         )}
+
+        <EntryFightsCard entryId={entryId} />
       </main>
     </div>
   )

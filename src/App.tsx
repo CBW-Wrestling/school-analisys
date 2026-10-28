@@ -21,6 +21,7 @@ import { ResultsImportPage } from "./pages/ResultsImportPage"
 import { RefereeImportPage } from "./pages/RefereeImportPage"
 import { PublicRefereeAssessmentPage } from "./pages/PublicRefereeAssessmentPage"
 import { StateLinksPage } from "./pages/StateLinksPage"
+import { SeriesLinksPage } from "./pages/SeriesLinksPage"
 import { PublicStateAssessmentPage } from "./pages/PublicStateAssessmentPage"
 import { RegistrationProgressPage } from "./pages/RegistrationProgressPage"
 import { ProfilePage } from "./pages/ProfilePage"
@@ -28,6 +29,9 @@ import { PhysicalPage } from "./pages/PhysicalPage"
 import { InferencesPage } from "./pages/InferencesPage"
 import { ProfilesPage } from "./pages/ProfilesPage"
 import { ResultsPage } from "./pages/ResultsPage"
+import { CompetitionsPage } from "./pages/CompetitionsPage"
+import { AthletePage } from "./pages/AthletePage"
+import { AthleteMergesPage } from "./pages/AthleteMergesPage"
 import { SidebarProvider } from "./components/ui/sidebar"
 import type { FormKind } from "./types"
 
@@ -66,6 +70,8 @@ function App() {
     : requestedView === "patient-monitoring" ? <PatientMonitoringDashboardPage />
     : requestedView === "users-example" ? <UsersDashboardPage />
     : requestedView === "results" ? <ResultsPage />
+    : requestedView === "competitions" ? <CompetitionsPage />
+    : requestedView === "athlete" ? <AthletePage athleteId={params.get("id") ?? ""} />
     : requestedView === "profiles" ? <ProfilesPage />
     : requestedView === "physical" ? <PhysicalPage />
     : requestedView === "motor" ? <TechnicalAssessmentsPage />
@@ -75,6 +81,8 @@ function App() {
     : requestedView === "results-import" ? <ResultsImportPage />
     : requestedView === "referee-import" ? <RefereeImportPage />
     : requestedView === "state-links" ? <StateLinksPage />
+    : requestedView === "series-links" ? <SeriesLinksPage />
+    : requestedView === "athlete-merges" ? <AthleteMergesPage />
     : requestedView === "registration-progress" ? <RegistrationProgressPage />
     : requestedView === "profile" ? <ProfilePage />
     : <DashboardPage />

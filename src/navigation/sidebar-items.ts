@@ -1,4 +1,6 @@
 import {
+  GitMerge,
+  Trophy,
   Activity,
   ClipboardList,
   FileUp,
@@ -10,6 +12,7 @@ import {
   LineChart,
   ListChecks,
   Medal,
+  Link2,
   MapPinned,
   Plus,
   ShieldPlus,
@@ -41,6 +44,7 @@ export const assessmentsNav: NavigationItem[] = [
 ]
 
 export const resultsNav: NavigationItem[] = [
+  { id: 'competitions', label: 'Competições', href: '?view=competitions', icon: Trophy },
   { id: 'results', label: 'Resultados', href: '?view=results', icon: Medal },
   { id: 'inferences', label: 'Inferências', href: '?view=inferences', icon: Sparkles },
   { id: 'registration-progress', label: 'Acompanhamento', href: '?view=registration-progress', icon: ClipboardList },
@@ -64,6 +68,8 @@ export const operations: NavigationItem[] = [
   { id: 'results-import', label: 'Importar resultados', href: '?view=results-import', icon: FileUp },
   { id: 'referee-import', label: 'Árbitros', href: '?view=referee-import', icon: UserCheck },
   { id: 'state-links', label: 'Links por estado', href: '?view=state-links', icon: MapPinned },
+  { id: 'series-links', label: 'Vínculos de séries', href: '?view=series-links', icon: Link2 },
+  { id: 'athlete-merges', label: 'Atletas duplicados', href: '?view=athlete-merges', icon: GitMerge },
 ]
 
 export const allNavItems: NavigationItem[] = [

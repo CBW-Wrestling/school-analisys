@@ -14,6 +14,7 @@ import { Toggle } from '@/components/ui/toggle'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { competitionLabel } from '../lib/seriesLinksApi'
 
 const SOCIAL_DIMS: { key: keyof ProfileRow; label: string; eyebrow: string }[] = [
   { key: 'tempoPratica',       label: 'Tempo de Prática',       eyebrow: 'EXPERIÊNCIA' },
@@ -89,7 +90,7 @@ export function ExplorerPage() {
   const eventLabel = useMemo(() => {
     const map: Record<string, string> = {}
     for (const c of competitions)
-      map[c.code] = c.year ? `${c.name} ${c.year}` : c.name
+      map[c.code] = c.year ? `${competitionLabel(c)} ${c.year}` : competitionLabel(c)
     return map
   }, [competitions])
 

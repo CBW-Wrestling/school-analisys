@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
+import { competitionLabel, isAssessable } from '../lib/seriesLinksApi'
 
 type Step = 'upload' | 'select' | 'done'
 
@@ -128,7 +129,7 @@ export function RefereeImportPage() {
   const [result, setResult] = useState<RefereeImportResponse | null>(null)
   const { rows: competitions, loading: competitionsLoading } = useApiRows<CompetitionRow>('/api/competitions')
 
-  const competitionOptions = competitions.map((competition) => ({ label: competition.name, value: competition.id }))
+  const competitionOptions = competitions.filter(isAssessable).map((competition) => ({ label: competitionLabel(competition), value: competition.id }))
   const selectedLinkCompetition = competitions.find((competition) => competition.id === selectedLinkCompetitionId)
 
   const handleDrop = useCallback((event: React.DragEvent) => {
