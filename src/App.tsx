@@ -31,6 +31,7 @@ import { ProfilesPage } from "./pages/ProfilesPage"
 import { ResultsPage } from "./pages/ResultsPage"
 import { CompetitionsPage } from "./pages/CompetitionsPage"
 import { AthletePage } from "./pages/AthletePage"
+import { AthleteMergesPage } from "./pages/AthleteMergesPage"
 import { SidebarProvider } from "./components/ui/sidebar"
 import type { FormKind } from "./types"
 
@@ -81,6 +82,7 @@ function App() {
     : requestedView === "referee-import" ? <RefereeImportPage />
     : requestedView === "state-links" ? <StateLinksPage />
     : requestedView === "series-links" ? <SeriesLinksPage />
+    : requestedView === "athlete-merges" ? <AthleteMergesPage />
     : requestedView === "registration-progress" ? <RegistrationProgressPage />
     : requestedView === "profile" ? <ProfilePage />
     : <DashboardPage />

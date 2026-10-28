@@ -1,4 +1,5 @@
 import {
+  GitMerge,
   Trophy,
   Activity,
   ClipboardList,
@@ -68,6 +69,7 @@ export const operations: NavigationItem[] = [
   { id: 'referee-import', label: 'Árbitros', href: '?view=referee-import', icon: UserCheck },
   { id: 'state-links', label: 'Links por estado', href: '?view=state-links', icon: MapPinned },
   { id: 'series-links', label: 'Vínculos de séries', href: '?view=series-links', icon: Link2 },
+  { id: 'athlete-merges', label: 'Atletas duplicados', href: '?view=athlete-merges', icon: GitMerge },
 ]
 
 export const allNavItems: NavigationItem[] = [
